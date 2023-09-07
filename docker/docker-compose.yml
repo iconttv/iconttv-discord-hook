@@ -1,0 +1,22 @@
+version: '3'
+services:
+  iconttv-discord-hook:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    container_name: iconttv-discord-hook
+    shm_size: '2gb'
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 2G
+    user: 1000:1000
+    environment:
+      - TZ=Asia/Seoul
+    logging:
+      driver: "json-file"
+      options:
+        max-file: "5"
+        max-size: "10m"
+    restart: unless-stopped
