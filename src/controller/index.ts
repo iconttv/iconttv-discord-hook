@@ -21,6 +21,8 @@ async function messageCreate(message: Message) {
   const iconFilePath = getAbsoluteIconFilePath(matchIcon);
   const userProfileEmbed = createUserProfileEmbed(message);
   const imageExtension = iconFilePath.split(".").pop();
+
+  // 첨부 이미지 이름을 한글로하면 임베드가 되지 않음.
   const imageAttachment = new AttachmentBuilder(iconFilePath, {
     name: `image.${imageExtension}`,
     description: matchIcon.keywords[0],
