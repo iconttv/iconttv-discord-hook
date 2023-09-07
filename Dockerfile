@@ -5,6 +5,8 @@ LABEL version="1.0"
 
 WORKDIR /app
 
+COPY .env .
+
 COPY . .
 
 RUN yarn install --frozen-lockfile

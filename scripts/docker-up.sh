@@ -1,9 +1,9 @@
-#!/bin/bash 
+#!/bin/bash
 
 SCRIPT_DIR=$(dirname $(readlink -f "$0"))
 PROJECT_DIR=$(readlink -f "$SCRIPT_DIR/..")
 
-cd "$PROJECT_DIR/docker"
+cd "$PROJECT_DIR"
 
 docker compose rm --force
 
