@@ -1,20 +1,39 @@
-import type { Client, Message } from "discord.js";
-import { findMatchIconOrNull, getAbsoluteIconFilePath } from "../utils";
+import { AttachmentBuilder, type Client, type Message } from "discord.js";
+import {
+  createUserProfileEmbed,
+  findMatchIconOrNull,
+  getAbsoluteIconFilePath,
+  getGuildMemberFromMessage,
+} from "../utils";
 
 async function messageCreate(message: Message) {
-  const { content, author } = message;
-  const { displayName: sender } = author;
+  const { content } = message;
+  const guildMember = getGuildMemberFromMessage(message);
+  const sender = guildMember?.nickname ?? "ㅇㅇ (223.38)";
+
   const matchIcon = findMatchIconOrNull(content);
   if (!matchIcon) return;
 
   console.log(
-    `Envoked icon command from "${message.author.displayName}" with command "${content}"`
+    `Envoked icon command from "${sender}" with command "${content}"`
   );
+
   const iconFilePath = getAbsoluteIconFilePath(matchIcon);
+  const userProfileEmbed = createUserProfileEmbed(message);
+  const imageExtension = iconFilePath.split(".").pop();
+  const imageAttachment = new AttachmentBuilder(iconFilePath, {
+    name: `image.${imageExtension}`,
+    description: matchIcon.keywords[0],
+  });
+
   await Promise.all([
     message.channel.send({
-      content: `${sender}: `,
-      files: [{ attachment: iconFilePath }],
+      embeds: [
+        userProfileEmbed
+          .setDescription(imageAttachment.description)
+          .setImage(`attachment://${imageAttachment.name}`),
+      ],
+      files: [imageAttachment],
     }),
     message.delete(),
   ]);
