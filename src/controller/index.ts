@@ -1,4 +1,9 @@
-import { AttachmentBuilder, type Client, type Message } from "discord.js";
+import {
+  AttachmentBuilder,
+  type Client,
+  type Message,
+  MessageFlags,
+} from "discord.js";
 import {
   createUserProfileEmbed,
   findMatchIconOrNull,
@@ -38,6 +43,7 @@ async function messageCreate(message: Message) {
 
   await Promise.all([
     message.channel.send({
+      flags: MessageFlags.SuppressNotifications,
       embeds: [
         userProfileEmbed
           .setDescription(imageAttachment.description)
