@@ -3,6 +3,7 @@ import { IconRepository } from "..";
 import { Icon, IconttvIcon } from "../../../models";
 import { IconttvResponse } from "../../../models/response";
 import { getIconttvUrl } from "../../../utils/iconttv";
+import { cloneDeep } from 'lodash';
 
 export class IconFunzinnuRepository implements IconRepository {
   private static _instance: IconFunzinnuRepository;
@@ -44,7 +45,7 @@ export class IconFunzinnuRepository implements IconRepository {
         : matchIcons[0].uri,
       isRemoteImage: true,
     };
-    return matchIcon;
+    return cloneDeep(matchIcon);
   }
 
   imagePathResolver(imagePath: string): string {

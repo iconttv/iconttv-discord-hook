@@ -33,31 +33,25 @@ export async function onMessageCreate(message: Message) {
     asAnonUser: isAnonMessage(messageText),
   });
 
+
   if (matchIcon.isRemoteImage) {
-    await Promise.all([
-      message.channel.send({
-        flags: MessageFlags.SuppressNotifications,
-        embeds: [
-          userProfileEmbed
-            .setDescription(matchIcon.keywords[0])
-            .setImage(matchIcon.imagePath),
-        ],
-      }),
-      message.delete(),
-    ]);
-    return;
-  }
+    await message.channel.send({
+      flags: MessageFlags.SuppressNotifications,
+      embeds: [
+        userProfileEmbed
+          .setDescription(matchIcon.keywords[0])
+          .setImage(matchIcon.imagePath),
+      ],
+    });
+  } else {
+    // 첨부 이미지 이름을 한글로하면 임베드가 되지 않음.
+    const imageExtension = matchIcon.imagePath.split(".").pop();
+    const imageAttachment = new AttachmentBuilder(matchIcon.imagePath, {
+      name: `image.${imageExtension}`,
+      description: matchIcon.keywords[0],
+    });
 
-  const imageExtension = matchIcon.imagePath.split(".").pop();
-
-  // 첨부 이미지 이름을 한글로하면 임베드가 되지 않음.
-  const imageAttachment = new AttachmentBuilder(matchIcon.imagePath, {
-    name: `image.${imageExtension}`,
-    description: matchIcon.keywords[0],
-  });
-
-  await Promise.all([
-    message.channel.send({
+    await message.channel.send({
       flags: MessageFlags.SuppressNotifications,
       embeds: [
         userProfileEmbed
@@ -65,7 +59,10 @@ export async function onMessageCreate(message: Message) {
           .setImage(`attachment://${imageAttachment.name}`),
       ],
       files: [imageAttachment],
-    }),
-    message.delete(),
-  ]);
+    });
+  }
+
+  if (message.deletable) {
+    await message.delete();
+  }
 }

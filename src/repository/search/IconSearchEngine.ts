@@ -53,10 +53,9 @@ export default class IconSearchEngine {
     const iconProviders: [string, IconRepository][] =
       providers.length === 0
         ? Object.entries(this._repositories)
-        : Object.entries(this._repositories)
-            .filter(([repositoryProvider, _]) =>
-              providers.includes(repositoryProvider)
-            );
+        : Object.entries(this._repositories).filter(([repositoryProvider]) =>
+            providers.includes(repositoryProvider)
+          );
 
     for (const [providerName, iconProvider] of iconProviders) {
       const matchIcon = await iconProvider.findOne(searchKeyword);
