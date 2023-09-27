@@ -14,7 +14,7 @@ import { getRandomTelecomIP } from "../telecomIP";
 import GuildMemberCache from "../../repository/search/GuildMemberCache";
 
 export function isAnonMessage(text: string) {
-  const [_, ...restArgs] = text.split(" ");
+  const restArgs = text.split(' ').slice(1);
   return (
     restArgs.length === 1 && ["익명", "ㅇㅇ", "anon"].includes(restArgs[0])
   );
