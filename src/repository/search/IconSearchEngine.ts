@@ -41,8 +41,6 @@ export default class IconSearchEngine {
     guildId: string | null,
     providers: string[] = []
   ): Promise<Icon | null> {
-    logger.debug(`Search icon keyword "${searchKeyword}"`);
-
     const cacheKey = `${guildId} ${searchKeyword}`;
     const cachedValue = this._cache[cacheKey];
     if (cachedValue) {
@@ -61,8 +59,6 @@ export default class IconSearchEngine {
           );
 
     for (const [providerName, iconProvider] of iconProviders) {
-      logger.debug(`Search icon keyword "${searchKeyword}" in ${providerName}`);
-
       const matchIcon = await iconProvider.findOne(searchKeyword);
       if (matchIcon) {
         matchIcon.imagePath = iconProvider.imagePathResolver(
@@ -76,10 +72,9 @@ export default class IconSearchEngine {
         };
         return matchIcon;
       }
-
-      logger.debug(`icon keyword "${searchKeyword}" not in ${providerName}`);
     }
 
+    logger.debug(`Icon keyword "${searchKeyword}" not found.`);
     return null;
   }
 

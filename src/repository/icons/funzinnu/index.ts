@@ -31,12 +31,12 @@ export class IconFunzinnuRepository implements IconRepository {
     if (!jsonData.icons) throw new Error('Iconttv Server Error!');
 
     logger.debug(`Fetch Funzinnu's icon list Done`);
-    return jsonData.icons;
+    this.iconList = jsonData.icons;
   }
 
   async findOne(searchKeyword: string): Promise<Icon | null> {
     if (!this.iconList || !this.iconList.length) {
-      this.iconList = await this.fetchIconList();
+      await this.fetchIconList();
       return this.findOne(searchKeyword);
     }
 
