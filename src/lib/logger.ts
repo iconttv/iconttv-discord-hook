@@ -14,7 +14,7 @@ const winstonFormat = winston.format.combine(
 );
 
 const logger = winston.createLogger({
-  level: process.env.NODE_ENV === 'development' ? 'debug' : 'info',
+  level: process.env.NODE_ENV === 'development' ? 'silly' : 'debug',
   format: winstonFormat,
   transports: [
     new winston.transports.Console({
