@@ -19,4 +19,6 @@ services:
       options:
         max-file: "5"
         max-size: "10m"
+    volumes:
+      - ./logs:/app/logs
     restart: unless-stopped
