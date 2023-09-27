@@ -2,8 +2,8 @@ import * as winston from 'winston';
 import dailyRotateFile from 'winston-daily-rotate-file';
 import moment from 'moment';
 
-const loggerFormat = winston.format.printf(({ level, message, timestamp }) => {
-  return `${timestamp} [${level.toUpperCase()}]: ${message}`;
+const loggerFormat = winston.format.printf(info => {
+  return `${info.timestamp} [${info.level.toUpperCase()}] ${info.message}`;
 });
 
 const winstonFormat = winston.format.combine(
@@ -18,10 +18,8 @@ const logger = winston.createLogger({
   format: winstonFormat,
   transports: [
     new winston.transports.Console({
-      format: winston.format.combine(
-        winstonFormat,
-        winston.format.colorize(),
-      ),
+      format: winston.format.colorize({ all: true }),
+      level: 'silly',
     }),
     new dailyRotateFile({
       filename: 'logs/all.%DATE%.log',

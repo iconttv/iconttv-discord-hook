@@ -1,3 +1,4 @@
+import logger from "../../lib/logger";
 import { Icon } from "../../models";
 import { IconRepository } from "../icons";
 import { IconFunzinnuRepository } from "../icons/funzinnu";
@@ -44,7 +45,7 @@ export default class IconSearchEngine {
     const cachedValue = this._cache[cacheKey];
     if (cachedValue) {
       if (!this.isExpiredCache(cachedValue.createdAtMs)) {
-        console.debug(`Found "${searchKeyword}" in memory cache`);
+        logger.debug(`Found "${searchKeyword}" in memory cache`);
         return cachedValue.icon;
       }
       delete this._cache[cacheKey];
@@ -64,7 +65,7 @@ export default class IconSearchEngine {
           matchIcon.imagePath
         );
 
-        console.debug(`Found "${searchKeyword}" in "${providerName}"`);
+        logger.debug(`Found "${searchKeyword}" in "${providerName}"`);
         this._cache[cacheKey] = {
           icon: matchIcon,
           createdAtMs: Date.now(),

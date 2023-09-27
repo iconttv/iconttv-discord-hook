@@ -1,4 +1,5 @@
 import { Client, Events, GatewayIntentBits } from "discord.js";
+import logger from './logger';
 
 const client = new Client({
   intents: [
@@ -9,7 +10,7 @@ const client = new Client({
 });
 
 client.once(Events.ClientReady, (event) => {
-  console.log(`Logged in as ${event.user.tag}`);
+  logger.info(`Logged in as ${event.user.tag}`);
 });
 
 export default client;

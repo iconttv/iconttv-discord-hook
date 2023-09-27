@@ -4,11 +4,12 @@ import { Icon, IconttvIcon } from "../../../models";
 import { IconttvResponse } from "../../../models/response";
 import { getIconttvUrl } from "../../../utils/iconttv";
 import { cloneDeep } from 'lodash';
+import logger from '../../../lib/logger';
 
 export class IconFunzinnuRepository implements IconRepository {
   private static _instance: IconFunzinnuRepository;
 
-  private sourceUrl = "https://api.probius.dev/twitch-icons/cdn/list/funzinnu";
+  private sourceUrl = 'https://api.probius.dev/twitch-icons/cdn/list/funzinnu';
   private iconList: IconttvIcon[] = [];
 
   static get instance(): IconFunzinnuRepository {
@@ -17,23 +18,31 @@ export class IconFunzinnuRepository implements IconRepository {
   }
 
   private async fetchIconList() {
-    console.debug(`Fetch Funzinnu's icon list`);
-    const response = await axios.get(this.sourceUrl);
+    logger.debug(`Fetch Funzinnu's icon list`);
+    const response = await axios.get(this.sourceUrl, {
+      headers: {
+        'Cache-Control': 'no-store',
+        Pragma: 'no-store',
+        Expires: '0',
+      },
+    });
     const jsonData: IconttvResponse = response.data;
 
-    if (!jsonData.icons) throw new Error("Iconttv Server Error!");
+    if (!jsonData.icons) throw new Error('Iconttv Server Error!');
 
+    logger.debug(`Fetch Funzinnu's icon list Done`);
     return jsonData.icons;
   }
 
   async findOne(searchKeyword: string): Promise<Icon | null> {
     if (!this.iconList || !this.iconList.length) {
       this.iconList = await this.fetchIconList();
+      return this.findOne(searchKeyword);
     }
 
-    const matchIcons = this.iconList.filter((icon) =>
+    const matchIcons = this.iconList.filter(icon =>
       icon.keywords
-        .map((keyword) => keyword.toLowerCase())
+        .map(keyword => keyword.toLowerCase())
         .includes(searchKeyword.toLowerCase())
     );
 

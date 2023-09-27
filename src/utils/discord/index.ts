@@ -9,14 +9,17 @@ import {
   type GuildMember,
   type Message,
   EmbedAuthorOptions,
-} from "discord.js";
-import { getRandomTelecomIP } from "../telecomIP";
-import GuildMemberCache from "../../repository/search/GuildMemberCache";
+  AttachmentBuilder,
+  MessageFlags,
+} from 'discord.js';
+import { getRandomTelecomIP } from '../telecomIP';
+import GuildMemberCache from '../../repository/search/GuildMemberCache';
+import logger from '../../lib/logger';
 
 export function isAnonMessage(text: string) {
   const restArgs = text.split(' ').slice(1);
   return (
-    restArgs.length === 1 && ["익명", "ㅇㅇ", "anon"].includes(restArgs[0])
+    restArgs.length === 1 && ['익명', 'ㅇㅇ', 'anon'].includes(restArgs[0])
   );
 }
 
@@ -33,7 +36,7 @@ export function getSenderName(guildMember: GuildMember | null) {
 }
 
 export function getAvatarUrl(guildMember: GuildMember | null) {
-  if (!guildMember) return "";
+  if (!guildMember) return '';
   return (
     guildMember.avatarURL() ??
     guildMember.displayAvatarURL() ??
@@ -44,7 +47,7 @@ export function getAvatarUrl(guildMember: GuildMember | null) {
 }
 
 export function getAbsoluteIconFilePath(icon: Icon) {
-  const ICON_DIRECTORY_ROOT = path.resolve("./src/constants/icon");
+  const ICON_DIRECTORY_ROOT = path.resolve('./src/constants/icon');
   return path.join(ICON_DIRECTORY_ROOT, icon.imagePath);
 }
 
@@ -76,8 +79,8 @@ export function createUserProfileEmbed(
 ) {
   const telecomIp = getRandomTelecomIP();
   const author: EmbedAuthorOptions = {
-    name: "",
-    iconURL: "",
+    name: '',
+    iconURL: '',
   };
 
   if (asAnonUser) {
@@ -94,6 +97,60 @@ export function createUserProfileEmbed(
     author.iconURL = getAvatarUrl(guildMember);
   }
 
-  const avaterEmbed = new EmbedBuilder().setColor("DarkBlue").setAuthor(author);
+  const avaterEmbed = new EmbedBuilder().setColor('DarkBlue').setAuthor(author);
   return avaterEmbed;
+}
+
+export async function deleteMessage(message: Message) {
+  if (message.deletable) {
+    try {
+      await message.delete();
+    } catch (e) {
+      logger.error(`An error occurred when deleting message.`);
+      logger.error(e);
+    }
+  }
+}
+
+export async function sendIconMessage(
+  message: Message,
+  matchIcon: Icon,
+  asAnonUser: boolean
+) {
+  const userProfileEmbed = createUserProfileEmbed(message, {
+    asAnonUser,
+  });
+
+  try {
+    if (matchIcon.isRemoteImage) {
+      await message.channel.send({
+        flags: MessageFlags.SuppressNotifications,
+        embeds: [
+          userProfileEmbed
+            .setDescription(matchIcon.keywords[0])
+            .setImage(matchIcon.imagePath),
+        ],
+      });
+    } else {
+      // 첨부 이미지 이름을 한글로하면 임베드가 되지 않음.
+      const imageExtension = matchIcon.imagePath.split('.').pop();
+      const imageAttachment = new AttachmentBuilder(matchIcon.imagePath, {
+        name: `image.${imageExtension}`,
+        description: matchIcon.keywords[0],
+      });
+
+      await message.channel.send({
+        flags: MessageFlags.SuppressNotifications,
+        embeds: [
+          userProfileEmbed
+            .setDescription(imageAttachment.description)
+            .setImage(`attachment://${imageAttachment.name}`),
+        ],
+        files: [imageAttachment],
+      });
+    }
+  } catch (e) {
+    logger.error(`An Error occurred when sending icon message.`);
+    logger.error(e);
+  }
 }
