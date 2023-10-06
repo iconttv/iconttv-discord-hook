@@ -73,6 +73,12 @@ export function getGuildMemberFromMessage(
   return member;
 }
 
+export function getChannelFromMessage(message: Message) {
+  return message.guild?.channels.cache.find(
+    channel => channel.id === message.channelId
+  );
+}
+
 export function createUserProfileEmbed(
   message: Message,
   { asAnonUser }: { asAnonUser: boolean } = { asAnonUser: false }
@@ -112,7 +118,7 @@ export async function deleteMessage(message: Message) {
   }
 }
 
-export async function sendIconMessage(
+export async function sendIconMessageEmbed(
   message: Message,
   matchIcon: Icon,
   asAnonUser: boolean
@@ -121,36 +127,39 @@ export async function sendIconMessage(
     asAnonUser,
   });
 
-  try {
-    if (matchIcon.isRemoteImage) {
-      await message.channel.send({
-        flags: MessageFlags.SuppressNotifications,
-        embeds: [
-          userProfileEmbed
-            .setDescription(matchIcon.keywords[0])
-            .setImage(matchIcon.imagePath),
-        ],
-      });
-    } else {
-      // 첨부 이미지 이름을 한글로하면 임베드가 되지 않음.
-      const imageExtension = matchIcon.imagePath.split('.').pop();
-      const imageAttachment = new AttachmentBuilder(matchIcon.imagePath, {
-        name: `image.${imageExtension}`,
-        description: matchIcon.keywords[0],
-      });
+  if (matchIcon.isRemoteImage) {
+    await message.channel.send({
+      flags: MessageFlags.SuppressNotifications,
+      embeds: [
+        userProfileEmbed
+          .setDescription(matchIcon.keywords[0])
+          .setImage(matchIcon.imagePath),
+      ],
+    });
+  } else {
+    // 첨부 이미지 이름을 한글로하면 임베드가 되지 않음.
+    const imageExtension = matchIcon.imagePath.split('.').pop();
+    const imageAttachment = new AttachmentBuilder(matchIcon.imagePath, {
+      name: `image.${imageExtension}`,
+      description: matchIcon.keywords[0],
+    });
 
-      await message.channel.send({
-        flags: MessageFlags.SuppressNotifications,
-        embeds: [
-          userProfileEmbed
-            .setDescription(imageAttachment.description)
-            .setImage(`attachment://${imageAttachment.name}`),
-        ],
-        files: [imageAttachment],
-      });
-    }
-  } catch (e) {
-    logger.error(`An Error occurred when sending icon message.`);
-    logger.error(e);
+    await message.channel.send({
+      flags: MessageFlags.SuppressNotifications,
+      embeds: [
+        userProfileEmbed
+          .setDescription(imageAttachment.description)
+          .setImage(`attachment://${imageAttachment.name}`),
+      ],
+      files: [imageAttachment],
+    });
   }
 }
+
+export async function sendIconMessage(message: Message, matchIcon: Icon) {
+  await message.channel.send({
+    flags: MessageFlags.SuppressNotifications,
+    files: [{ attachment: matchIcon.imagePath }],
+  });
+}
+

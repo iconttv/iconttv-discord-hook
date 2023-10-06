@@ -2,6 +2,16 @@ import * as winston from 'winston';
 import dailyRotateFile from 'winston-daily-rotate-file';
 import moment from 'moment';
 
+export function channel_log_message(
+  logMessage: string,
+  context: Record<string, string | number | undefined>
+) {
+  return JSON.stringify({
+    message: logMessage,
+    ...context,
+  });
+}
+
 const loggerFormat = winston.format.printf(info => {
   return `${info.timestamp} [${info.level.toUpperCase()}] ${info.message}`;
 });

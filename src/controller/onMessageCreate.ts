@@ -4,11 +4,13 @@ import {
   getSenderName,
   isAnonMessage,
   deleteMessage,
+  sendIconMessageEmbed,
+  getChannelFromMessage,
   sendIconMessage,
 } from '../utils/discord';
 import { parseIconSearchKeyword } from '../utils';
 import IconSearchEngine from '../repository/search/IconSearchEngine';
-import logger from '../lib/logger';
+import logger, { channel_log_message } from '../lib/logger';
 
 export async function onMessageCreate(message: Message) {
   const { content: messageText } = message;
@@ -19,6 +21,9 @@ export async function onMessageCreate(message: Message) {
   const guildMember = getGuildMemberFromMessage(message);
   if (!guildMember) return;
 
+  const channel = getChannelFromMessage(message);
+  if (!channel) return;
+
   const sender = getSenderName(guildMember);
 
   const matchIcon = await IconSearchEngine.instance.searchIcon(
@@ -27,10 +32,46 @@ export async function onMessageCreate(message: Message) {
   );
   if (!matchIcon) return;
 
-  logger.info(`"${sender}": "${messageText}" @ ${guildMember.guild.id}`);
+  const messageContext = {
+    sender,
+    senderMesage: messageText,
+    guildName: guildMember.guild.name,
+    guildId: guildMember.guild.id,
+    channelName: channel.name,
+    channelId: channel.id,
+    threadName: message.thread?.name,
+    threadId: message.thread?.id,
+  };
 
-  await Promise.all([
-    sendIconMessage(message, matchIcon, isAnonMessage(messageText)),
-    deleteMessage(message),
-  ]);
+  logger.info(channel_log_message('Icon Found', messageContext));
+
+  sendIconMessageEmbed(message, matchIcon, isAnonMessage(messageText))
+    .catch(e => {
+      logger.error(
+        channel_log_message(`Icon Embeded Post Failed: ${e}`, messageContext)
+      );
+      return sendIconMessage(message, matchIcon);
+    })
+    .catch(e => {
+      logger.error(
+        channel_log_message(`Icon Post Failed: ${e}`, messageContext)
+      );
+    })
+    .then(() => {
+      logger.debug(
+        channel_log_message('Icon Posted Successfully', messageContext)
+      );
+    });
+
+  deleteMessage(message)
+    .catch(e => {
+      logger.error(
+        channel_log_message(`Message Deletion Failed: ${e}`, messageContext)
+      );
+    })
+    .then(() => {
+      logger.debug(
+        channel_log_message('Message Deleted Successfully', messageContext)
+      );
+    });
 }
