@@ -43,7 +43,12 @@ export async function onMessageCreate(message: Message) {
     threadId: message.thread?.id,
   };
 
-  logger.info(channel_log_message('Icon Found', messageContext));
+  logger.info(
+    channel_log_message(
+      `Icon Found: ${JSON.stringify(matchIcon)}`,
+      messageContext
+    )
+  );
 
   sendIconMessageEmbed(message, matchIcon, isAnonMessage(messageText))
     .catch(e => {
