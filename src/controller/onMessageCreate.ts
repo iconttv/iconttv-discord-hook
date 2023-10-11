@@ -26,12 +26,6 @@ export async function onMessageCreate(message: Message) {
 
   const sender = getSenderName(guildMember);
 
-  const matchIcon = await IconSearchEngine.instance.searchIcon(
-    searchKeyword,
-    guildMember.guild.id
-  );
-  if (!matchIcon) return;
-
   const messageContext = {
     sender,
     senderMesage: messageText,
@@ -42,6 +36,12 @@ export async function onMessageCreate(message: Message) {
     threadName: message.thread?.name,
     threadId: message.thread?.id,
   };
+
+  const matchIcon = await IconSearchEngine.instance.searchIcon(
+    searchKeyword,
+    guildMember.guild.id
+  );
+  if (!matchIcon) return;
 
   logger.info(
     channel_log_message(

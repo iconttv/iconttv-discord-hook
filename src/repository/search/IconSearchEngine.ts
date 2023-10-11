@@ -1,8 +1,8 @@
-import logger from "../../lib/logger";
-import { Icon } from "../../models";
-import { IconRepository } from "../icons";
-import { IconFunzinnuRepository } from "../icons/funzinnu";
-import { IconJindolRepository } from "../icons/jindol";
+import logger, { channel_log_message } from '../../lib/logger';
+import { Icon } from '../../models';
+import { IconRepository } from '../icons';
+import { IconFunzinnuRepository } from '../icons/funzinnu';
+import { IconJindolRepository } from '../icons/jindol';
 
 // 1hour
 const MAX_CACHE_AGE = 60 * 60 * 1000;
@@ -39,13 +39,19 @@ export default class IconSearchEngine {
   async searchIcon(
     searchKeyword: string,
     guildId: string | null,
-    providers: string[] = []
+    providers: string[] = [],
+    messageContext: Record<string, string | number | undefined> = {}
   ): Promise<Icon | null> {
     const cacheKey = `${guildId} ${searchKeyword}`;
     const cachedValue = this._cache[cacheKey];
     if (cachedValue) {
       if (!this.isExpiredCache(cachedValue.createdAtMs)) {
-        logger.debug(`Found "${searchKeyword}" in memory cache`);
+        logger.debug(
+          channel_log_message(
+            `Found "${searchKeyword}" in memory cache`,
+            messageContext
+          )
+        );
         return cachedValue.icon;
       }
       delete this._cache[cacheKey];
@@ -65,7 +71,12 @@ export default class IconSearchEngine {
           matchIcon.imagePath
         );
 
-        logger.debug(`Found "${searchKeyword}" in "${providerName}"`);
+        logger.debug(
+          channel_log_message(
+            `Found "${searchKeyword}" in "${providerName}"`,
+            messageContext
+          )
+        );
         this._cache[cacheKey] = {
           icon: matchIcon,
           createdAtMs: Date.now(),
@@ -74,7 +85,12 @@ export default class IconSearchEngine {
       }
     }
 
-    logger.debug(`Icon keyword "${searchKeyword}" not found.`);
+    logger.debug(
+      channel_log_message(
+        `Icon keyword "${searchKeyword}" not found.`,
+        messageContext
+      )
+    );
     return null;
   }
 

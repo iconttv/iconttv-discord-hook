@@ -9,6 +9,7 @@ import logger from '../../../lib/logger';
 export class IconFunzinnuRepository implements IconRepository {
   private static _instance: IconFunzinnuRepository;
 
+  private isIconLoading = false;
   private sourceUrl = 'https://api.probius.dev/twitch-icons/cdn/list/funzinnu';
   private iconList: IconttvIcon[] = [];
 
@@ -36,7 +37,20 @@ export class IconFunzinnuRepository implements IconRepository {
 
   async findOne(searchKeyword: string): Promise<Icon | null> {
     if (!this.iconList || !this.iconList.length) {
-      await this.fetchIconList();
+      try {
+        while (this.isIconLoading) {
+          /** lock */
+        }
+
+        this.isIconLoading = true;
+        await this.fetchIconList();
+      } catch (e) {
+        logger.error(e);
+        return null;
+      } finally {
+        this.isIconLoading = false;
+      }
+
       return this.findOne(searchKeyword);
     }
 
