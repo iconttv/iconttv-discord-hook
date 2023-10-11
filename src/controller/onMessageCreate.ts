@@ -39,7 +39,9 @@ export async function onMessageCreate(message: Message) {
 
   const matchIcon = await IconSearchEngine.instance.searchIcon(
     searchKeyword,
-    guildMember.guild.id
+    guildMember.guild.id,
+    [],
+    messageContext
   );
   if (!matchIcon) return;
 
