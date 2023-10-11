@@ -5,7 +5,7 @@ import { IconttvResponse } from "../../../models/response";
 import { getIconttvUrl } from "../../../utils/iconttv";
 import { cloneDeep } from 'lodash';
 import logger from '../../../lib/logger';
-import { sleep } from '../../../utils';
+import { acquireLock } from '../../../utils';
 
 export class IconFunzinnuRepository implements IconRepository {
   private static _instance: IconFunzinnuRepository;
@@ -39,8 +39,9 @@ export class IconFunzinnuRepository implements IconRepository {
   async findOne(searchKeyword: string): Promise<Icon | null> {
     if (!this.iconList || !this.iconList.length) {
       try {
-        while (this.isIconLoading) {
-          await sleep(10);
+        await acquireLock(() => this.isIconLoading, 2000);
+        if (this.iconList && this.iconList.length) {
+          return this.findOne(searchKeyword);
         }
 
         this.isIconLoading = true;
@@ -51,8 +52,6 @@ export class IconFunzinnuRepository implements IconRepository {
       } finally {
         this.isIconLoading = false;
       }
-
-      return this.findOne(searchKeyword);
     }
 
     const matchIcons = this.iconList.filter(icon =>

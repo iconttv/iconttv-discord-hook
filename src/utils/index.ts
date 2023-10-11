@@ -12,3 +12,21 @@ export async function sleep(sleepMs: number): Promise<void> {
     setTimeout(resolve, sleepMs);
   });
 }
+
+export async function acquireLock(
+  isLocked: () => boolean,
+  maxWaitMs: number
+): Promise<void> {
+  if (!isLocked()) return;
+
+  const interval = 10;
+  let waitMs = 0;
+  while (isLocked() && waitMs < maxWaitMs) {
+    await sleep(interval);
+    waitMs += interval;
+  }
+
+  if (waitMs >= maxWaitMs) {
+    throw new Error('Lock Acquirement Failed!');
+  }
+}
