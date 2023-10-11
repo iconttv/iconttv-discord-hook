@@ -5,6 +5,7 @@ import { IconttvResponse } from "../../../models/response";
 import { getIconttvUrl } from "../../../utils/iconttv";
 import { cloneDeep } from 'lodash';
 import logger from '../../../lib/logger';
+import { sleep } from '../../../utils';
 
 export class IconFunzinnuRepository implements IconRepository {
   private static _instance: IconFunzinnuRepository;
@@ -39,7 +40,7 @@ export class IconFunzinnuRepository implements IconRepository {
     if (!this.iconList || !this.iconList.length) {
       try {
         while (this.isIconLoading) {
-          /** lock */
+          await sleep(10);
         }
 
         this.isIconLoading = true;

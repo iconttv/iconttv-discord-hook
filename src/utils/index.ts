@@ -6,3 +6,9 @@ export function parseIconSearchKeyword(text: string): string | null {
   // remove `~` prefix
   return iconCommand.slice(1);
 }
+
+export async function sleep(sleepMs: number): Promise<void> {
+  return new Promise(resolve => {
+    setTimeout(resolve, sleepMs);
+  });
+}
