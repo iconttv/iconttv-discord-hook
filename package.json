@@ -3,9 +3,12 @@
   "version": "1.0.0",
   "main": "index.js",
   "license": "MIT",
+  "engines": {
+    "node": "20.x"
+  },
   "scripts": {
-    "dev": "cross-env NODE_ENV=development nodemon ./src/index.ts",
-    "start": "cross-env NODE_ENV=production ts-node ./src/index.ts",
+    "dev": "cross-env NODE_ENV=dev nodemon ./src/index.ts",
+    "start": "cross-env NODE_ENV=prod ts-node ./src/index.ts",
     "eslint": "eslint src/ --ext .ts",
     "lint": "yarn eslint",
     "lint:format": "yarn lint --fix"
