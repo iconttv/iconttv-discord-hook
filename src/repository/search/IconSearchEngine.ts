@@ -1,5 +1,6 @@
 import logger, { channel_log_message } from '../../lib/logger';
 import { Icon } from '../../models';
+import { MessageLogContext } from '../../utils/discord';
 import { IconRepository } from '../icons';
 import { IconFunzinnuRepository } from '../icons/funzinnu';
 import { IconJindolRepository } from '../icons/jindol';
@@ -40,7 +41,7 @@ export default class IconSearchEngine {
     searchKeyword: string,
     guildId: string | null,
     providers: string[] = [],
-    messageContext: Record<string, string | number | undefined> = {}
+    messageLogContext: MessageLogContext | Record<string, unknown> = {}
   ): Promise<Icon | null> {
     const cacheKey = `${guildId} ${searchKeyword}`;
     const cachedValue = this._cache[cacheKey];
@@ -49,7 +50,7 @@ export default class IconSearchEngine {
         logger.debug(
           channel_log_message(
             `Found "${searchKeyword}" in memory cache`,
-            messageContext
+            messageLogContext
           )
         );
         return cachedValue.icon;
@@ -74,7 +75,7 @@ export default class IconSearchEngine {
         logger.debug(
           channel_log_message(
             `Found "${searchKeyword}" in "${providerName}"`,
-            messageContext
+            messageLogContext
           )
         );
         this._cache[cacheKey] = {
@@ -88,7 +89,7 @@ export default class IconSearchEngine {
     logger.debug(
       channel_log_message(
         `Icon keyword "${searchKeyword}" not found.`,
-        messageContext
+        messageLogContext
       )
     );
     return null;

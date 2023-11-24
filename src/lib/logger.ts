@@ -2,14 +2,14 @@ import * as winston from 'winston';
 import dailyRotateFile from 'winston-daily-rotate-file';
 import moment from 'moment';
 
-export function channel_log_message(
-  logMessage: string,
-  context: Record<string, string | number | undefined>
-) {
-  return JSON.stringify({
-    message: logMessage,
-    ...context,
-  });
+export function channel_log_message(logMessage: string, context: object) {
+  return JSON.stringify(
+    {
+      message: logMessage,
+      ...context,
+    },
+    (key, value) => (typeof value === 'bigint' ? value.toString() : value)
+  );
 }
 
 const loggerFormat = winston.format.printf(info => {
@@ -24,7 +24,7 @@ const winstonFormat = winston.format.combine(
 );
 
 const logger = winston.createLogger({
-  level: process.env.NODE_ENV === 'development' ? 'silly' : 'debug',
+  level: process.env.NODE_ENV === 'dev' ? 'silly' : 'debug',
   format: winstonFormat,
   transports: [
     new winston.transports.Console({

@@ -11,10 +11,27 @@ import {
   EmbedAuthorOptions,
   AttachmentBuilder,
   MessageFlags,
+  GuildBasedChannel,
 } from 'discord.js';
 import { getRandomTelecomIP } from '../telecomIP';
 import GuildMemberCache from '../../repository/search/GuildMemberCache';
 import logger from '../../lib/logger';
+
+export interface MessageLogContext {
+  senderName: string;
+  senderMessage: string;
+  guildName: string;
+  guildId: string;
+  channelName: string;
+  channelId: string;
+  threadName?: string;
+  threadId?: string;
+}
+
+export interface MessageContext extends MessageLogContext {
+  guildMember: GuildMember;
+  channel: GuildBasedChannel;
+}
 
 export function isAnonMessage(text: string) {
   const restArgs = text.split(' ').slice(1);
@@ -23,7 +40,7 @@ export function isAnonMessage(text: string) {
   );
 }
 
-export function getSenderName(guildMember: GuildMember | null) {
+function getSenderName(guildMember: GuildMember | null) {
   if (!guildMember) return `ㅇㅇ (${getRandomTelecomIP()}.)`;
   return (
     guildMember.nickname ??
@@ -51,9 +68,7 @@ export function getAbsoluteIconFilePath(icon: Icon) {
   return path.join(ICON_DIRECTORY_ROOT, icon.imagePath);
 }
 
-export function getGuildMemberFromMessage(
-  message: Message
-): GuildMember | null {
+function getGuildMemberFromMessage(message: Message): GuildMember | null {
   const cachedValue = GuildMemberCache.instance.getCache(message.author.id);
   if (cachedValue) return cachedValue;
 
@@ -73,7 +88,7 @@ export function getGuildMemberFromMessage(
   return member;
 }
 
-export function getChannelFromMessage(message: Message) {
+function getChannelFromMessage(message: Message) {
   return message.guild?.channels.cache.find(
     channel => channel.id === message.channelId
   );
@@ -163,3 +178,50 @@ export async function sendIconMessage(message: Message, matchIcon: Icon) {
   });
 }
 
+export const getMessageContext = (
+  message: Message
+): MessageContext | undefined => {
+  const guildMember = getGuildMemberFromMessage(message);
+  if (!guildMember) return;
+
+  const channel = getChannelFromMessage(message);
+  if (!channel) return;
+
+  const senderName = getSenderName(guildMember);
+
+  return {
+    senderName,
+    senderMessage: message.content,
+    guildMember: guildMember,
+    guildName: guildMember.guild.name,
+    guildId: guildMember.guild.id,
+    channelName: channel.name,
+    channelId: channel.id,
+    channel,
+    threadName: message.thread?.name,
+    threadId: message.thread?.id,
+  };
+};
+
+export const getMessageLogContext = (
+  message: Message
+): MessageLogContext | undefined => {
+  const guildMember = getGuildMemberFromMessage(message);
+  if (!guildMember) return;
+
+  const channel = getChannelFromMessage(message);
+  if (!channel) return;
+
+  const senderName = getSenderName(guildMember);
+
+  return {
+    senderName,
+    senderMessage: message.content,
+    guildName: guildMember.guild.name,
+    guildId: guildMember.guild.id,
+    channelName: channel.name,
+    channelId: channel.id,
+    threadName: message.thread?.name,
+    threadId: message.thread?.id,
+  };
+};
