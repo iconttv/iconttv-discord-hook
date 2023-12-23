@@ -1,13 +1,8 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { Icon } from '../../models';
+import Singleton from '../../utils/singleton';
 
-export abstract class IconRepository {
-  private static _instance: IconRepository;
-
-  static get instance(): IconRepository {
-    throw 'not implemented';
-  }
-
+export abstract class IconRepository extends Singleton {
   /**
    * 매칭되는 아이콘 리턴.
    * 이미지 주소는 처리하지 않은 그대로의 것을 리턴한다.

@@ -3,7 +3,7 @@ import { Icon } from '../../models';
 import { MessageLogContext } from '../../utils/discord';
 import { IconRepository } from '../icons';
 import { IconFunzinnuRepository } from '../icons/funzinnu';
-import { IconJindolRepository } from '../icons/jindol';
+import { IconSmalljuzi6974Repository } from '../icons/smalljuzi6974';
 
 // 1hour
 const MAX_CACHE_AGE = 60 * 60 * 1000;
@@ -20,8 +20,8 @@ export default class IconSearchEngine {
 
   private constructor() {
     this._repositories = {
-      jindol: IconJindolRepository.instance,
-      funzinnu: IconFunzinnuRepository.instance,
+      smalljuzi6974: new IconSmalljuzi6974Repository(),
+      funzinnu: new IconFunzinnuRepository(),
     };
 
     /**
