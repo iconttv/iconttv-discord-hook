@@ -20,10 +20,15 @@ const purgeCommands = async () => {
     )) as RESTGetAPIApplicationGuildCommandsResult;
 
     for (const command of commands) {
+      logger.debug(`Delete ${command.name}-${command.id}`);
       await rest.delete(
         Routes.applicationCommand(config.DISCORD_CLIENT_ID, command.id)
       );
     }
+
+    await rest.put(Routes.applicationCommands(config.DISCORD_CLIENT_ID), {
+      body: [],
+    });
 
     logger.info(
       `Successfully deleted ${commands.length} application (/) commands.`
