@@ -4,6 +4,7 @@ import { MessageLogContext } from '../../utils/discord';
 import { IconRepository } from '../icons';
 import { IconFunzinnuRepository } from '../icons/funzinnu';
 import { IconSmalljuzi6974Repository } from '../icons/smalljuzi6974';
+import { cloneDeep } from 'lodash';
 
 // 1hour
 const MAX_CACHE_AGE = 60 * 60 * 1000;
@@ -53,7 +54,7 @@ export default class IconSearchEngine {
             messageLogContext
           )
         );
-        return cachedValue.icon;
+        return cloneDeep(cachedValue.icon);
       }
       delete this._cache[cacheKey];
     }
