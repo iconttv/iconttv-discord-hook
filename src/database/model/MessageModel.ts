@@ -7,6 +7,8 @@ export const messageSchema = new mongoose.Schema({
   messageType: Number,
   message: String,
   senderId: { type: String, required: true },
+  channelName: String,
+  guildName: String,
   senderName: String,
   createdAt: { type: Date, default: Date.now },
 });

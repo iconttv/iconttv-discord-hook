@@ -16,6 +16,8 @@ export const saveMessage = async (message: Message) => {
       messageType: context.messageType,
       message: context.senderMessage,
       senderId: context.senderId,
+      channelName: context.channelName,
+      guildName: context.guildName,
       senderName: context.senderName,
       createdAt: context.createdAt,
     });
