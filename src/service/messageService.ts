@@ -10,14 +10,14 @@ export const saveMessage = async (message: Message) => {
     if (!context || !context.senderMessage.trim()) return;
 
     const messageModel = new MessageModel({
-      channelId: context.channelId,
       guildId: context.guildId,
+      channelId: context.channelId,
       messageId: context.messageId,
       messageType: context.messageType,
       message: context.senderMessage,
       senderId: context.senderId,
-      channelName: context.channelName,
       guildName: context.guildName,
+      channelName: context.channelName,
       senderName: context.senderName,
       createdAt: context.createdAt,
     });
