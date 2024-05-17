@@ -3,7 +3,7 @@ import {
   RESTGetAPIApplicationGuildCommandsResult,
   Routes,
 } from 'discord.js';
-import { config } from './utils/config';
+import { config } from './config';
 import logger from './lib/logger';
 import { readCommands } from './service/commands';
 

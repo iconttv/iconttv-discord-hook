@@ -1,6 +1,6 @@
-import { Icon } from "../../models";
-import path from "path";
-import client from "../../lib/discord";
+import { Icon } from '../../models';
+import path from 'path';
+import client from '../../lib/discord';
 
 import {
   EmbedBuilder,
@@ -20,12 +20,16 @@ import logger from '../../lib/logger';
 export interface MessageLogContext {
   senderName: string;
   senderMessage: string;
+  senderId: string;
+  messageId: string;
+  messageType: number;
   guildName: string;
   guildId: string;
   channelName: string;
   channelId: string;
   threadName?: string;
   threadId?: string;
+  createdAt: Date;
 }
 
 export interface MessageContext extends MessageLogContext {
@@ -192,6 +196,9 @@ export const getMessageContext = (
   return {
     senderName,
     senderMessage: message.content,
+    senderId: guildMember.id,
+    messageId: message.id,
+    messageType: message.type,
     guildMember: guildMember,
     guildName: guildMember.guild.name,
     guildId: guildMember.guild.id,
@@ -200,6 +207,7 @@ export const getMessageContext = (
     channel,
     threadName: message.thread?.name,
     threadId: message.thread?.id,
+    createdAt: message.createdAt,
   };
 };
 
@@ -217,11 +225,15 @@ export const getMessageLogContext = (
   return {
     senderName,
     senderMessage: message.content,
+    senderId: guildMember.id,
+    messageId: message.id,
+    messageType: message.type,
     guildName: guildMember.guild.name,
     guildId: guildMember.guild.id,
     channelName: channel.name,
     channelId: channel.id,
     threadName: message.thread?.name,
     threadId: message.thread?.id,
+    createdAt: message.createdAt,
   };
 };

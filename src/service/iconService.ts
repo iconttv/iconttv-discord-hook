@@ -10,7 +10,7 @@ import {
   getMessageLogContext,
 } from '../utils/discord';
 
-const iconReplaceService = async (message: Message) => {
+export const replaceIcon = async (message: Message) => {
   const { content: messageText } = message;
 
   const searchKeyword = parseIconSearchKeyword(messageText);
@@ -64,5 +64,3 @@ const iconReplaceService = async (message: Message) => {
       );
     });
 };
-
-export default iconReplaceService;

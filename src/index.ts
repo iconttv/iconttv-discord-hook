@@ -1,9 +1,12 @@
 import client from './lib/discord';
 import { registerEvents } from './controller';
-import { config } from './utils/config';
+import { config } from './config';
+import { getConnection } from './database';
 
 (async () => {
-  await registerEvents(client);
+  // test database connection
+  await getConnection();
 
+  await registerEvents(client);
   client.login(config.DISCORD_BOT_TOKEN);
 })();

@@ -1,26 +1,14 @@
-import fs from 'fs';
-import sqlite3, { Database as Sqlite3Database } from 'better-sqlite3';
-import logger from '../lib/logger';
-import { config } from '../utils/config';
+import mongoose from 'mongoose';
+import { config } from '../config';
 
-class Database {
-  static _instance: Database = new Database();
-  connection: Sqlite3Database;
+export const getConnection = () => {
+  const url =
+    'mongodb://' +
+    `${config.MONGODB_USERNAME}:${config.MONGODB_PASSWORD}` +
+    '@' +
+    `${config.MONGODB_HOST}:${config.MONGODB_PORT}` +
+    '/' +
+    `${config.MONGODB_DATABASE}?authSource=admin`;
 
-  constructor() {
-    if (typeof (config.SQLITE3_FILE) !== 'string' || fs.existsSync(config.SQLITE3_FILE) === false){ 
-      logger.error('Invalid SQLITE3_FILE');
-    }
-    this.connection = sqlite3(config.SQLITE3_FILE);
-    this.connection.pragma('journal_mode = WAL');
-  }
-
-  static getInstance() {
-    if (!this._instance) {
-      this._instance = new Database();
-    }
-    return this._instance;
-  }
-}
-
-export default Database;
+  return mongoose.connect(url, { dbName: config.MONGODB_DATABASE });
+};

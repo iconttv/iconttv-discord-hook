@@ -3,10 +3,10 @@ import logger from '../lib/logger';
 import { onMessageCreate } from './onMessageCreate';
 import { onCommandInteractionCreate } from './onCommandInteractionCreate';
 
-export const registerEvents = async (client: Client) => {
-  client.on(Events.MessageCreate, message => {
+export const registerEvents = (client: Client) => {
+  client.on(Events.MessageCreate, async message => {
     try {
-      onMessageCreate(message);
+      await onMessageCreate(message);
     } catch (e) {
       logger.error(e);
     }

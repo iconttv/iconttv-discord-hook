@@ -1,7 +1,7 @@
 import { Message } from 'discord.js';
-import iconReplaceService from '../service/iconReplaceService';
+import { replaceIcon } from '../service/iconService';
+import { saveMessage } from '../service/messageService';
 
 export const onMessageCreate = async (message: Message) => {
-  
-  iconReplaceService(message);
+  await Promise.allSettled([saveMessage(message), replaceIcon(message)]);
 };
