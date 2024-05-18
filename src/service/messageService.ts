@@ -80,7 +80,7 @@ export const summarizeLastMessages = async (
     return `${cached[0].summarization}\n\n(최근 10분 이내 응답에서 캐시됨)`;
   }
 
-  const messages = await getLastMessages(guildId, channelId, undefined, 500);
+  const messages = await getLastMessages(guildId, channelId, hours, count);
   const messagePrompt = convertMessagesToPrompt(messages);
   const summarization = await summarizeMessages(messagePrompt);
 
