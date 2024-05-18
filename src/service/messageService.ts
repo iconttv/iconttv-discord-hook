@@ -45,13 +45,23 @@ export const summarizeLastMessagesAndReply = async (message: Message) => {
   const context = getMessageContext(message);
   if (!context?.channelId || !context.guildId) return;
 
-  const summarization = await summarizeLastMessages(
-    context.guildId,
-    context.channelId,
-    undefined,
-    1000
-  );
-  if (!summarization) return;
+  let summarization;
+  try {
+    summarization = await summarizeLastMessages(
+      context.guildId,
+      context.channelId,
+      undefined,
+      1000
+    );
+  } catch (e) {
+    logger.error(e);
+    await message.reply(`요약을 생성할 수 없습니다. [000]`);
+    return;
+  }
+  if (!summarization) {
+    await message.reply(`요약을 생성할 수 없습니다. [001]`);
+    return;
+  }
 
   await message.reply(`최근 1000개의 채팅 요약:\n\n${summarization}`);
 };

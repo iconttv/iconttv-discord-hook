@@ -54,15 +54,23 @@ export const execute = async (interaction: CommandInteraction) => {
   // otherwise should defer reply
   await interaction.deferReply();
 
-  const summarization = await summarizeLastMessages(
-    guildId,
-    channelId,
-    hours,
-    count
-  );
+  let summarization;
+  try {
+    summarization = await summarizeLastMessages(
+      guildId,
+      channelId,
+      hours,
+      count
+    );
+  } catch (e) {
+    logger.error(e);
+    await interaction.editReply(`요약을 생성할 수 없습니다. [000]`);
+    return;
+  }
+
   if (!summarization) {
-    await interaction.editReply(`요약을 생성할 수 없습니다.`);
-    return
+    await interaction.editReply(`요약을 생성할 수 없습니다. [001]`);
+    return;
   }
 
   const messageRangeText = hours ? `${hours}시간 내의` : `${count}개의`;
@@ -72,5 +80,6 @@ export const execute = async (interaction: CommandInteraction) => {
     );
   } catch (e) {
     logger.error(e);
+    await interaction.editReply(`요약을 생성할 수 없습니다. [002]`);
   }
 };
