@@ -8,6 +8,6 @@ export const execute = async (interaction: CommandInteraction) => {
   // interaction.user is the object representing the User who ran the command
   // interaction.member is the GuildMember object, which represents the user in the specific guild
   await interaction.reply(
-    `This command was run by ${interaction.user.username}.`
+    `디스코드에서 '~' 명령어를 사용하여 디시콘을 보여줍니다. `
   );
 };

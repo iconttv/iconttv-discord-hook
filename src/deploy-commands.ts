@@ -59,7 +59,7 @@ const registerCommands = async () => {
   }
 };
 
-(async () => {
+export const purgeAndRegisterCommands = async () => {
   await purgeCommands();
   await registerCommands();
-})();
+};

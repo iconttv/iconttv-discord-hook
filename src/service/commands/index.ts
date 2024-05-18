@@ -32,6 +32,7 @@ export const readCommands = (() => {
     const commandFiles = readdirSync(foldersPath).filter(
       file =>
         !file.endsWith(__filename.split('/').pop() || 'index.ts') &&
+        !file.startsWith('_') &&
         file.endsWith('.ts')
     );
 

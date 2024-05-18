@@ -7,8 +7,6 @@
     "node": "20.x"
   },
   "scripts": {
-    "cmd-dev": "cross-env NODE_ENV=dev ts-node ./src/deploy-commands.ts",
-    "cmd-prod": "cross-env NODE_ENV=prod ts-node ./src/deploy-commands.ts",
     "dev": "cross-env NODE_ENV=dev nodemon ./src/index.ts",
     "start": "cross-env NODE_ENV=prod ts-node ./src/index.ts",
     "eslint": "eslint src/ --ext .ts",

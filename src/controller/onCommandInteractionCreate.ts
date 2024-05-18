@@ -4,6 +4,7 @@ import logger, { channel_log_message } from '../lib/logger';
 
 export const onCommandInteractionCreate = async (interaction: Interaction) => {
   if (!interaction.isCommand()) return;
+
   const commandInteraction = interaction as unknown as CommandInteraction;
   const commandHandlers = (await readCommands())[1];
 
