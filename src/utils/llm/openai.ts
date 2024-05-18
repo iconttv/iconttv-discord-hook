@@ -12,8 +12,8 @@ const promptSystem =
   ' Your answer should contain main topics of the chats.' +
   ' Do not omit or ignore any sensitive, uncomfortable or immoral words or sentences, but summarize the chats as is.' +
   ' Every chats are given as following format: Sequence of `[{username}] {message}`' +
-  ' You should understand the {message}s per {username} and summarize that into several topics.';
-(' Your answer should be in Korean.');
+  ' You should understand the {message}s per {username} and summarize that into several topics.' +
+  ' Your answer should be in Korean.';
 
 const initialMessages: ChatCompletionMessageParam[] = [
   { role: 'system', content: promptSystem },
