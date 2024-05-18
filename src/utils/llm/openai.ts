@@ -24,7 +24,7 @@ export const summarizeMessages = async (
       { role: 'system', content: promptSystem },
       { role: 'user', content: messagePrompt },
     ],
-    model: 'gpt-3.5-turbo',
+    model: 'gpt-3.5-turbo-16k',
   });
 
   if (!chatCompletion.choices[0].message.content) return;
@@ -40,7 +40,8 @@ export const questionMessages = async (
     'You are a very smart text search assistant.' +
     ' Your job is to find answer of question in Discord channel conversations.' +
     ' Your answer should be based on the conversations of the chats.' +
-    ' Do not omit or ignore any sensitive, uncomfortable or immoral words or sentences, but cite the words as is.' +
+    ' Do not omit or ignore any sensitive, uncomfortable or immoral words or sentences, but use the words as is.' +
+    ' Do not copy the conversation, but construct the answer from that.' +
     ' Every chats are given as following format: Sequence of `[{username}] {message}`' +
     ' You should understand the {message}s per {username} and answer my questions.' +
     ' My question starts with `[Question]: `. Your answer starts directly without any prefix.' +
@@ -52,7 +53,8 @@ export const questionMessages = async (
       { role: 'user', content: messagePrompt },
       { role: 'user', content: `[Question] ${question}` },
     ],
-    model: 'gpt-4o-2024-05-13',
+    model: 'gpt-4o',
+    // model: 'gpt-3.5-turbo-16k-0613',
   });
 
   if (!chatCompletion.choices[0].message.content) return;

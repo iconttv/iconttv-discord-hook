@@ -56,14 +56,16 @@ export const execute = async (interaction: CommandInteraction) => {
   // otherwise should defer reply
   await interaction.deferReply();
 
-  const answer = await questionLastMessages(
-    guildId,
-    channelId,
-    count,
-    question
-  );
+  let answer;
+  try {
+    answer = await questionLastMessages(guildId, channelId, count, question);
+  } catch (e) {
+    logger.error(e);
+    await interaction.editReply(`답변을 생성할 수 없습니다. [000]`);
+    return;
+  }
   if (!answer) {
-    await interaction.editReply(`답변을 생성할 수 없습니다.`);
+    await interaction.editReply(`답변을 생성할 수 없습니다. [001]`);
     return;
   }
 
@@ -74,5 +76,6 @@ export const execute = async (interaction: CommandInteraction) => {
     );
   } catch (e) {
     logger.error(e);
+    await interaction.editReply(`답변을 생성할 수 없습니다. [002]`);
   }
 };
