@@ -8,13 +8,13 @@ export const data = new SlashCommandBuilder()
   .addNumberOption(option =>
     option
       .setName('hours')
-      .setDescription('n 시간 전까지 대화 내용 요약. 1 <= n <= 6')
+      .setDescription('n 시간 전까지 대화 내용 요약. 1 <= n <= 12')
       .setRequired(false)
   )
   .addNumberOption(option =>
     option
       .setName('count')
-      .setDescription('n 개의 대화 내용을 요약. 100 <= n <= 3000')
+      .setDescription('n 개의 대화 내용을 요약. 100 <= n <= 6000')
       .setRequired(false)
   );
 
@@ -24,11 +24,11 @@ export const execute = async (interaction: CommandInteraction) => {
 
   let hours, count;
   if (isNaN(rawHours) && isNaN(rawCount)) {
-    count = 500;
+    count = 1000;
   } else if (isNaN(rawHours)) {
-    count = Math.min(Math.max(rawCount, 100), 3000);
+    count = Math.min(Math.max(rawCount, 100), 6000);
   } else if (isNaN(rawCount)) {
-    hours = Math.min(Math.max(rawHours, 1), 6);
+    hours = Math.min(Math.max(rawHours, 1), 12);
   } else {
     await interaction.reply(`hours, count 둘 중 하나만 입력 가능합니다.`);
   }

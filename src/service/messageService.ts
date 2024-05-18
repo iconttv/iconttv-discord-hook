@@ -49,11 +49,11 @@ export const summarizeLastMessagesAndReply = async (message: Message) => {
     context.guildId,
     context.channelId,
     undefined,
-    500
+    1000
   );
   if (!summarization) return;
 
-  await message.reply(`최근 500개의 채팅 요약:\n\n${summarization}`);
+  await message.reply(`최근 1000개의 채팅 요약:\n\n${summarization}`);
 };
 
 export const summarizeLastMessages = async (
@@ -122,7 +122,7 @@ const getLastHourMessages = async (
     )
       .sort({ createdAt: -1 })
       .exec();
-    return messages;
+    return messages.reverse();
   } catch (e) {
     logger.error(e);
     return [];
@@ -142,7 +142,7 @@ const getLastNMessages = async (
       .sort({ createdAt: -1 })
       .limit(count)
       .exec();
-    return messages;
+    return messages.reverse();
   } catch (e) {
     logger.error(e);
     return [];
