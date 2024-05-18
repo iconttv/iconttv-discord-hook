@@ -63,7 +63,7 @@ export const summarizeLastMessages = async (
   count: number | undefined = undefined
 ) => {
   const tenMinAgo = new Date();
-  tenMinAgo.setMilliseconds(tenMinAgo.getMilliseconds() - 10 * 60 * 1000);
+  tenMinAgo.setMilliseconds(tenMinAgo.getMilliseconds() - 5 * 60 * 1000);
 
   const cached = await MessageSummarizationModel.find({
     guildId,
@@ -77,7 +77,7 @@ export const summarizeLastMessages = async (
     .exec();
 
   if (cached.length) {
-    return `${cached[0].summarization}\n\n(최근 10분 이내 응답에서 캐시됨)`;
+    return `${cached[0].summarization}\n\n(최근 5분 이내 응답에서 캐시됨)`;
   }
 
   const messages = await getLastMessages(guildId, channelId, hours, count);
