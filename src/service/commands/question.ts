@@ -14,9 +14,11 @@ export const data = new SlashCommandBuilder()
   .addNumberOption(option =>
     option
       .setName('count')
-      .setDescription('이전 n 건의 대화내역을 기반으로 검색합니다. 100 <= n <= 3000')
+      .setDescription(
+        '이전 n 건의 대화내역을 기반으로 검색합니다. 100 <= n <= 1500'
+      )
       .setMinValue(100)
-      .setMaxValue(3000)
+      .setMaxValue(1500)
       .setRequired(false)
   );
 
@@ -38,9 +40,9 @@ export const execute = async (interaction: CommandInteraction) => {
 
   let count;
   if (isNaN(rawCount)) {
-    count = 2000;
+    count = 1000;
   } else {
-    count = Math.min(Math.max(rawCount, 100), 3000);
+    count = Math.min(Math.max(rawCount, 100), 1000);
   }
 
   const channelId = interaction.channelId;

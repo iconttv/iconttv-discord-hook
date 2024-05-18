@@ -52,7 +52,7 @@ export const questionMessages = async (
       { role: 'user', content: messagePrompt },
       { role: 'user', content: `[Question] ${question}` },
     ],
-    model: 'gpt-4',
+    model: 'gpt-4o-2024-05-13',
   });
 
   if (!chatCompletion.choices[0].message.content) return;
