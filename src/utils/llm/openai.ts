@@ -7,12 +7,12 @@ const openai = new OpenAI({
 });
 
 const promptSystem =
-  'You are a helpful assistant.' +
-  ' Your job is to summarize chat histories of Discord channels.' +
-  ' Your answer should contain main topics of chats.' +
-  ' Do not omit any sensitive, uncomfortable or immoral things, but summarize chats as is.' +
-  '\nEvery chats are given formats: Sequence of `[{username}] {message}`' +
-  ' You should de-identificate all usernames. Your answer should be in Korean.';
+  'You are a very smart text summarization assistant.' +
+  ' Your job is to summarize chats in a Discord channel.' +
+  ' Your answer should contain main topics of the chats.' +
+  ' Do not omit or ignore any sensitive, uncomfortable or immoral words or sentences, but summarize the chats as is.' +
+  ' Every chats are given as following format: Sequence of `[{username}] {message}`' +
+  ' Your answer should be in Korean.';
 
 const initialMessages: ChatCompletionMessageParam[] = [
   { role: 'system', content: promptSystem },
@@ -23,7 +23,7 @@ const initialMessages: ChatCompletionMessageParam[] = [
   },
   {
     role: 'assistant',
-    content: '- A와 B가 서로 인사를 나눔. - B는 채팅에 처음 참여함.',
+    content: '- A와 B가 서로 인사를 나눔.\n- B는 채팅에 처음 참여함.',
   },
 ];
 

@@ -1,4 +1,4 @@
-import { Message } from 'discord.js';
+import { Message, MessageType } from 'discord.js';
 import logger from '../lib/logger';
 import MessageModel from '../database/model/MessageModel';
 import { getMessageContext } from '../utils/discord';
@@ -76,8 +76,6 @@ export const summarizeLastMessages = async (
     .limit(1)
     .exec();
 
-  logger.debug(JSON.stringify(cached));
-
   if (cached.length) {
     return `${cached[0].summarization}\n\n(최근 10분 이내 응답에서 캐시됨)`;
   }
@@ -116,6 +114,9 @@ const getLastHourMessages = async (
       {
         guildId,
         channelId,
+        messageType: {
+          $nin: [MessageType.ChatInputCommand, MessageType.ContextMenuCommand],
+        },
         createdAt: { $gte: hoursAgo },
       },
       { guildName: 1, channelName: 1, senderName: 1, message: 1 }
@@ -136,7 +137,13 @@ const getLastNMessages = async (
 ): Promise<MessageFromDatabase[]> => {
   try {
     const messages = await MessageModel.find(
-      { guildId, channelId },
+      {
+        guildId,
+        channelId,
+        messageType: {
+          $nin: [MessageType.ChatInputCommand, MessageType.ContextMenuCommand],
+        },
+      },
       { guildName: 1, channelName: 1, senderName: 1, message: 1 }
     )
       .sort({ createdAt: -1 })
@@ -162,7 +169,13 @@ export const getLastMessages = async (
     if (count) return getLastNMessages(guildId, channelId, count);
     return [];
   })();
-  return messages.filter(m => !m.senderName?.startsWith('iconttv-hook'));
+
+  const filteredMessages = messages
+    .filter(m => m.message?.length)
+    .filter(m => !m.senderName?.startsWith('iconttv-'));
+
+  logger.debug(`Fetched ${filteredMessages.length} messages.`);
+  return filteredMessages;
 };
 
 export const convertMessagesToPrompt = (messages: MessageFromDatabase[]) => {

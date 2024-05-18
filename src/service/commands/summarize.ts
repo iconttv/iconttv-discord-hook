@@ -22,6 +22,12 @@ export const execute = async (interaction: CommandInteraction) => {
   const rawHours = Number(interaction.options.get('hours')?.value);
   const rawCount = Number(interaction.options.get('count')?.value);
 
+  logger.debug(
+    `hours: ${interaction.options.get('hours')?.value}, count: ${
+      interaction.options.get('count')?.value
+    }`
+  );
+
   let hours, count;
   if (isNaN(rawHours) && isNaN(rawCount)) {
     count = 1000;
