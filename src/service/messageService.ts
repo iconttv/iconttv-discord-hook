@@ -2,7 +2,7 @@ import { Message, MessageType } from 'discord.js';
 import logger from '../lib/logger';
 import MessageModel from '../database/model/MessageModel';
 import { getMessageContext } from '../utils/discord';
-import { summarizeMessages } from '../utils/llm/openai';
+import { questionMessages, summarizeMessages } from '../utils/llm/openai';
 import MessageSummarizationModel from '../database/model/MessageSummarization';
 
 export interface MessageFromDatabase {
@@ -99,6 +99,18 @@ export const summarizeLastMessages = async (
   }
 
   return summarization;
+};
+
+export const questionLastMessages = async (
+  guildId: string,
+  channelId: string,
+  count: number,
+  question: string
+) => {
+  const messages = await getLastMessages(guildId, channelId, undefined, count);
+  const messagePrompt = convertMessagesToPrompt(messages);
+  const answer = await questionMessages(messagePrompt, question);
+  return answer;
 };
 
 const getLastHourMessages = async (

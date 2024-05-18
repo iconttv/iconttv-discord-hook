@@ -9,12 +9,16 @@ export const data = new SlashCommandBuilder()
     option
       .setName('hours')
       .setDescription('n 시간 전까지 대화 내용 요약. 1 <= n <= 12')
+      .setMinValue(1)
+      .setMaxValue(12)
       .setRequired(false)
   )
   .addNumberOption(option =>
     option
       .setName('count')
       .setDescription('n 개의 대화 내용을 요약. 100 <= n <= 6000')
+      .setMinValue(100)
+      .setMaxValue(6000)
       .setRequired(false)
   );
 
@@ -58,6 +62,7 @@ export const execute = async (interaction: CommandInteraction) => {
   );
   if (!summarization) {
     await interaction.editReply(`요약을 생성할 수 없습니다.`);
+    return
   }
 
   const messageRangeText = hours ? `${hours}시간 내의` : `${count}개의`;
