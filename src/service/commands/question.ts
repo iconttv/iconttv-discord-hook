@@ -42,7 +42,7 @@ export const execute = async (interaction: CommandInteraction) => {
   if (isNaN(rawCount)) {
     count = 1000;
   } else {
-    count = Math.min(Math.max(rawCount, 100), 1000);
+    count = Math.min(Math.max(rawCount, 100), 1500);
   }
 
   const channelId = interaction.channelId;
