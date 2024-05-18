@@ -1,7 +1,7 @@
 export function parseIconSearchKeyword(text: string): string | null {
-  if (!text.startsWith("~")) return null;
-  const [iconCommand, ...restArgs] = text.split(" ");
-  if (restArgs.includes(" ")) return null;
+  if (!text.startsWith('~')) return null;
+  const [iconCommand, ...restArgs] = text.split(' ');
+  if (restArgs.includes(' ')) return null;
 
   // remove `~` prefix
   return iconCommand.slice(1);
@@ -29,4 +29,14 @@ export async function acquireLock(
   if (waitMs >= maxWaitMs) {
     throw new Error('Lock Acquirement Failed!');
   }
+}
+
+export function* makeChunks<T>(arr: T[], n: number): Generator<T[]> {
+  for (let i = 0; i < arr.length; i += n) {
+    yield arr.slice(i, i + n);
+  }
+}
+
+export function replaceLaughs(text: string) {
+  return text.replace(/ㅋ{3,}/g, '(웃음)');
 }

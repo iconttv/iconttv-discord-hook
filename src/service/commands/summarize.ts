@@ -1,10 +1,15 @@
-import { CommandInteraction, SlashCommandBuilder } from 'discord.js';
+import {
+  CommandInteraction,
+  PermissionFlagsBits,
+  SlashCommandBuilder,
+} from 'discord.js';
 import logger from '../../lib/logger';
 import { summarizeLastMessages } from '../messageService';
 
 export const data = new SlashCommandBuilder()
   .setName('itvsumm')
   .setDescription('이전 대화 요약')
+  .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
   .addNumberOption(option =>
     option
       .setName('hours')
@@ -23,6 +28,12 @@ export const data = new SlashCommandBuilder()
   );
 
 export const execute = async (interaction: CommandInteraction) => {
+  if (
+    !interaction.memberPermissions?.has(PermissionFlagsBits.ModerateMembers)
+  ) {
+    return;
+  }
+
   const rawHours = Number(interaction.options.get('hours')?.value);
   const rawCount = Number(interaction.options.get('count')?.value);
 
@@ -34,7 +45,7 @@ export const execute = async (interaction: CommandInteraction) => {
 
   let hours, count;
   if (isNaN(rawHours) && isNaN(rawCount)) {
-    count = 1000;
+    count = 500;
   } else if (isNaN(rawHours)) {
     count = Math.min(Math.max(rawCount, 100), 6000);
   } else if (isNaN(rawCount)) {

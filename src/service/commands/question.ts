@@ -1,10 +1,15 @@
-import { CommandInteraction, SlashCommandBuilder } from 'discord.js';
+import {
+  CommandInteraction,
+  PermissionFlagsBits,
+  SlashCommandBuilder,
+} from 'discord.js';
 import logger from '../../lib/logger';
 import { questionLastMessages } from '../messageService';
 
 export const data = new SlashCommandBuilder()
   .setName('itvques')
   .setDescription('이전 대화내역을 기반으로 질문을 검색합니다.')
+  .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
   .addStringOption(option =>
     option
       .setName('q')
@@ -23,6 +28,12 @@ export const data = new SlashCommandBuilder()
   );
 
 export const execute = async (interaction: CommandInteraction) => {
+  if (
+    !interaction.memberPermissions?.has(PermissionFlagsBits.ModerateMembers)
+  ) {
+    return;
+  }
+
   const rawQuestion = interaction.options.get('q')?.value;
   const rawCount = Number(interaction.options.get('count')?.value);
   const question = String(rawQuestion);
@@ -40,7 +51,7 @@ export const execute = async (interaction: CommandInteraction) => {
 
   let count;
   if (isNaN(rawCount)) {
-    count = 1000;
+    count = 500;
   } else {
     count = Math.min(Math.max(rawCount, 100), 1500);
   }

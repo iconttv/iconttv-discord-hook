@@ -24,7 +24,7 @@ export const summarizeMessages = async (
       { role: 'system', content: promptSystem },
       { role: 'user', content: messagePrompt },
     ],
-    model: 'gpt-3.5-turbo-16k',
+    model: 'gpt-3.5-turbo-0125',
   });
 
   if (!chatCompletion.choices[0].message.content) return;
@@ -53,8 +53,7 @@ export const questionMessages = async (
       { role: 'user', content: messagePrompt },
       { role: 'user', content: `[Question] ${question}` },
     ],
-    model: 'gpt-4o',
-    // model: 'gpt-3.5-turbo-16k-0613',
+    model: 'gpt-3.5-turbo-0125',
   });
 
   if (!chatCompletion.choices[0].message.content) return;
