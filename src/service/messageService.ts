@@ -3,7 +3,9 @@ import logger from '../lib/logger';
 import MessageModel from '../database/model/MessageModel';
 import { getMessageContext } from '../utils/discord';
 import { questionMessages, summarizeMessages } from '../utils/llm/openai';
-import MessageSummarizationModel from '../database/model/MessageSummarization';
+import MessageSummarizationModel from '../database/model/MessageSummarizationModel';
+import GuildPermissionModel from '../database/model/GuildPermissionModel';
+import { makeChunk, replaceLaughs } from '../utils';
 
 export interface MessageFromDatabase {
   guildName?: string | null | undefined;
@@ -62,8 +64,9 @@ export const summarizeLastMessages = async (
   }
 
   const messages = await getLastMessages(guildId, channelId, hours, count);
-  const messagePrompt = convertMessagesToPrompt(messages);
-  const summarization = await summarizeMessages(messagePrompt);
+  const messageChunks = makeChunk(messages, 700);
+  const messagePrompts = messageChunks.map(convertMessagesToPrompt);
+  const summarization = await summarizeMessages(messagePrompts);
 
   if (summarization) {
     try {
@@ -88,6 +91,20 @@ export const questionLastMessages = async (
   count: number,
   question: string
 ) => {
+  const guildPermission = await GuildPermissionModel.find({
+    guildId,
+  });
+  if (
+    guildPermission === null ||
+    guildPermission === undefined ||
+    guildPermission.length === 0
+  ) {
+    return '해당 기능을 사용할 권한이 부족합니다. [000]';
+  }
+  if (guildPermission[0].level < 3) {
+    return '해당 기능을 사용할 권한이 부족합니다. [001]';
+  }
+
   const messages = await getLastMessages(guildId, channelId, undefined, count);
   const messagePrompt = convertMessagesToPrompt(messages);
   const answer = await questionMessages(messagePrompt, question);
@@ -180,6 +197,7 @@ export const convertMessagesToPrompt = (messages: MessageFromDatabase[]) => {
       currentMessage += `\n${message.message}`;
     } else {
       if (currentUserName && currentMessage) {
+        currentMessage = replaceLaughs(currentMessage);
         conversations.push(`[${currentUserName}] ${currentMessage}`);
       }
 
@@ -187,6 +205,7 @@ export const convertMessagesToPrompt = (messages: MessageFromDatabase[]) => {
       currentMessage = `${message.message}`;
     }
   }
+  currentMessage = replaceLaughs(currentMessage);
   conversations.push(`[${currentUserName}] ${currentMessage}`);
   const conversation = conversations.join('\n');
   return conversation;

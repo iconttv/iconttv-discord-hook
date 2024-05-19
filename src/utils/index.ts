@@ -31,10 +31,12 @@ export async function acquireLock(
   }
 }
 
-export function* makeChunks<T>(arr: T[], n: number): Generator<T[]> {
+export function makeChunk<T>(arr: T[], n: number): Array<T[]> {
+  const res = [];
   for (let i = 0; i < arr.length; i += n) {
-    yield arr.slice(i, i + n);
+    res.push(arr.slice(i, i + n));
   }
+  return res;
 }
 
 export function replaceLaughs(text: string) {

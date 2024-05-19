@@ -11,6 +11,8 @@ interface Config {
   MONGODB_PASSWORD: string;
   MONGODB_DATABASE: string;
   OPENAI_SECRET: string | undefined;
+  ENV: 'prod' | 'dev';
+  GITHUB_BASEURL: string;
 }
 
 const env = dotenv.config({
@@ -31,4 +33,8 @@ export const config: Config = {
   MONGODB_PASSWORD: env.parsed.MONGODB_PASSWORD,
   MONGODB_DATABASE: env.parsed.MONGODB_DATABASE,
   OPENAI_SECRET: env.parsed.OPENAI_SECRET,
+  ENV: process.env.NODE_ENV === 'prod' ? 'prod' : 'dev',
+  GITHUB_BASEURL: `https://raw.githubusercontent.com/iconttv/iconttv-discord-hook/${
+    process.env.NODE_ENV === 'prod' ? 'main' : 'develop'
+  }`,
 };

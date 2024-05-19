@@ -20,10 +20,10 @@ export const data = new SlashCommandBuilder()
     option
       .setName('count')
       .setDescription(
-        '이전 n 건의 대화내역을 기반으로 검색합니다. 100 <= n <= 1500'
+        '이전 n 건의 대화내역을 기반으로 검색합니다. 100 <= n <= 1000'
       )
       .setMinValue(100)
-      .setMaxValue(1500)
+      .setMaxValue(1000)
       .setRequired(false)
   );
 
@@ -53,11 +53,12 @@ export const execute = async (interaction: CommandInteraction) => {
   if (isNaN(rawCount)) {
     count = 500;
   } else {
-    count = Math.min(Math.max(rawCount, 100), 1500);
+    count = Math.min(Math.max(rawCount, 100), 1000);
   }
 
   const channelId = interaction.channelId;
   const guildId = interaction.guildId;
+
   if (!guildId) {
     await interaction.reply(`해당 기능을 사용할 수 없는 대화방입니다.`);
     return;
