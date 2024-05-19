@@ -4,7 +4,6 @@ import MessageModel from '../database/model/MessageModel';
 import { getMessageContext } from '../utils/discord';
 import { questionMessages, summarizeMessages } from '../utils/llm/openai';
 import MessageSummarizationModel from '../database/model/MessageSummarizationModel';
-import GuildPermissionModel from '../database/model/GuildPermissionModel';
 import { makeChunk, replaceLaughs } from '../utils';
 
 export interface MessageFromDatabase {
@@ -45,20 +44,6 @@ export const summarizeLastMessages = async (
   hours: number | undefined = undefined,
   count: number | undefined = undefined
 ) => {
-  const guildPermission = await GuildPermissionModel.find({
-    guildId,
-  });
-  if (
-    guildPermission === null ||
-    guildPermission === undefined ||
-    guildPermission.length === 0
-  ) {
-    return '서버에서 해당 기능을 사용할 권한이 부족합니다. [000]';
-  }
-  if (guildPermission[0].level < 3) {
-    return '서버에서 해당 기능을 사용할 권한이 부족합니다. [001]';
-  }
-
   const tenMinAgo = new Date();
   tenMinAgo.setMilliseconds(tenMinAgo.getMilliseconds() - 5 * 60 * 1000);
 
@@ -105,20 +90,6 @@ export const questionLastMessages = async (
   count: number,
   question: string
 ) => {
-  const guildPermission = await GuildPermissionModel.find({
-    guildId,
-  });
-  if (
-    guildPermission === null ||
-    guildPermission === undefined ||
-    guildPermission.length === 0
-  ) {
-    return '서버에서 해당 기능을 사용할 권한이 부족합니다. [000]';
-  }
-  if (guildPermission[0].level < 3) {
-    return '서버에서 해당 기능을 사용할 권한이 부족합니다. [001]';
-  }
-
   const messages = await getLastMessages(guildId, channelId, undefined, count);
   const messagePrompt = convertMessagesToPrompt(messages);
   const answer = await questionMessages(messagePrompt, question);

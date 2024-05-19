@@ -1,6 +1,7 @@
 import { CommandInteraction, SlashCommandBuilder } from 'discord.js';
 import logger from '../../lib/logger';
 import { summarizeLastMessages } from '../messageService';
+import { rejectGPTRequestAndGetMessage } from '../../utils/auth';
 
 export const data = new SlashCommandBuilder()
   .setName('itvsumm')
@@ -47,6 +48,12 @@ export const execute = async (interaction: CommandInteraction) => {
   const guildId = interaction.guildId;
   if (!guildId) {
     await interaction.reply(`해당 기능을 사용할 수 없는 대화방입니다.`);
+    return;
+  }
+
+  const rejectMessage = await rejectGPTRequestAndGetMessage(guildId);
+  if (rejectMessage !== undefined) {
+    await interaction.reply(rejectMessage);
     return;
   }
 
