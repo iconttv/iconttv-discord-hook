@@ -45,6 +45,20 @@ export const summarizeLastMessages = async (
   hours: number | undefined = undefined,
   count: number | undefined = undefined
 ) => {
+  const guildPermission = await GuildPermissionModel.find({
+    guildId,
+  });
+  if (
+    guildPermission === null ||
+    guildPermission === undefined ||
+    guildPermission.length === 0
+  ) {
+    return '서버에서 해당 기능을 사용할 권한이 부족합니다. [000]';
+  }
+  if (guildPermission[0].level < 3) {
+    return '서버에서 해당 기능을 사용할 권한이 부족합니다. [001]';
+  }
+
   const tenMinAgo = new Date();
   tenMinAgo.setMilliseconds(tenMinAgo.getMilliseconds() - 5 * 60 * 1000);
 
@@ -99,10 +113,10 @@ export const questionLastMessages = async (
     guildPermission === undefined ||
     guildPermission.length === 0
   ) {
-    return '해당 기능을 사용할 권한이 부족합니다. [000]';
+    return '서버에서 해당 기능을 사용할 권한이 부족합니다. [000]';
   }
   if (guildPermission[0].level < 3) {
-    return '해당 기능을 사용할 권한이 부족합니다. [001]';
+    return '서버에서 해당 기능을 사용할 권한이 부족합니다. [001]';
   }
 
   const messages = await getLastMessages(guildId, channelId, undefined, count);
