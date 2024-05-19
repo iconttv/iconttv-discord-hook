@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 export const guildPermissionSchema = new mongoose.Schema({
   guildId: { type: String, required: true },
   channelId: String,
-  // 0: default, 3: gpt usable, 5: gpt userId usable, 10: admin
+  // 0: default, 3: gpt usable, 10: admin
   level: { type: Number, required: true },
   updatedAt: { type: Date, default: Date.now },
   updatedBy: String,
