@@ -28,9 +28,9 @@ export const summarizeMessages = async (
   const model = 'gpt-3.5-turbo-0125';
   const requestOptions: Partial<OpenAI.ChatCompletionCreateParamsNonStreaming> =
     {
-      frequency_penalty: 0.2,
-      presence_penalty: -0.8,
-      temperature: 0.2,
+      frequency_penalty: 0.5,
+      presence_penalty: -0.3,
+      temperature: 0.6,
     };
 
   let summarization: string | undefined;
