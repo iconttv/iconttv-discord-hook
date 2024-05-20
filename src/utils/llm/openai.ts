@@ -42,7 +42,7 @@ export const summarizeMessages = async (
     if (summarization !== undefined && summarization.length > 0) {
       chatCompletionMessage.push({
         role: 'user',
-        content: `[SUMM] ${summarization}`,
+        content: summarization,
       });
     }
     chatCompletionMessage.push({
@@ -50,24 +50,41 @@ export const summarizeMessages = async (
       content: messagePrompt,
     });
 
-    const chatCompletion = await openai.chat.completions.create({
-      messages: chatCompletionMessage,
-      model,
-      ...requestOptions,
-    });
-
-    if (logOpenaiRequest !== undefined) {
-      await logOpenaiRequest(
-        chatCompletionMessage,
+    const chatCompletion = await openai.chat.completions
+      .create({
+        messages: chatCompletionMessage,
         model,
-        requestOptions,
-        chatCompletion
-      ).catch(e => logger.error(e));
-    }
+        ...requestOptions,
+      })
+      .then(async res => {
+        if (logOpenaiRequest !== undefined) {
+          await logOpenaiRequest(
+            chatCompletionMessage,
+            model,
+            requestOptions,
+            res
+          ).catch(e => logger.error(e));
+        }
+        return res;
+      })
+      .catch(async e => {
+        if (logOpenaiRequest !== undefined) {
+          await logOpenaiRequest(
+            chatCompletionMessage,
+            model,
+            requestOptions,
+            e
+          ).catch(e => logger.error(e));
+        }
+        throw e;
+      });
 
     if (!chatCompletion.choices[0].message.content) break;
 
-    summarization = chatCompletion.choices[0].message.content.trim();
+    summarization = chatCompletion.choices[0].message.content
+      .trim()
+      .replace('[SUMM]', '')
+      .replace('[REVIEW]', '');
   }
 
   return summarization;
@@ -90,9 +107,9 @@ export const questionMessages = async (
   const model = 'gpt-3.5-turbo-0125';
   const requestOptions: Partial<OpenAI.ChatCompletionCreateParamsNonStreaming> =
     {
-      frequency_penalty: 0.2,
-      presence_penalty: -0.8,
-      temperature: 0.2,
+      frequency_penalty: 0.5,
+      presence_penalty: -0.3,
+      temperature: 0.6,
     };
   const chatCompletionMessage: OpenAI.ChatCompletionMessageParam[] = [
     { role: 'system', content: promptSystem },
@@ -100,20 +117,34 @@ export const questionMessages = async (
     { role: 'user', content: `[Question] ${question}` },
   ];
 
-  const chatCompletion = await openai.chat.completions.create({
-    messages: chatCompletionMessage,
-    model,
-    ...requestOptions,
-  });
-
-  if (logOpenaiRequest !== undefined) {
-    await logOpenaiRequest(
-      chatCompletionMessage,
+  const chatCompletion = await openai.chat.completions
+    .create({
+      messages: chatCompletionMessage,
       model,
-      requestOptions,
-      chatCompletion
-    ).catch(e => logger.error(e));
-  }
+      ...requestOptions,
+    })
+    .then(async res => {
+      if (logOpenaiRequest !== undefined) {
+        await logOpenaiRequest(
+          chatCompletionMessage,
+          model,
+          requestOptions,
+          res
+        ).catch(e => logger.error(e));
+      }
+      return res;
+    })
+    .catch(async e => {
+      if (logOpenaiRequest !== undefined) {
+        await logOpenaiRequest(
+          chatCompletionMessage,
+          model,
+          requestOptions,
+          e
+        ).catch(e => logger.error(e));
+      }
+      throw e;
+    });
 
   if (!chatCompletion.choices[0].message.content) return;
 
