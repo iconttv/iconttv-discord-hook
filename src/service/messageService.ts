@@ -4,13 +4,14 @@ import MessageModel from '../database/model/MessageModel';
 import { getMessageContext } from '../utils/discord';
 import { questionMessages, summarizeMessages } from '../utils/llm/openai';
 import MessageSummarizationModel from '../database/model/MessageSummarizationModel';
-import { makeChunk, replaceLaughs } from '../utils';
+import { formatDate, makeChunk, replaceLaughs } from '../utils';
 
 export interface MessageFromDatabase {
   guildName?: string | null | undefined;
   channelName?: string | null | undefined;
   senderName?: string | null | undefined;
   message?: string | null | undefined;
+  createdAt?: Date | null | undefined;
 }
 
 export const saveMessage = async (message: Message) => {
@@ -114,7 +115,7 @@ const getLastHourMessages = async (
         },
         createdAt: { $gte: hoursAgo },
       },
-      { guildName: 1, channelName: 1, senderName: 1, message: 1 }
+      { guildName: 1, channelName: 1, senderName: 1, message: 1, createdAt: 1 }
     )
       .sort({ createdAt: -1 })
       .exec();
@@ -139,7 +140,7 @@ const getLastNMessages = async (
           $nin: [MessageType.ChatInputCommand, MessageType.ContextMenuCommand],
         },
       },
-      { guildName: 1, channelName: 1, senderName: 1, message: 1 }
+      { guildName: 1, channelName: 1, senderName: 1, message: 1, createdAt: 1 }
     )
       .sort({ createdAt: -1 })
       .limit(count)
@@ -176,22 +177,28 @@ export const getLastMessages = async (
 export const convertMessagesToPrompt = (messages: MessageFromDatabase[]) => {
   const conversations = [];
   let currentUserName = '';
-  let currentMessage = '';
+  let currentMessageWithTimestamp = '';
   for (const message of messages) {
+    const mmdd = formatDate(message.createdAt);
+    const timestamp = mmdd.length ? `(${mmdd})` : '';
+    const normalizedMessageWithTimestamp = `${replaceLaughs(
+      message.message
+    )} ${timestamp}`;
+
     if (currentUserName === message.senderName) {
-      currentMessage += `\n${message.message}`;
+      currentMessageWithTimestamp += `\n${normalizedMessageWithTimestamp}`;
     } else {
-      if (currentUserName && currentMessage) {
-        currentMessage = replaceLaughs(currentMessage);
-        conversations.push(`[${currentUserName}] ${currentMessage}`);
+      if (currentUserName && currentMessageWithTimestamp) {
+        conversations.push(
+          `[${currentUserName}] ${currentMessageWithTimestamp}`
+        );
       }
 
       currentUserName = `${message.senderName}`;
-      currentMessage = `${message.message}`;
+      currentMessageWithTimestamp = normalizedMessageWithTimestamp;
     }
   }
-  currentMessage = replaceLaughs(currentMessage);
-  conversations.push(`[${currentUserName}] ${currentMessage}`);
+  conversations.push(`[${currentUserName}] ${currentMessageWithTimestamp}`);
   const conversation = conversations.join('\n');
   return conversation;
 };

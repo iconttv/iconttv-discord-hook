@@ -39,6 +39,24 @@ export function makeChunk<T>(arr: T[], n: number): Array<T[]> {
   return res;
 }
 
-export function replaceLaughs(text: string) {
+export function replaceLaughs(text: string | null | undefined) {
+  if (text === null || text === undefined) return;
+
   return text.replace(/ㅋ{3,}/g, '(웃음)');
+}
+
+export function formatDate(date: Date | null | undefined) {
+  if (date === null || date === undefined) return '';
+
+  function addLeadingZero(number: number) {
+    return number < 10 ? '0' + number : number;
+  }
+
+  const month = addLeadingZero(date.getMonth() + 1);
+  const day = addLeadingZero(date.getDate());
+  const hours = addLeadingZero(date.getHours());
+  const minutes = addLeadingZero(date.getMinutes());
+  const seconds = addLeadingZero(date.getSeconds());
+
+  return month + '/' + day + ' ' + hours + ':' + minutes + ':' + seconds;
 }
