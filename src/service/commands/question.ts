@@ -21,7 +21,8 @@ export const data = new SlashCommandBuilder()
     option
       .setName('count')
       .setDescription(
-        '이전 n 건의 대화내역을 기반으로 검색합니다. 100 <= n <= 1000'
+        '이전 n 건의 대화내역을 기반으로 검색합니다. 100 <= n <= 1000.' +
+          ' 너무 많은 양을 요청할 시 요약이 불가능할 수 있습니다.'
       )
       .setMinValue(100)
       .setMaxValue(1000)

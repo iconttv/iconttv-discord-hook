@@ -4,7 +4,12 @@ import MessageModel from '../database/model/MessageModel';
 import { getMessageContext } from '../utils/discord';
 import { questionMessages, summarizeMessages } from '../utils/llm/openai';
 import MessageSummarizationModel from '../database/model/MessageSummarizationModel';
-import { formatDate, makeChunk, replaceLaughs } from '../utils';
+import {
+  formatDate,
+  makeChunk,
+  replaceLaughs,
+  unreplaceLaughs,
+} from '../utils';
 import MessageSummarizationRequestModel from '../database/model/MessageSummarizationRequestModel';
 
 export interface MessageFromDatabase {
@@ -86,7 +91,7 @@ export const summarizeLastMessages = async (
   }
 
   const messages = await getLastMessages(guildId, channelId, hours, count);
-  const messageChunks = makeChunk(messages, 700);
+  const messageChunks = makeChunk(messages, 500);
   const messagePrompts = messageChunks.map(convertMessagesToPrompt);
   const summarization = await summarizeMessages(
     messagePrompts,
@@ -107,7 +112,7 @@ export const summarizeLastMessages = async (
     }
   }
 
-  return summarization;
+  return unreplaceLaughs(summarization);
 };
 
 export const questionLastMessages = async (
@@ -123,7 +128,7 @@ export const questionLastMessages = async (
     question,
     saveOpenaiRequestBuilder(guildId, channelId, { question, count })
   );
-  return answer;
+  return unreplaceLaughs(answer);
 };
 
 const getLastHourMessages = async (

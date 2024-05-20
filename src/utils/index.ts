@@ -45,6 +45,12 @@ export function replaceLaughs(text: string | null | undefined) {
   return text.replace(/ㅋ{3,}/g, '(웃음)');
 }
 
+export function unreplaceLaughs(text: string | null | undefined) {
+  if (text === null || text === undefined) return;
+
+  return text.replace('(웃음)', 'ㅋㅋㅋㅋㅋㅋㅋ');
+}
+
 export function formatDate(date: Date | null | undefined) {
   if (date === null || date === undefined) return '';
 
