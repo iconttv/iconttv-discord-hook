@@ -84,7 +84,8 @@ export const summarizeMessages = async (
     summarization = chatCompletion.choices[0].message.content
       .trim()
       .replace('[SUMM]', '')
-      .replace('[REVIEW]', '');
+      .replace('[REVIEW]', '')
+      .replace('한줄평:', '');
   }
 
   return summarization;
