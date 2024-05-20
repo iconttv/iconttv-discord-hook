@@ -5,6 +5,7 @@ import { getMessageContext } from '../utils/discord';
 import { questionMessages, summarizeMessages } from '../utils/llm/openai';
 import MessageSummarizationModel from '../database/model/MessageSummarizationModel';
 import { formatDate, makeChunk, replaceLaughs } from '../utils';
+import MessageSummarizationRequestModel from '../database/model/MessageSummarizationRequestModel';
 
 export interface MessageFromDatabase {
   guildName?: string | null | undefined;
@@ -39,6 +40,27 @@ export const saveMessage = async (message: Message) => {
   }
 };
 
+export const saveOpenaiRequestBuilder =
+  (guildId: string, channelId: string, discordParams: object) =>
+  async (
+    messages: object[],
+    model: string,
+    params: object,
+    response: object
+  ) => {
+    await new MessageSummarizationRequestModel({
+      guildId,
+      channelId,
+      discordParams,
+      messages,
+      model,
+      params,
+      response,
+    })
+      .save()
+      .catch(e => logger.error(e));
+  };
+
 export const summarizeLastMessages = async (
   guildId: string,
   channelId: string,
@@ -66,7 +88,10 @@ export const summarizeLastMessages = async (
   const messages = await getLastMessages(guildId, channelId, hours, count);
   const messageChunks = makeChunk(messages, 700);
   const messagePrompts = messageChunks.map(convertMessagesToPrompt);
-  const summarization = await summarizeMessages(messagePrompts);
+  const summarization = await summarizeMessages(
+    messagePrompts,
+    saveOpenaiRequestBuilder(guildId, channelId, { hours, count })
+  );
 
   if (summarization) {
     try {
@@ -93,7 +118,11 @@ export const questionLastMessages = async (
 ) => {
   const messages = await getLastMessages(guildId, channelId, undefined, count);
   const messagePrompt = convertMessagesToPrompt(messages);
-  const answer = await questionMessages(messagePrompt, question);
+  const answer = await questionMessages(
+    messagePrompt,
+    question,
+    saveOpenaiRequestBuilder(guildId, channelId, { question, count })
+  );
   return answer;
 };
 

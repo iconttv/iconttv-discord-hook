@@ -2,12 +2,20 @@ import OpenAI from 'openai';
 import { config } from '../../config';
 import logger from '../../lib/logger';
 
+type LogOpenaiRequest = (
+  messageParam: OpenAI.ChatCompletionMessageParam[],
+  modelName: string,
+  params: object,
+  response: object
+) => Promise<void>;
+
 const openai = new OpenAI({
   apiKey: config.OPENAI_SECRET,
 });
 
 export const summarizeMessages = async (
-  messagePrompts: string[]
+  messagePrompts: string[],
+  logOpenaiRequest: LogOpenaiRequest | undefined
 ): Promise<string | undefined> => {
   const promptSystem = await fetch(
     `${config.GITHUB_BASEURL}/src/utils/llm/prompt-summarization.txt`
@@ -17,6 +25,13 @@ export const summarizeMessages = async (
       logger.error(e);
       throw e;
     });
+  const model = 'gpt-3.5-turbo-0125';
+  const requestOptions: Partial<OpenAI.ChatCompletionCreateParamsNonStreaming> =
+    {
+      frequency_penalty: 0.2,
+      presence_penalty: -0.8,
+      temperature: 0.2,
+    };
 
   let summarization: string | undefined;
   for (const messagePrompt of messagePrompts) {
@@ -37,13 +52,22 @@ export const summarizeMessages = async (
 
     const chatCompletion = await openai.chat.completions.create({
       messages: chatCompletionMessage,
-      model: 'gpt-3.5-turbo-0125',
+      model,
+      ...requestOptions,
     });
+
+    if (logOpenaiRequest !== undefined) {
+      await logOpenaiRequest(
+        chatCompletionMessage,
+        model,
+        requestOptions,
+        chatCompletion
+      ).catch(e => logger.error(e));
+    }
 
     if (!chatCompletion.choices[0].message.content) break;
 
     summarization = chatCompletion.choices[0].message.content.trim();
-    logger.debug(`temporal summarization: ${summarization}`);
   }
 
   return summarization;
@@ -51,7 +75,8 @@ export const summarizeMessages = async (
 
 export const questionMessages = async (
   messagePrompt: string,
-  question: string
+  question: string,
+  logOpenaiRequest: LogOpenaiRequest | undefined
 ): Promise<string | undefined> => {
   const promptSystem = await fetch(
     `${config.GITHUB_BASEURL}/src/utils/llm/prompt-question.txt`
@@ -62,14 +87,33 @@ export const questionMessages = async (
       throw e;
     });
 
+  const model = 'gpt-3.5-turbo-0125';
+  const requestOptions: Partial<OpenAI.ChatCompletionCreateParamsNonStreaming> =
+    {
+      frequency_penalty: 0.2,
+      presence_penalty: -0.8,
+      temperature: 0.2,
+    };
+  const chatCompletionMessage: OpenAI.ChatCompletionMessageParam[] = [
+    { role: 'system', content: promptSystem },
+    { role: 'user', content: messagePrompt },
+    { role: 'user', content: `[Question] ${question}` },
+  ];
+
   const chatCompletion = await openai.chat.completions.create({
-    messages: [
-      { role: 'system', content: promptSystem },
-      { role: 'user', content: messagePrompt },
-      { role: 'user', content: `[Question] ${question}` },
-    ],
-    model: 'gpt-3.5-turbo-0125',
+    messages: chatCompletionMessage,
+    model,
+    ...requestOptions,
   });
+
+  if (logOpenaiRequest !== undefined) {
+    await logOpenaiRequest(
+      chatCompletionMessage,
+      model,
+      requestOptions,
+      chatCompletion
+    ).catch(e => logger.error(e));
+  }
 
   if (!chatCompletion.choices[0].message.content) return;
 
