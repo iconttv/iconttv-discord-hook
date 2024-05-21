@@ -10,7 +10,7 @@ import {
   replaceLaughs,
   unreplaceLaughs,
 } from '../utils';
-import MessageSummarizationRequestModel from '../database/model/MessageSummarizationRequestModel';
+import { saveOpenaiRequestBuilder } from './common';
 
 export interface MessageFromDatabase {
   guildName?: string | null | undefined;
@@ -45,30 +45,10 @@ export const saveMessage = async (message: Message) => {
   }
 };
 
-export const saveOpenaiRequestBuilder =
-  (guildId: string, channelId: string, discordParams: object) =>
-  async (
-    messages: object[],
-    model: string,
-    params: object,
-    response: object
-  ) => {
-    await new MessageSummarizationRequestModel({
-      guildId,
-      channelId,
-      discordParams,
-      messages,
-      model,
-      params,
-      response,
-    })
-      .save()
-      .catch(e => logger.error(e));
-  };
-
 export const summarizeLastMessages = async (
   guildId: string,
   channelId: string,
+  senderId: string | undefined,
   hours: number | undefined = undefined,
   count: number | undefined = undefined
 ) => {
@@ -95,7 +75,7 @@ export const summarizeLastMessages = async (
   const messagePrompts = messageChunks.map(convertMessagesToPrompt);
   const summarization = await summarizeMessages(
     messagePrompts,
-    saveOpenaiRequestBuilder(guildId, channelId, { hours, count })
+    saveOpenaiRequestBuilder(guildId, channelId, senderId, { hours, count })
   );
 
   if (summarization) {
@@ -103,6 +83,7 @@ export const summarizeLastMessages = async (
       await new MessageSummarizationModel({
         guildId,
         channelId,
+        senderId,
         hours,
         count,
         summarization,
@@ -118,6 +99,7 @@ export const summarizeLastMessages = async (
 export const questionLastMessages = async (
   guildId: string,
   channelId: string,
+  senderId: string | undefined,
   count: number,
   question: string
 ) => {
@@ -126,7 +108,7 @@ export const questionLastMessages = async (
   const answer = await questionMessages(
     messagePrompt,
     question,
-    saveOpenaiRequestBuilder(guildId, channelId, { question, count })
+    saveOpenaiRequestBuilder(guildId, channelId, senderId, { question, count })
   );
   return unreplaceLaughs(answer);
 };

@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 export const messageSummarizationSchema = new mongoose.Schema({
   guildId: { type: String, required: true },
   channelId: { type: String, required: true },
+  senderId: String,
   hours: Number,
   count: Number,
   summarization: String,

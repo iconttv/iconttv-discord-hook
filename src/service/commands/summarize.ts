@@ -69,6 +69,7 @@ export const execute = async (interaction: CommandInteraction) => {
     summarization = await summarizeLastMessages(
       guildId,
       channelId,
+      interaction.member?.user.id,
       hours,
       count
     );

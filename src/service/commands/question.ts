@@ -78,7 +78,13 @@ export const execute = async (interaction: CommandInteraction) => {
 
   let answer;
   try {
-    answer = await questionLastMessages(guildId, channelId, count, question);
+    answer = await questionLastMessages(
+      guildId,
+      channelId,
+      interaction.member?.user.id,
+      count,
+      question
+    );
   } catch (e) {
     logger.error(e);
     await interaction.editReply(`답변을 생성할 수 없습니다. [000]`);

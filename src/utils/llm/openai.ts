@@ -3,9 +3,7 @@ import { config } from '../../config';
 import logger from '../../lib/logger';
 
 type LogOpenaiRequest = (
-  messageParam: OpenAI.ChatCompletionMessageParam[],
-  modelName: string,
-  params: object,
+  openaiParams: Partial<OpenAI.ChatCompletionCreateParamsNonStreaming>,
   response: object
 ) => Promise<void>;
 
@@ -50,31 +48,22 @@ export const summarizeMessages = async (
       content: messagePrompt,
     });
 
+    const openaiParams = {
+      messages: chatCompletionMessage,
+      model,
+      ...requestOptions,
+    };
     const chatCompletion = await openai.chat.completions
-      .create({
-        messages: chatCompletionMessage,
-        model,
-        ...requestOptions,
-      })
+      .create(openaiParams)
       .then(async res => {
         if (logOpenaiRequest !== undefined) {
-          await logOpenaiRequest(
-            chatCompletionMessage,
-            model,
-            requestOptions,
-            res
-          ).catch(e => logger.error(e));
+          await logOpenaiRequest(openaiParams, res).catch(e => logger.error(e));
         }
         return res;
       })
       .catch(async e => {
         if (logOpenaiRequest !== undefined) {
-          await logOpenaiRequest(
-            chatCompletionMessage,
-            model,
-            requestOptions,
-            e
-          ).catch(e => logger.error(e));
+          await logOpenaiRequest(openaiParams, e).catch(e => logger.error(e));
         }
         throw e;
       });
@@ -118,31 +107,22 @@ export const questionMessages = async (
     { role: 'user', content: `[Question] ${question}` },
   ];
 
+  const openaiParams = {
+    messages: chatCompletionMessage,
+    model,
+    ...requestOptions,
+  };
   const chatCompletion = await openai.chat.completions
-    .create({
-      messages: chatCompletionMessage,
-      model,
-      ...requestOptions,
-    })
+    .create(openaiParams)
     .then(async res => {
       if (logOpenaiRequest !== undefined) {
-        await logOpenaiRequest(
-          chatCompletionMessage,
-          model,
-          requestOptions,
-          res
-        ).catch(e => logger.error(e));
+        await logOpenaiRequest(openaiParams, res).catch(e => logger.error(e));
       }
       return res;
     })
     .catch(async e => {
       if (logOpenaiRequest !== undefined) {
-        await logOpenaiRequest(
-          chatCompletionMessage,
-          model,
-          requestOptions,
-          e
-        ).catch(e => logger.error(e));
+        await logOpenaiRequest(openaiParams, e).catch(e => logger.error(e));
       }
       throw e;
     });
