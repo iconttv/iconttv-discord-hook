@@ -11,7 +11,7 @@ You should understand the {message}s per {username} and aggregate topics with ti
 `(웃음)` means `ㅋㅋㅋ`.
 You should consider and preserve if necessary the given previous chat summarization information. This information may or may not exists.
 The previous summarizations are given as following format: `[SUMM] {summarizations}\n\n[REVIEW] {review}`. 
-Your answer should be in Korean.
+Your answer should be in Korean. Do not include titles or subtitles in your answer.
 
 List each topic with a `-` at the beginning and after all topics add your one line review.
 Example: 
