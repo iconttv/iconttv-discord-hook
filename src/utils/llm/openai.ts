@@ -11,6 +11,8 @@ const openai = new OpenAI({
   apiKey: config.OPENAI_SECRET,
 });
 
+const GPT4_PROB = 0.4;
+
 export const summarizeMessages = async (
   messagePrompts: string[],
   logOpenaiRequest: LogOpenaiRequest | undefined
@@ -23,7 +25,7 @@ export const summarizeMessages = async (
       logger.error(e);
       throw e;
     });
-  const model = Math.random() > 0.3 ? 'gpt-3.5-turbo' : 'gpt-4o';
+  const model = Math.random() > GPT4_PROB ? 'gpt-3.5-turbo' : 'gpt-4o';
   const requestOptions: Partial<OpenAI.ChatCompletionCreateParamsNonStreaming> =
     {
       frequency_penalty: 0.5 + Math.random() * 0.1,
@@ -94,7 +96,7 @@ export const questionMessages = async (
       throw e;
     });
 
-  const model = Math.random() > 0.3 ? 'gpt-3.5-turbo' : 'gpt-4o';
+  const model = Math.random() > GPT4_PROB ? 'gpt-3.5-turbo' : 'gpt-4o';
   const requestOptions: Partial<OpenAI.ChatCompletionCreateParamsNonStreaming> =
     {
       frequency_penalty: 0.5 + Math.random() * 0.1,
