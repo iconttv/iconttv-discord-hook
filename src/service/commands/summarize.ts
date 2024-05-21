@@ -18,10 +18,10 @@ export const data = new SlashCommandBuilder()
     option
       .setName('count')
       .setDescription(
-        'n 개의 대화 내용을 요약. 100 <= n <= 3000.' +
+        'n 개의 대화 내용을 요약. 25 <= n <= 3000.' +
           '너무 많은 양을 요청할 시 요약이 불가능할 수 있습니다.'
       )
-      .setMinValue(100)
+      .setMinValue(25)
       .setMaxValue(3000)
       .setRequired(false)
   );
@@ -40,7 +40,7 @@ export const execute = async (interaction: CommandInteraction) => {
   if (isNaN(rawHours) && isNaN(rawCount)) {
     count = 300;
   } else if (isNaN(rawHours)) {
-    count = Math.min(Math.max(rawCount, 100), 3000);
+    count = Math.min(Math.max(rawCount, 25), 3000);
   } else if (isNaN(rawCount)) {
     hours = Math.min(Math.max(rawHours, 1), 12);
   } else {
