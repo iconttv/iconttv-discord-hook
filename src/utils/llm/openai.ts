@@ -25,12 +25,12 @@ export const summarizeMessages = async (
       logger.error(e);
       throw e;
     });
-  const model = 'gpt-3.5-turbo-0125';
+  const model = Math.random() > 0.3 ? 'gpt-3.5-turbo' : 'gpt-4o';
   const requestOptions: Partial<OpenAI.ChatCompletionCreateParamsNonStreaming> =
     {
-      frequency_penalty: 0.5,
-      presence_penalty: -0.3,
-      temperature: 0.6,
+      frequency_penalty: 0.5 + Math.random() * 0.1,
+      presence_penalty: -0.3 + Math.random() * 0.2,
+      temperature: 0.5 + Math.random() * 0.2,
     };
 
   let summarization: string | undefined;
@@ -88,7 +88,7 @@ export const summarizeMessages = async (
       .replace('한줄평:', '');
   }
 
-  return summarization;
+  return summarization + `\n(${model})`;
 };
 
 export const questionMessages = async (
@@ -105,12 +105,12 @@ export const questionMessages = async (
       throw e;
     });
 
-  const model = 'gpt-3.5-turbo-0125';
+  const model = Math.random() > 0.3 ? 'gpt-3.5-turbo' : 'gpt-4o';
   const requestOptions: Partial<OpenAI.ChatCompletionCreateParamsNonStreaming> =
     {
-      frequency_penalty: 0.5,
-      presence_penalty: -0.3,
-      temperature: 0.6,
+      frequency_penalty: 0.5 + Math.random() * 0.1,
+      presence_penalty: -0.3 + Math.random() * 0.2,
+      temperature: 0.5 + Math.random() * 0.2,
     };
   const chatCompletionMessage: OpenAI.ChatCompletionMessageParam[] = [
     { role: 'system', content: promptSystem },
@@ -149,5 +149,5 @@ export const questionMessages = async (
 
   if (!chatCompletion.choices[0].message.content) return;
 
-  return chatCompletion.choices[0].message.content.trim();
+  return chatCompletion.choices[0].message.content.trim() + `\n(${model})`;
 };
