@@ -9,6 +9,8 @@
   "scripts": {
     "dev": "cross-env NODE_ENV=dev nodemon ./src/index.ts",
     "start": "cross-env NODE_ENV=prod ts-node ./src/index.ts",
+    "cmd-dev": "cross-env NODE_ENV=dev ts-node ./src/deploy-commands.ts",
+    "cmd-prod": "cross-env NODE_ENV=prod ts-node ./src/deploy-commands.ts",
     "eslint": "eslint src/ --ext .ts",
     "lint": "yarn eslint",
     "lint:format": "yarn lint --fix"
