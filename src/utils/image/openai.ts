@@ -14,7 +14,7 @@ const openai = new OpenAI({
 export const generateImage = async (
   prompt: string,
   logOpenaiRequest: LogOpenaiRequest | undefined
-): Promise<string | undefined> => {
+): Promise<[string | undefined, string | undefined]> => {
   const prePrompt = await fetch(
     `${config.GITHUB_BASEURL}/src/utils/image/prompt-generation.txt`
   )
@@ -45,5 +45,5 @@ export const generateImage = async (
       throw e;
     });
 
-  return response.data[0].url;
+  return [response.data[0].url, response.data[0].revised_prompt];
 };

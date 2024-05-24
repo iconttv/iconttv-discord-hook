@@ -1,10 +1,8 @@
-import {
-  CommandInteraction,
-  EmbedBuilder,
-  SlashCommandBuilder,
-} from 'discord.js';
+import { CommandInteraction, SlashCommandBuilder } from 'discord.js';
 import logger from '../../lib/logger';
 import { generateImageFromUser } from '../imageService';
+import { replyMessagePerError } from '../../utils/openai';
+import { createUserProfileEmbed } from '../../utils/discord';
 
 export const data = new SlashCommandBuilder()
   .setName('itvimgen')
@@ -34,16 +32,20 @@ export const execute = async (interaction: CommandInteraction) => {
   }
 
   await interaction.deferReply();
-  let imageUrl;
+  let imageUrl, revisedPrompt;
   try {
-    imageUrl = await generateImageFromUser(
+    [imageUrl, revisedPrompt] = await generateImageFromUser(
       guildId,
       channelId,
       senderId,
       prompt
     );
   } catch (e) {
-    await interaction.editReply(`이미지를 생성할 수 없습니다. [000]`);
+    await replyMessagePerError(
+      e,
+      '이미지를 생성할 수 없습니다.',
+      interaction.editReply
+    );
     return;
   }
 
@@ -53,11 +55,16 @@ export const execute = async (interaction: CommandInteraction) => {
   }
 
   try {
+    const userProfileEmbed = createUserProfileEmbed(interaction);
     await interaction.editReply({
-      embeds: [new EmbedBuilder().setImage(imageUrl)],
+      embeds: [
+        userProfileEmbed
+          .setDescription(`${prompt}\n  =>  ${revisedPrompt}`)
+          .setImage(imageUrl),
+      ],
     });
   } catch (e) {
     logger.error(e);
-    await interaction.editReply(`이미지를 생성할 수 없습니다. [002]`);
+    await interaction.editReply(`생성한 이미지를 전송할 수 없습니다. [002]`);
   }
 };

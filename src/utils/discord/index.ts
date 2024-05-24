@@ -7,11 +7,12 @@ import {
   type Collection,
   type Guild,
   type GuildMember,
-  type Message,
+  Message,
   EmbedAuthorOptions,
   AttachmentBuilder,
   MessageFlags,
   GuildBasedChannel,
+  CommandInteraction,
 } from 'discord.js';
 import { getRandomTelecomIP } from '../telecomIP';
 import GuildMemberCache from '../../repository/search/GuildMemberCache';
@@ -82,14 +83,30 @@ function getGuildMemberFromMessage(message: Message): GuildMember | null {
   const guild = guilds.first();
   if (!guild) return null;
 
+  return getGuildMemberFromGuildAndUserId(guild, message.author.id);
+}
+
+function getGuildMemberFromGuildAndUserId(
+  guild: Guild | null,
+  userId: string
+): GuildMember | null {
+  if (!guild) return null;
+
   const members: Collection<string, GuildMember> = guild.members.cache.filter(
-    (gm: GuildMember) => gm.id === message.author.id
+    (gm: GuildMember) => gm.id === userId
   );
   const member = members.first();
   if (!member) return null;
 
-  GuildMemberCache.instance.setCache(message.author.id, member);
+  GuildMemberCache.instance.setCache(userId, member);
   return member;
+}
+
+function getGuildMember(
+  message: Message | CommandInteraction
+): GuildMember | null {
+  if (message instanceof Message) return getGuildMemberFromMessage(message);
+  return getGuildMemberFromGuildAndUserId(message.guild, message.user.id);
 }
 
 function getChannelFromMessage(message: Message) {
@@ -99,7 +116,7 @@ function getChannelFromMessage(message: Message) {
 }
 
 export function createUserProfileEmbed(
-  message: Message,
+  message: Message | CommandInteraction,
   { asAnonUser }: { asAnonUser: boolean } = { asAnonUser: false }
 ) {
   const telecomIp = getRandomTelecomIP();
@@ -108,11 +125,15 @@ export function createUserProfileEmbed(
     iconURL: '',
   };
 
+  const isMessage = message instanceof Message;
+
   if (asAnonUser) {
     author.name = `ㅇㅇ (${telecomIp})`;
-    author.iconURL = message.author.defaultAvatarURL;
+    author.iconURL = isMessage
+      ? message.author.defaultAvatarURL
+      : message.user.defaultAvatarURL;
   } else {
-    const guildMember = getGuildMemberFromMessage(message);
+    const guildMember = getGuildMember(message);
     // author.name =
     //   guildMember?.nickname ??
     //   guildMember?.user.globalName ??
