@@ -3,16 +3,21 @@ import logger from '../lib/logger';
 const parseOpenAiError = (
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   e: Record<string, any>
-): 'ratelimit' | 'violation' | 'quota' | 'unknown' => {
+): string => {
   try {
     const statusCode = e.status;
     const { code, message } = e.error;
-    if (code === 'content_policy_violation') return 'violation';
+
     if (statusCode === 429) {
-      if ((message as string).includes('current quota')) return 'quota';
-      return 'ratelimit';
+      if ((message as string).includes('current quota'))
+        return '너무 많은 요청이 있어 일시적인 오류가 발생했습니다.';
     }
-    return 'unknown';
+    if (statusCode === 400) {
+      if (code === 'content_policy_violation') return '부적절한 콘텐츠입니다.';
+      if (code === 'billing_hard_limit_reached') return '돈이 다 떨어졌어요.';
+    }
+
+    return `알 수 없는 오류입니다. (${code})`;
   } catch (_e) {
     logger.error(_e);
     throw e;
@@ -24,17 +29,6 @@ export const replyMessagePerError = async (
   prefix: string,
   reply: (_: string) => unknown
 ) => {
-  const errorType = parseOpenAiError(e as Record<string, unknown>);
-  switch (errorType) {
-    case 'quota':
-      return await reply(prefix + ' 크레딧이 다 떨어졌어요.');
-    case 'ratelimit':
-      return await reply(
-        prefix + ' 너무 많은 요청이 있어 일시적인 오류가 발생했습니다.'
-      );
-    case 'violation':
-      return await reply(prefix + ' 부적절한 콘텐츠입니다.');
-    case 'unknown':
-      return await reply(prefix + ' 알 수 없는 오류입니다.');
-  }
+  const errorMessage = parseOpenAiError(e as Record<string, unknown>);
+  await reply(`${prefix} ${errorMessage}`);
 };
