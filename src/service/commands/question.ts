@@ -6,6 +6,7 @@ import {
 import logger from '../../lib/logger';
 import { questionLastMessages } from '../messageService';
 import { rejectGPTRequestAndGetMessage } from '../../utils/auth';
+import { replyMessagePerError } from '../../utils/openai';
 
 export const data = new SlashCommandBuilder()
   .setName('itvques')
@@ -87,7 +88,11 @@ export const execute = async (interaction: CommandInteraction) => {
     );
   } catch (e) {
     logger.error(e);
-    await interaction.editReply(`답변을 생성할 수 없습니다. [000]`);
+    await replyMessagePerError(
+      e,
+      '답변을 생성할 수 없습니다.',
+      interaction.editReply.bind(interaction)
+    );
     return;
   }
   if (!answer) {
@@ -102,6 +107,6 @@ export const execute = async (interaction: CommandInteraction) => {
     );
   } catch (e) {
     logger.error(e);
-    await interaction.editReply(`답변을 생성할 수 없습니다. [002]`);
+    await interaction.editReply(`생성한 답변을 전송할 수 없습니다. [002]`);
   }
 };

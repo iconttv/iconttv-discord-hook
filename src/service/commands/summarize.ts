@@ -2,6 +2,7 @@ import { CommandInteraction, SlashCommandBuilder } from 'discord.js';
 import logger from '../../lib/logger';
 import { summarizeLastMessages } from '../messageService';
 import { rejectGPTRequestAndGetMessage } from '../../utils/auth';
+import { replyMessagePerError } from '../../utils/openai';
 
 export const data = new SlashCommandBuilder()
   .setName('itvsumm')
@@ -75,7 +76,11 @@ export const execute = async (interaction: CommandInteraction) => {
     );
   } catch (e) {
     logger.error(e);
-    await interaction.editReply(`요약을 생성할 수 없습니다. [000]`);
+    await replyMessagePerError(
+      e,
+      '요약을 생성할 수 없습니다.',
+      interaction.editReply.bind(interaction)
+    );
     return;
   }
 

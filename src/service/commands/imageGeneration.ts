@@ -41,6 +41,7 @@ export const execute = async (interaction: CommandInteraction) => {
       prompt
     );
   } catch (e) {
+    logger.error(e);
     await replyMessagePerError(
       e,
       '이미지를 생성할 수 없습니다.',
