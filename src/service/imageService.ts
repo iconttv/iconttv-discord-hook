@@ -1,5 +1,5 @@
 import { generateImage } from '../utils/image/openai';
-import { saveOpenaiRequestBuilder } from './common';
+import { saveAiRequestBuilder } from './common';
 
 export const generateImageFromUser = async (
   guildId: string,
@@ -9,6 +9,6 @@ export const generateImageFromUser = async (
 ) => {
   return generateImage(
     prompt,
-    saveOpenaiRequestBuilder(guildId, channelId, senderId, { prompt })
+    saveAiRequestBuilder(guildId, channelId, senderId, { prompt })
   );
 };

@@ -1,20 +1,27 @@
-import OpenaiRequestModel from '../database/model/OpenaiRequestModel';
+import AiRequestModel from '../database/model/AiRequestModel';
 import logger from '../lib/logger';
 
-export const saveOpenaiRequestBuilder =
+export const saveAiRequestBuilder =
   (
     guildId: string,
     channelId: string,
     senderId: string | undefined,
     discordParams: object
   ) =>
-  async (openaiParams: object, response: object) => {
-    await new OpenaiRequestModel({
+  async (
+    provider: string,
+    modelName: string,
+    aiParams: object,
+    response: object
+  ) => {
+    await new AiRequestModel({
       guildId,
       channelId,
       senderId,
+      provider,
       discordParams,
-      openaiParams,
+      modelName,
+      openaiParams: aiParams,
       response,
     })
       .save()

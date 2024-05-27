@@ -6,7 +6,7 @@ import {
 import logger from '../../lib/logger';
 import { questionLastMessages } from '../messageService';
 import { rejectGPTRequestAndGetMessage } from '../../utils/auth';
-import { replyMessagePerError } from '../../utils/openai';
+import { replyMessagePerError } from '../../utils/error';
 
 export const data = new SlashCommandBuilder()
   .setName('itvques')

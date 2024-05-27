@@ -1,19 +1,15 @@
 import OpenAI from 'openai';
 import { config } from '../../config';
 import logger from '../../lib/logger';
-
-type LogOpenaiRequest = (
-  openaiParams: object,
-  response: object
-) => Promise<void>;
+import { LogAiRequest } from '../../type';
 
 const openai = new OpenAI({
-  apiKey: config.OPENAI_SECRET,
+  apiKey: config.OPENAI_API_KEY,
 });
 
 export const generateImage = async (
   prompt: string,
-  logOpenaiRequest: LogOpenaiRequest | undefined
+  logOpenaiRequest: LogAiRequest | undefined
 ): Promise<[string | undefined, string | undefined]> => {
   const prePrompt = await fetch(
     `${config.GITHUB_BASEURL}/src/utils/image/prompt-generation.txt`
@@ -34,13 +30,17 @@ export const generateImage = async (
     .generate(openaiParams)
     .then(async res => {
       if (logOpenaiRequest !== undefined) {
-        await logOpenaiRequest(openaiParams, res).catch(e => logger.error(e));
+        await logOpenaiRequest('openai', 'dall-e-3', openaiParams, res).catch(
+          e => logger.error(e)
+        );
       }
       return res;
     })
     .catch(async e => {
       if (logOpenaiRequest !== undefined) {
-        await logOpenaiRequest(openaiParams, e).catch(e => logger.error(e));
+        await logOpenaiRequest('openai', 'dall-e-3', openaiParams, e).catch(e =>
+          logger.error(e)
+        );
       }
       throw e;
     });

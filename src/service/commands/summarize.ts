@@ -2,7 +2,7 @@ import { CommandInteraction, SlashCommandBuilder } from 'discord.js';
 import logger from '../../lib/logger';
 import { summarizeLastMessages } from '../messageService';
 import { rejectGPTRequestAndGetMessage } from '../../utils/auth';
-import { replyMessagePerError } from '../../utils/openai';
+import { replyMessagePerError } from '../../utils/error';
 
 export const data = new SlashCommandBuilder()
   .setName('itvsumm')
@@ -63,9 +63,10 @@ export const execute = async (interaction: CommandInteraction) => {
 
   // interaction should be <= 3 sec
   // otherwise should defer reply
+  const start = Date.now();
   await interaction.deferReply();
 
-  let summarization;
+  let summarization, executionTimeSecMessage;
   try {
     summarization = await summarizeLastMessages(
       guildId,
@@ -76,26 +77,42 @@ export const execute = async (interaction: CommandInteraction) => {
     );
   } catch (e) {
     logger.error(e);
+    executionTimeSecMessage = `(${((Date.now() - start) / 1000).toFixed(
+      2
+    )}초 소요됨) `;
     await replyMessagePerError(
       e,
-      '요약을 생성할 수 없습니다.',
+      `요약을 생성할 수 없습니다. ${executionTimeSecMessage}`,
       interaction.editReply.bind(interaction)
     );
     return;
   }
 
   if (!summarization) {
-    await interaction.editReply(`요약을 생성할 수 없습니다. [001]`);
+    executionTimeSecMessage = `(${((Date.now() - start) / 1000).toFixed(
+      2
+    )}초 소요됨) `;
+    await interaction.editReply(
+      `요약을 생성할 수 없습니다. ${executionTimeSecMessage}[001]`
+    );
     return;
   }
 
   const messageRangeText = hours ? `${hours}시간 내의` : `${count}개의`;
   try {
+    executionTimeSecMessage = `(${((Date.now() - start) / 1000).toFixed(
+      2
+    )}초 소요됨) `;
     await interaction.editReply(
-      `최근 ${messageRangeText} 채팅 요약:\n\n${summarization}`
+      `최근 ${messageRangeText} 채팅 요약:\n\n${summarization} ${executionTimeSecMessage}`
     );
   } catch (e) {
     logger.error(e);
-    await interaction.editReply(`요약을 생성할 수 없습니다. [002]`);
+    executionTimeSecMessage = `(${((Date.now() - start) / 1000).toFixed(
+      2
+    )}초 소요됨) `;
+    await interaction.editReply(
+      `요약을 생성할 수 없습니다. ${executionTimeSecMessage}[002]`
+    );
   }
 };

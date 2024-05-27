@@ -1,24 +1,19 @@
-import { Message, MessageType } from 'discord.js';
+import { Message } from 'discord.js';
 import logger from '../lib/logger';
 import MessageModel from '../database/model/MessageModel';
 import { getMessageContext } from '../utils/discord';
-import { questionMessages, summarizeMessages } from '../utils/llm/openai';
-import MessageSummarizationModel from '../database/model/MessageSummarizationModel';
 import {
-  formatDate,
-  makeChunk,
-  replaceLaughs,
-  unreplaceLaughs,
-} from '../utils';
-import { saveOpenaiRequestBuilder } from './common';
+  openaiQuestionMessages,
+  openaiSummarizeMessages,
+  geminiQuestionMessages,
+  geminiSummarizeMessages,
+} from '../utils/llm';
+import MessageSummarizationModel from '../database/model/MessageSummarizationModel';
+import { unreplaceLaughs } from '../utils';
+import { saveAiRequestBuilder } from './common';
+import { getLastMessages } from '../utils/message';
 
-export interface MessageFromDatabase {
-  guildName?: string | null | undefined;
-  channelName?: string | null | undefined;
-  senderName?: string | null | undefined;
-  message?: string | null | undefined;
-  createdAt?: Date | null | undefined;
-}
+const useOpenai = () => Math.random() < 0.0;
 
 export const saveMessage = async (message: Message) => {
   try {
@@ -52,30 +47,37 @@ export const summarizeLastMessages = async (
   hours: number | undefined = undefined,
   count: number | undefined = undefined
 ) => {
-  const tenMinAgo = new Date();
-  tenMinAgo.setMilliseconds(tenMinAgo.getMilliseconds() - 5 * 60 * 1000);
+  // const minsOld = new Date();
+  // minsOld.setMilliseconds(minsOld.getMilliseconds() - 5 * 60 * 1000);
 
-  const cached = await MessageSummarizationModel.find({
-    guildId,
-    channelId,
-    hours,
-    count,
-    createdAt: { $gte: tenMinAgo },
-  })
-    .sort({ createdAt: -1 })
-    .limit(1)
-    .exec();
+  // const cached = await MessageSummarizationModel.find({
+  //   guildId,
+  //   channelId,
+  //   hours,
+  //   count,
+  //   createdAt: { $gte: minsOld },
+  // })
+  //   .sort({ createdAt: -1 })
+  //   .limit(1)
+  //   .exec();
 
-  if (cached.length) {
-    return `${cached[0].summarization}\n\n(최근 5분 이내 응답에서 캐시됨)`;
+  // if (cached.length) {
+  //   return `${cached[0].summarization}\n\n(최근 5분 이내 응답에서 캐시됨)`;
+  // }
+
+  if (channelId === '1149369024497590344' && guildId === '777418777104089119') {
+    channelId = '1087534402592047109';
+    guildId = '1087534402592047104';
   }
 
   const messages = await getLastMessages(guildId, channelId, hours, count);
-  const messageChunks = makeChunk(messages, 500);
-  const messagePrompts = messageChunks.map(convertMessagesToPrompt);
-  const summarization = await summarizeMessages(
-    messagePrompts,
-    saveOpenaiRequestBuilder(guildId, channelId, senderId, { hours, count })
+  const summarizer = useOpenai()
+    ? openaiSummarizeMessages
+    : geminiSummarizeMessages;
+
+  const summarization = await summarizer(
+    messages,
+    saveAiRequestBuilder(guildId, channelId, senderId, { hours, count })
   );
 
   if (summarization) {
@@ -104,117 +106,13 @@ export const questionLastMessages = async (
   question: string
 ) => {
   const messages = await getLastMessages(guildId, channelId, undefined, count);
-  const messagePrompt = convertMessagesToPrompt(messages);
-  const answer = await questionMessages(
-    messagePrompt,
+  const quentioner = useOpenai()
+    ? openaiQuestionMessages
+    : geminiQuestionMessages;
+  const answer = await quentioner(
+    messages,
     question,
-    saveOpenaiRequestBuilder(guildId, channelId, senderId, { question, count })
+    saveAiRequestBuilder(guildId, channelId, senderId, { question, count })
   );
   return unreplaceLaughs(answer);
-};
-
-const getLastHourMessages = async (
-  guildId: string,
-  channelId: string,
-  hours: number
-): Promise<MessageFromDatabase[]> => {
-  const hoursAgo = new Date();
-  hoursAgo.setMilliseconds(hoursAgo.getMilliseconds() - hours * 60 * 60 * 1000);
-
-  try {
-    const messages = await MessageModel.find(
-      {
-        guildId,
-        channelId,
-        messageType: {
-          $nin: [MessageType.ChatInputCommand, MessageType.ContextMenuCommand],
-        },
-        createdAt: { $gte: hoursAgo },
-      },
-      { guildName: 1, channelName: 1, senderName: 1, message: 1, createdAt: 1 }
-    )
-      .sort({ createdAt: -1 })
-      .exec();
-    return messages.reverse();
-  } catch (e) {
-    logger.error(e);
-    return [];
-  }
-};
-
-const getLastNMessages = async (
-  guildId: string,
-  channelId: string,
-  count: number
-): Promise<MessageFromDatabase[]> => {
-  try {
-    const messages = await MessageModel.find(
-      {
-        guildId,
-        channelId,
-        messageType: {
-          $nin: [MessageType.ChatInputCommand, MessageType.ContextMenuCommand],
-        },
-      },
-      { guildName: 1, channelName: 1, senderName: 1, message: 1, createdAt: 1 }
-    )
-      .sort({ createdAt: -1 })
-      .limit(count)
-      .exec();
-    return messages.reverse();
-  } catch (e) {
-    logger.error(e);
-    return [];
-  }
-};
-
-export const getLastMessages = async (
-  guildId: string,
-  channelId: string,
-  hours: number | undefined = undefined,
-  count: number | undefined = undefined
-) => {
-  if (!hours && !count) return [];
-
-  const messages = await (() => {
-    if (hours) return getLastHourMessages(guildId, channelId, hours);
-    if (count) return getLastNMessages(guildId, channelId, count);
-    return [];
-  })();
-
-  const filteredMessages = messages
-    .filter(m => m.message?.length)
-    .filter(m => !m.senderName?.startsWith('iconttv-'));
-
-  logger.debug(`Fetched ${filteredMessages.length} messages.`);
-  return filteredMessages;
-};
-
-export const convertMessagesToPrompt = (messages: MessageFromDatabase[]) => {
-  const conversations = [];
-  let currentUserName = '';
-  let currentMessageWithTimestamp = '';
-  for (const message of messages) {
-    const mmdd = formatDate(message.createdAt);
-    const timestamp = mmdd.length ? `(${mmdd})` : '';
-    const normalizedMessageWithTimestamp = `${replaceLaughs(
-      message.message
-    )} ${timestamp}`;
-
-    if (currentUserName === message.senderName) {
-      currentMessageWithTimestamp += `\n${normalizedMessageWithTimestamp}`;
-    } else {
-      if (currentUserName && currentMessageWithTimestamp) {
-        conversations.push(
-          `[${currentUserName}] ${currentMessageWithTimestamp}`
-        );
-      }
-
-      currentUserName = `${message.senderName}`;
-      currentMessageWithTimestamp = normalizedMessageWithTimestamp;
-    }
-  }
-  conversations.push(`[${currentUserName}] ${currentMessageWithTimestamp}`);
-  const conversation = conversations.join('\n');
-  return conversation;
 };

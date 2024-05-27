@@ -1,21 +1,22 @@
 import OpenAI from 'openai';
 import { config } from '../../config';
 import logger from '../../lib/logger';
-
-type LogOpenaiRequest = (
-  openaiParams: Partial<OpenAI.ChatCompletionCreateParamsNonStreaming>,
-  response: object
-) => Promise<void>;
+import { LogAiRequest, MessageFromDatabase } from '../../type';
+import { makeChunk } from '..';
+import { convertMessagesToPrompt } from '../message';
 
 const openai = new OpenAI({
-  apiKey: config.OPENAI_SECRET,
+  apiKey: config.OPENAI_API_KEY,
 });
 
-const GPT4_PROB = 0.4;
+const GPT35_PROB = 0.4;
+
+const getModel = () =>
+  Math.random() < GPT35_PROB ? 'gpt-3.5-turbo' : 'gpt-4o';
 
 export const summarizeMessages = async (
-  messagePrompts: string[],
-  logOpenaiRequest: LogOpenaiRequest | undefined
+  messages: MessageFromDatabase[],
+  logOpenaiRequest: LogAiRequest | undefined
 ): Promise<string | undefined> => {
   const promptSystem = await fetch(
     `${config.GITHUB_BASEURL}/src/utils/llm/prompt-summarization.txt`
@@ -25,7 +26,11 @@ export const summarizeMessages = async (
       logger.error(e);
       throw e;
     });
-  const model = Math.random() > GPT4_PROB ? 'gpt-3.5-turbo' : 'gpt-4o';
+
+  const messageChunks = makeChunk(messages, 500);
+  const messagePrompts = messageChunks.map(convertMessagesToPrompt);
+
+  const model = getModel();
   const requestOptions: Partial<OpenAI.ChatCompletionCreateParamsNonStreaming> =
     {
       frequency_penalty: 0.5 + Math.random() * 0.1,
@@ -59,13 +64,17 @@ export const summarizeMessages = async (
       .create(openaiParams)
       .then(async res => {
         if (logOpenaiRequest !== undefined) {
-          await logOpenaiRequest(openaiParams, res).catch(e => logger.error(e));
+          await logOpenaiRequest('openai', model, openaiParams, res).catch(e =>
+            logger.error(e)
+          );
         }
         return res;
       })
       .catch(async e => {
         if (logOpenaiRequest !== undefined) {
-          await logOpenaiRequest(openaiParams, e).catch(e => logger.error(e));
+          await logOpenaiRequest('openai', model, openaiParams, e).catch(e =>
+            logger.error(e)
+          );
         }
         throw e;
       });
@@ -83,9 +92,9 @@ export const summarizeMessages = async (
 };
 
 export const questionMessages = async (
-  messagePrompt: string,
+  messages: MessageFromDatabase[],
   question: string,
-  logOpenaiRequest: LogOpenaiRequest | undefined
+  logOpenaiRequest: LogAiRequest | undefined
 ): Promise<string | undefined> => {
   const promptSystem = await fetch(
     `${config.GITHUB_BASEURL}/src/utils/llm/prompt-question.txt`
@@ -96,7 +105,9 @@ export const questionMessages = async (
       throw e;
     });
 
-  const model = Math.random() > GPT4_PROB ? 'gpt-3.5-turbo' : 'gpt-4o';
+  const messagePrompt = convertMessagesToPrompt(messages);
+
+  const model = getModel();
   const requestOptions: Partial<OpenAI.ChatCompletionCreateParamsNonStreaming> =
     {
       frequency_penalty: 0.5 + Math.random() * 0.1,
@@ -118,13 +129,17 @@ export const questionMessages = async (
     .create(openaiParams)
     .then(async res => {
       if (logOpenaiRequest !== undefined) {
-        await logOpenaiRequest(openaiParams, res).catch(e => logger.error(e));
+        await logOpenaiRequest('openai', model, openaiParams, res).catch(e =>
+          logger.error(e)
+        );
       }
       return res;
     })
     .catch(async e => {
       if (logOpenaiRequest !== undefined) {
-        await logOpenaiRequest(openaiParams, e).catch(e => logger.error(e));
+        await logOpenaiRequest('openai', model, openaiParams, e).catch(e =>
+          logger.error(e)
+        );
       }
       throw e;
     });

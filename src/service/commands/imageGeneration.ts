@@ -1,7 +1,7 @@
 import { CommandInteraction, SlashCommandBuilder } from 'discord.js';
 import logger from '../../lib/logger';
 import { generateImageFromUser } from '../imageService';
-import { replyMessagePerError } from '../../utils/openai';
+import { replyMessagePerError } from '../../utils/error';
 import { createUserProfileEmbed } from '../../utils/discord';
 
 export const data = new SlashCommandBuilder()
@@ -31,8 +31,10 @@ export const execute = async (interaction: CommandInteraction) => {
     return;
   }
 
+  const start = Date.now();
   await interaction.deferReply();
-  let imageUrl, revisedPrompt;
+
+  let imageUrl, revisedPrompt, executionTimeSecMessage;
   try {
     [imageUrl, revisedPrompt] = await generateImageFromUser(
       guildId,
@@ -42,30 +44,48 @@ export const execute = async (interaction: CommandInteraction) => {
     );
   } catch (e) {
     logger.error(e);
+    executionTimeSecMessage = `(${((Date.now() - start) / 1000).toFixed(
+      2
+    )}초 소요됨) `;
     await replyMessagePerError(
       e,
-      '이미지를 생성할 수 없습니다.',
+      `이미지를 생성할 수 없습니다. ${executionTimeSecMessage}`,
       interaction.editReply.bind(interaction)
     );
     return;
   }
 
   if (!imageUrl) {
-    await interaction.editReply(`이미지를 생성할 수 없습니다. [001]`);
+    executionTimeSecMessage = `(${((Date.now() - start) / 1000).toFixed(
+      2
+    )}초 소요됨) `;
+    await interaction.editReply(
+      `이미지를 생성할 수 없습니다. ${executionTimeSecMessage}[001]`
+    );
     return;
   }
 
   try {
+    executionTimeSecMessage = `(${((Date.now() - start) / 1000).toFixed(
+      2
+    )}초 소요됨) `;
     const userProfileEmbed = createUserProfileEmbed(interaction);
     await interaction.editReply({
       embeds: [
         userProfileEmbed
-          .setDescription(`${prompt}\n  =>  ${revisedPrompt}`)
+          .setDescription(
+            `${prompt}\n  =>  ${revisedPrompt} ${executionTimeSecMessage}`
+          )
           .setImage(imageUrl),
       ],
     });
   } catch (e) {
     logger.error(e);
-    await interaction.editReply(`생성한 이미지를 전송할 수 없습니다. [002]`);
+    executionTimeSecMessage = `(${((Date.now() - start) / 1000).toFixed(
+      2
+    )}초 소요됨) `;
+    await interaction.editReply(
+      `생성한 이미지를 전송할 수 없습니다. ${executionTimeSecMessage}[002]`
+    );
   }
 };

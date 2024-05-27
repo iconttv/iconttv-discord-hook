@@ -1,15 +1,17 @@
 import mongoose from 'mongoose';
 
-export const openaiRequestSchema = new mongoose.Schema({
+export const AiRequestSchema = new mongoose.Schema({
   guildId: { type: String, required: true },
   channelId: { type: String, required: true },
   senderId: String,
+  provider: String,
   discordParams: Object,
-  openaiParams: Object,
+  modelName: String,
+  aiParams: Object,
   response: Object,
   createdAt: { type: Date, default: Date.now },
 });
 
-const OpenaiRequestModel = mongoose.model('OpenaiRequest', openaiRequestSchema);
+const AiRequestModel = mongoose.model('AiRequest', AiRequestSchema);
 
-export default OpenaiRequestModel;
+export default AiRequestModel;

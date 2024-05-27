@@ -10,7 +10,8 @@ interface Config {
   MONGODB_USERNAME: string;
   MONGODB_PASSWORD: string;
   MONGODB_DATABASE: string;
-  OPENAI_SECRET: string | undefined;
+  OPENAI_API_KEY: string | undefined;
+  GEMINI_API_KEY: string | undefined;
   ENV: 'prod' | 'dev';
   GITHUB_BASEURL: string;
 }
@@ -32,7 +33,8 @@ export const config: Config = {
   MONGODB_USERNAME: env.parsed.MONGODB_USERNAME,
   MONGODB_PASSWORD: env.parsed.MONGODB_PASSWORD,
   MONGODB_DATABASE: env.parsed.MONGODB_DATABASE,
-  OPENAI_SECRET: env.parsed.OPENAI_SECRET,
+  OPENAI_API_KEY: env.parsed.OPENAI_API_KEY,
+  GEMINI_API_KEY: env.parsed.GEMINI_API_KEY,
   ENV: process.env.NODE_ENV === 'prod' ? 'prod' : 'dev',
   GITHUB_BASEURL: `https://raw.githubusercontent.com/iconttv/iconttv-discord-hook/${
     process.env.NODE_ENV === 'prod' ? 'main' : 'develop'
