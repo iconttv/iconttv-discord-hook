@@ -47,27 +47,22 @@ export const summarizeLastMessages = async (
   hours: number | undefined = undefined,
   count: number | undefined = undefined
 ) => {
-  // const minsOld = new Date();
-  // minsOld.setMilliseconds(minsOld.getMilliseconds() - 5 * 60 * 1000);
+  const minsOld = new Date();
+  minsOld.setMilliseconds(minsOld.getMilliseconds() - 5 * 60 * 1000);
 
-  // const cached = await MessageSummarizationModel.find({
-  //   guildId,
-  //   channelId,
-  //   hours,
-  //   count,
-  //   createdAt: { $gte: minsOld },
-  // })
-  //   .sort({ createdAt: -1 })
-  //   .limit(1)
-  //   .exec();
+  const cached = await MessageSummarizationModel.find({
+    guildId,
+    channelId,
+    hours,
+    count,
+    createdAt: { $gte: minsOld },
+  })
+    .sort({ createdAt: -1 })
+    .limit(1)
+    .exec();
 
-  // if (cached.length) {
-  //   return `${cached[0].summarization}\n\n(최근 5분 이내 응답에서 캐시됨)`;
-  // }
-
-  if (channelId === '1149369024497590344' && guildId === '777418777104089119') {
-    channelId = '1087534402592047109';
-    guildId = '1087534402592047104';
+  if (cached.length) {
+    return `${cached[0].summarization}\n\n(최근 5분 이내 응답에서 캐시됨)`;
   }
 
   const messages = await getLastMessages(guildId, channelId, hours, count);
