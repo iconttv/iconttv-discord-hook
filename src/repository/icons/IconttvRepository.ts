@@ -7,9 +7,13 @@ import { cloneDeep } from 'lodash';
 import logger from '../..//lib/logger';
 import { acquireLock } from '../../utils';
 
+// 12 hours
+const EXPIRE_TIME = 12 * 60 * 60 * 1000;
+
 export class IconttvRepository implements IconRepository {
   private isIconLoading = false;
   private iconList: IconttvIcon[] = [];
+  private fetchedAt: number = 0;
 
   _streamerName: string | undefined;
 
@@ -31,13 +35,16 @@ export class IconttvRepository implements IconRepository {
 
     logger.debug(`Fetch ${this._streamerName}'s icon list Done`);
     this.iconList = jsonData.icons;
+    this.fetchedAt = Date.now();
   }
 
   async findOne(searchKeyword: string): Promise<Icon | null> {
-    if (!this.iconList || !this.iconList.length) {
+    const isExpired =  Date.now() - this.fetchedAt > EXPIRE_TIME
+    if (isExpired || !this.iconList || !this.iconList.length) {
       try {
         await acquireLock(() => this.isIconLoading, 2000);
         if (this.iconList && this.iconList.length) {
+          // 다른 메시지 요청에서 목록을 이미 가져온 경우
           return this.findOne(searchKeyword);
         }
 
