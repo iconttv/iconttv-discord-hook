@@ -16,7 +16,7 @@ export function getIconttvUrl(urlpath: string): string {
 
   const url = new URL(urlString);
 
-  url.searchParams.set('size', '128');
+  url.searchParams.set('size', '100');
 
   return url.toString();
 }
