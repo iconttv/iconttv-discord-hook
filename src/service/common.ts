@@ -21,7 +21,7 @@ export const saveAiRequestBuilder =
       provider,
       discordParams,
       modelName,
-      openaiParams: aiParams,
+      aiParams,
       response,
     })
       .save()
