@@ -78,9 +78,7 @@ export const summarizeMessages = async (
 
   let summarization: string | undefined;
   for (const messagePrompt of messagePrompts) {
-    const generateContents: GenerateContentRequestContent[] = [
-      { role: 'user', parts: [{ text: promptSystem }] },
-    ];
+    const generateContents: GenerateContentRequestContent[] = [];
 
     if (summarization !== undefined && summarization.length > 0) {
       generateContents.push({
