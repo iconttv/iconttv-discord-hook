@@ -9,10 +9,7 @@ const openai = new OpenAI({
   apiKey: config.OPENAI_API_KEY,
 });
 
-const GPT35_PROB = 0.4;
-
-const getModel = () =>
-  Math.random() < GPT35_PROB ? 'gpt-3.5-turbo' : 'gpt-4o';
+const getModel = () => 'gpt-4o';
 
 export const summarizeMessages = async (
   messages: MessageFromDatabase[],
