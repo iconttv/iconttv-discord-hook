@@ -11,7 +11,7 @@ const MAX_CACHE_AGE = 60 * 60 * 1000;
 
 interface MatchIconCacheElement {
   icon: Icon;
-  createdAtMs: number;
+  createdAt: number;
 }
 
 export default class IconSearchEngine {
@@ -47,7 +47,7 @@ export default class IconSearchEngine {
     const cacheKey = `${guildId} ${searchKeyword}`;
     const cachedValue = this._cache[cacheKey];
     if (cachedValue) {
-      if (!this.isExpiredCache(cachedValue.createdAtMs)) {
+      if (!this.isExpiredCache(cachedValue.createdAt)) {
         logger.debug(
           channel_log_message(
             `Found "${searchKeyword}" in memory cache`,
@@ -81,7 +81,7 @@ export default class IconSearchEngine {
         );
         this._cache[cacheKey] = {
           icon: matchIcon,
-          createdAtMs: Date.now(),
+          createdAt: Date.now(),
         };
         return matchIcon;
       }

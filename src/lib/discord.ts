@@ -7,6 +7,12 @@ const client = new Client({
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
   ],
+  sweepers: {
+    messages: {
+      interval: 1800,
+      lifetime: 1800,
+    },
+  },
 });
 
 client.once(Events.ClientReady, event => {

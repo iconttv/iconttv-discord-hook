@@ -18,8 +18,7 @@ const useOpenai = () => Math.random() < 0.4;
 export const saveMessage = async (message: Message) => {
   try {
     const context = getMessageContext(message);
-    // ignore messages that does not contain any text
-    if (!context || !context.senderMessage.trim()) return;
+    if (!context) return;
 
     const messageModel = new MessageModel({
       guildId: context.guildId,
@@ -27,10 +26,14 @@ export const saveMessage = async (message: Message) => {
       messageId: context.messageId,
       messageType: context.messageType,
       message: context.senderMessage,
+      attachments: context.attachments,
+      components: context.components,
+      embeds: context.embeds,
       senderId: context.senderId,
       guildName: context.guildName,
       channelName: context.channelName,
       senderName: context.senderName,
+      raw: JSON.stringify(message),
       createdAt: context.createdAt,
     });
 

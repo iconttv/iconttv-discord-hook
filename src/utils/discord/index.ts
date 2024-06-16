@@ -13,6 +13,9 @@ import {
   MessageFlags,
   GuildBasedChannel,
   CommandInteraction,
+  ActionRow,
+  MessageActionRowComponent,
+  Embed,
 } from 'discord.js';
 import { getRandomTelecomIP } from '../telecomIP';
 import GuildMemberCache from '../../repository/search/GuildMemberCache';
@@ -24,6 +27,9 @@ export interface MessageLogContext {
   senderId: string;
   messageId: string;
   messageType: number;
+  attachments: unknown[];
+  components: ActionRow<MessageActionRowComponent>[];
+  embeds: Embed[];
   guildName: string;
   guildId: string;
   channelName: string;
@@ -220,6 +226,9 @@ export const getMessageContext = (
     senderId: guildMember.id,
     messageId: message.id,
     messageType: message.type,
+    attachments: message.attachments.map(attachment => attachment.toJSON()),
+    components: message.components,
+    embeds: message.embeds,
     guildMember: guildMember,
     guildName: guildMember.guild.name,
     guildId: guildMember.guild.id,
@@ -236,23 +245,22 @@ export const getMessageLogContext = (
   message: Message
 ): MessageLogContext | undefined => {
   const guildMember = getGuildMemberFromMessage(message);
-  if (!guildMember) return;
-
   const channel = getChannelFromMessage(message);
-  if (!channel) return;
-
-  const senderName = getSenderName(guildMember);
+  const senderName = guildMember !== null ? getSenderName(guildMember) : '';
 
   return {
     senderName,
     senderMessage: message.content,
-    senderId: guildMember.id,
+    senderId: guildMember?.id || '',
     messageId: message.id,
     messageType: message.type,
-    guildName: guildMember.guild.name,
-    guildId: guildMember.guild.id,
-    channelName: channel.name,
-    channelId: channel.id,
+    attachments: message.attachments.map(attachment => attachment.toJSON()),
+    components: message.components,
+    embeds: message.embeds,
+    guildName: guildMember?.guild?.name || '',
+    guildId: guildMember?.guild?.id || '',
+    channelName: channel?.name || '',
+    channelId: channel?.id || '',
     threadName: message.thread?.name,
     threadId: message.thread?.id,
     createdAt: message.createdAt,
