@@ -5,7 +5,7 @@ PROJECT_DIR=$(readlink -f "$SCRIPT_DIR/..")
 
 cd "$PROJECT_DIR"
 
-docker compose rm --force
+docker compose rm --stop --force --volumes
 
 docker compose up \
   --build \
