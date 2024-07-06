@@ -16,6 +16,8 @@ import {
   ActionRow,
   MessageActionRowComponent,
   Embed,
+  APIEmbed,
+  EmbedData,
 } from 'discord.js';
 import { getRandomTelecomIP } from '../telecomIP';
 import GuildMemberCache from '../../repository/search/GuildMemberCache';
@@ -123,7 +125,8 @@ function getChannelFromMessage(message: Message) {
 
 export function createUserProfileEmbed(
   message: Message | CommandInteraction,
-  { asAnonUser }: { asAnonUser: boolean } = { asAnonUser: false }
+  { asAnonUser }: { asAnonUser: boolean } = { asAnonUser: false },
+  options?: APIEmbed | EmbedData
 ) {
   const telecomIp = getRandomTelecomIP();
   const author: EmbedAuthorOptions = {
@@ -149,7 +152,9 @@ export function createUserProfileEmbed(
     author.iconURL = getAvatarUrl(guildMember);
   }
 
-  const avaterEmbed = new EmbedBuilder().setColor('DarkBlue').setAuthor(author);
+  const avaterEmbed = new EmbedBuilder(options)
+    .setColor('DarkBlue')
+    .setAuthor(author);
   return avaterEmbed;
 }
 
@@ -169,18 +174,24 @@ export async function sendIconMessageEmbed(
   matchIcon: Icon,
   asAnonUser: boolean
 ) {
-  const userProfileEmbed = createUserProfileEmbed(message, {
-    asAnonUser,
-  });
-
   if (matchIcon.isRemoteImage) {
+    const userProfileEmbed = createUserProfileEmbed(
+      message,
+      {
+        asAnonUser,
+      },
+      {
+        image: {
+          url: matchIcon.imagePath,
+          width: 100,
+          height: 100,
+        },
+      }
+    );
+
     await message.channel.send({
       flags: MessageFlags.SuppressNotifications,
-      embeds: [
-        userProfileEmbed
-          .setDescription(matchIcon.keywords[0])
-          .setImage(matchIcon.imagePath),
-      ],
+      embeds: [userProfileEmbed.setDescription(matchIcon.keywords[0])],
     });
   } else {
     // 첨부 이미지 이름을 한글로하면 임베드가 되지 않음.
@@ -190,13 +201,23 @@ export async function sendIconMessageEmbed(
       description: matchIcon.keywords[0],
     });
 
+    const userProfileEmbed = createUserProfileEmbed(
+      message,
+      {
+        asAnonUser,
+      },
+      {
+        image: {
+          url: `attachment://${imageAttachment.name}`,
+          width: 100,
+          height: 100,
+        },
+      }
+    );
+
     await message.channel.send({
       flags: MessageFlags.SuppressNotifications,
-      embeds: [
-        userProfileEmbed
-          .setDescription(imageAttachment.description)
-          .setImage(`attachment://${imageAttachment.name}`),
-      ],
+      embeds: [userProfileEmbed.setDescription(imageAttachment.description)],
       files: [imageAttachment],
     });
   }
