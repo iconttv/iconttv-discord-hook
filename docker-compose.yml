@@ -12,6 +12,8 @@ services:
           cpus: "2"
           memory: 2G
     user: 1000:1000
+    env_file:
+      - .env
     environment:
       - TZ=Asia/Seoul
     logging:
