@@ -1,6 +1,6 @@
 import * as dotenv from 'dotenv';
 import logger from './lib/logger.js';
-import { exit } from 'process';
+import { existsSync } from 'fs';
 
 interface Config {
   DISCORD_BOT_TOKEN: string;
@@ -16,25 +16,28 @@ interface Config {
   GITHUB_BASEURL: string;
 }
 
-const env = dotenv.config({
-  path: process.env.NODE_ENV === 'prod' ? '.env' : '.env.dev',
-});
+const envFilePath = process.env.NODE_ENV === 'prod' ? '.env' : '.env.dev';
 
-if (env.error || !env.parsed) {
-  logger.error(env.error);
-  exit(1);
+if (existsSync(envFilePath)) {
+  const env = dotenv.config({
+    path: process.env.NODE_ENV === 'prod' ? '.env' : '.env.dev',
+  });
+
+  if (env.error || !env.parsed) {
+    logger.error(env.error);
+  }
 }
 
 export const config: Config = {
-  DISCORD_BOT_TOKEN: env.parsed.DISCORD_BOT_TOKEN,
-  DISCORD_CLIENT_ID: env.parsed.DISCORD_CLIENT_ID,
-  MONGODB_HOST: env.parsed.MONGODB_HOST,
-  MONGODB_PORT: env.parsed.MONGODB_PORT,
-  MONGODB_USERNAME: env.parsed.MONGODB_USERNAME,
-  MONGODB_PASSWORD: env.parsed.MONGODB_PASSWORD,
-  MONGODB_DATABASE: env.parsed.MONGODB_DATABASE,
-  OPENAI_API_KEY: env.parsed.OPENAI_API_KEY,
-  GEMINI_API_KEY: env.parsed.GEMINI_API_KEY,
+  DISCORD_BOT_TOKEN: process.env.DISCORD_BOT_TOKEN,
+  DISCORD_CLIENT_ID: process.env.DISCORD_CLIENT_ID,
+  MONGODB_HOST: process.env.MONGODB_HOST!,
+  MONGODB_PORT: process.env.MONGODB_PORT!,
+  MONGODB_USERNAME: process.env.MONGODB_USERNAME,
+  MONGODB_PASSWORD: process.env.MONGODB_PASSWORD,
+  MONGODB_DATABASE: process.env.MONGODB_DATABASE,
+  OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+  GEMINI_API_KEY: process.env.GEMINI_API_KEY,
   ENV: process.env.NODE_ENV === 'prod' ? 'prod' : 'dev',
   GITHUB_BASEURL: `https://raw.githubusercontent.com/iconttv/iconttv-discord-hook/${
     process.env.NODE_ENV === 'prod' ? 'main' : 'develop'
