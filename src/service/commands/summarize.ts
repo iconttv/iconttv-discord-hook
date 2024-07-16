@@ -1,8 +1,8 @@
 import { CommandInteraction, SlashCommandBuilder } from 'discord.js';
-import logger from '../../lib/logger';
-import { summarizeLastMessages } from '../messageService';
-import { rejectGPTRequestAndGetMessage } from '../../utils/auth';
-import { replyMessagePerError } from '../../utils/error';
+import logger from '../../lib/logger.js';
+import { summarizeLastMessages } from '../messageService.js';
+import { rejectGPTRequestAndGetMessage } from '../../utils/auth.js';
+import { replyMessagePerError } from '../../utils/error.js';
 
 export const data = new SlashCommandBuilder()
   .setName('itvsumm')

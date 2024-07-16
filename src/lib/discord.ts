@@ -1,5 +1,5 @@
 import { Client, Events, GatewayIntentBits } from 'discord.js';
-import logger from './logger';
+import logger from './logger.js';
 
 const client = new Client({
   intents: [

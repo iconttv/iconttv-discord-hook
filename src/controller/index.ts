@@ -1,7 +1,7 @@
 import { Events, Interaction, Client } from 'discord.js';
-import logger from '../lib/logger';
-import { onMessageCreate } from './onMessageCreate';
-import { onCommandInteractionCreate } from './onCommandInteractionCreate';
+import logger from '../lib/logger.js';
+import { onMessageCreate } from './onMessageCreate.js';
+import { onCommandInteractionCreate } from './onCommandInteractionCreate.js';
 
 export const registerEvents = (client: Client) => {
   client.on(Events.Debug, message => {

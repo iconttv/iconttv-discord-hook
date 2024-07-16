@@ -1,4 +1,4 @@
-import { IconttvIcon } from ".";
+import { IconttvIcon } from "./index.js";
 
 export interface IconttvResponse {
   icons: IconttvIcon[];

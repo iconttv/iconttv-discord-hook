@@ -3,9 +3,9 @@ import {
   RESTGetAPIApplicationGuildCommandsResult,
   Routes,
 } from 'discord.js';
-import { config } from './config';
-import logger from './lib/logger';
-import { readCommands } from './service/commands';
+import { config } from './config.js';
+import logger from './lib/logger.js';
+import { readCommands } from './service/commands/index.js';
 
 // https://discordjs.guide/creating-your-bot/command-deployment.html#where-to-deploy
 

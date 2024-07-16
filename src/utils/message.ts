@@ -1,8 +1,8 @@
 import { MessageType } from 'discord.js';
-import { MessageFromDatabase } from '../type';
-import { formatDate, replaceLaughs } from './index';
-import logger from '../lib/logger';
-import MessageModel from '../database/model/MessageModel';
+import { MessageFromDatabase } from '../type/index.js';
+import { formatDate, replaceLaughs } from './index.js';
+import logger from '../lib/logger.js';
+import MessageModel from '../database/model/MessageModel.js';
 
 export const convertMessagesToPrompt = (messages: MessageFromDatabase[]) => {
   const conversations = [];

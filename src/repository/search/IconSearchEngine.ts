@@ -1,9 +1,9 @@
-import logger, { channel_log_message } from '../../lib/logger';
-import { Icon } from '../../models';
-import { MessageLogContext } from '../../utils/discord';
-import { IconRepository } from '../icons';
-import { IconFunzinnuRepository } from '../icons/funzinnu';
-import { IconSmalljuzi6974Repository } from '../icons/smalljuzi6974';
+import logger, { channel_log_message } from '../../lib/logger.js';
+import { Icon } from '../../models/index.js';
+import { MessageLogContext } from '../../utils/discord/index.js';
+import { IconRepository } from '../icons/index.js';
+import { IconFunzinnuRepository } from '../icons/funzinnu/index.js';
+import { IconSmalljuzi6974Repository } from '../icons/smalljuzi6974/index.js';
 import { cloneDeep } from 'lodash';
 
 // 1hour

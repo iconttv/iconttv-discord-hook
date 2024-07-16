@@ -1,6 +1,6 @@
 import { CommandInteraction, Interaction } from 'discord.js';
-import { readCommands } from '../service/commands';
-import logger, { channel_log_message } from '../lib/logger';
+import { readCommands } from '../service/commands/index.js';
+import logger, { channel_log_message } from '../lib/logger.js';
 
 export const onCommandInteractionCreate = async (interaction: Interaction) => {
   if (!interaction.isCommand()) return;

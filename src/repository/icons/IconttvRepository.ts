@@ -1,11 +1,11 @@
 import axios from 'axios';
-import { IconRepository } from '.';
-import { Icon, IconttvIcon } from '../..//models';
-import { IconttvResponse } from '../..//models/response';
-import { getIconttvUrl } from '../..//utils/iconttv';
+import { IconRepository } from './index.js';
+import { Icon, IconttvIcon } from '../../models/index.js';
+import { IconttvResponse } from '../../models/response.js';
+import { getIconttvUrl } from '../../utils/iconttv.js';
 import { cloneDeep } from 'lodash';
-import logger from '../..//lib/logger';
-import { acquireLock } from '../../utils';
+import logger from '../../lib/logger.js';
+import { acquireLock } from '../../utils/index.js';
 
 // 12 hours
 const EXPIRE_TIME = 12 * 60 * 60 * 1000;
@@ -39,7 +39,7 @@ export class IconttvRepository implements IconRepository {
   }
 
   async findOne(searchKeyword: string): Promise<Icon | null> {
-    const isExpired =  Date.now() - this.fetchedAt > EXPIRE_TIME
+    const isExpired = Date.now() - this.fetchedAt > EXPIRE_TIME;
     if (isExpired || !this.iconList || !this.iconList.length) {
       try {
         await acquireLock(() => this.isIconLoading, 2000);

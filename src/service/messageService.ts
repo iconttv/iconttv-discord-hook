@@ -1,17 +1,17 @@
 import { Message } from 'discord.js';
-import logger from '../lib/logger';
-import MessageModel from '../database/model/MessageModel';
-import { getMessageContext } from '../utils/discord';
+import logger from '../lib/logger.js';
+import MessageModel from '../database/model/MessageModel.js';
+import { getMessageContext } from '../utils/discord/index.js';
 import {
   openaiQuestionMessages,
   openaiSummarizeMessages,
   geminiQuestionMessages,
   geminiSummarizeMessages,
-} from '../utils/llm';
-import MessageSummarizationModel from '../database/model/MessageSummarizationModel';
-import { unreplaceLaughs } from '../utils';
-import { saveAiRequestBuilder } from './common';
-import { getLastMessages } from '../utils/message';
+} from '../utils/llm/index.js';
+import MessageSummarizationModel from '../database/model/MessageSummarizationModel.js';
+import { unreplaceLaughs } from '../utils/index.js';
+import { saveAiRequestBuilder } from './common.js';
+import { getLastMessages } from '../utils/message.js';
 
 const useOpenai = () => Math.random() < 0.4;
 

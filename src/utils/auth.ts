@@ -1,4 +1,4 @@
-import GuildPermissionModel from '../database/model/GuildPermissionModel';
+import GuildPermissionModel from '../database/model/GuildPermissionModel.js';
 
 export async function rejectGPTRequestAndGetMessage(guildId: string) {
   const guildPermission = await GuildPermissionModel.find({

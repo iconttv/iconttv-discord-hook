@@ -1,5 +1,5 @@
-import AiRequestModel from '../database/model/AiRequestModel';
-import logger from '../lib/logger';
+import AiRequestModel from '../database/model/AiRequestModel.js';
+import logger from '../lib/logger.js';
 
 export const saveAiRequestBuilder =
   (

@@ -1,5 +1,5 @@
 import * as dotenv from 'dotenv';
-import logger from './lib/logger';
+import logger from './lib/logger.js';
 import { exit } from 'process';
 
 interface Config {

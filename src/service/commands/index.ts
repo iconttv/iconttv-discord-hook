@@ -5,7 +5,8 @@ import {
 } from 'discord.js';
 import { readdirSync } from 'fs';
 import path from 'path';
-import logger from '../../lib/logger';
+import logger from '../../lib/logger.js';
+import { pathToFileURL } from 'url';
 
 type SlashCommandHandler = (interaction: Interaction) => Promise<void>;
 
@@ -31,14 +32,18 @@ export const readCommands = (() => {
 
     const commandFiles = readdirSync(foldersPath).filter(
       file =>
-        !file.endsWith(__filename.split('/').pop() || 'index.ts') &&
+        !file.endsWith(__filename.split('/').pop()!) &&
+        !file.endsWith('index.ts') &&
+        !file.endsWith('index.js') &&
         !file.startsWith('_') &&
-        file.endsWith('.ts')
+        !file.endsWith('.d.ts') &&
+        (file.endsWith('.ts') || file.endsWith('.js'))
     );
 
     for (const file of commandFiles) {
       const filePath = path.join(foldersPath, file);
-      const commandConfig = (await import(filePath)) as SlashCommand;
+      const filePathUrl = pathToFileURL(filePath).href;
+      const commandConfig = (await import(filePathUrl)) as SlashCommand;
 
       logger.debug(JSON.stringify(commandConfig));
 
