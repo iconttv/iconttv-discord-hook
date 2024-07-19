@@ -13,7 +13,7 @@ import { unreplaceLaughs } from '../utils/index.js';
 import { saveAiRequestBuilder } from './common.js';
 import { getLastMessages } from '../utils/message.js';
 
-const useOpenai = () => Math.random() < 0.4;
+const useOpenai = () => Math.random() < 0.5;
 
 export const saveMessage = async (message: Message) => {
   try {

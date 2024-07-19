@@ -9,7 +9,7 @@ const openai = new OpenAI({
   apiKey: config.OPENAI_API_KEY,
 });
 
-const getModel = () => 'gpt-4o';
+const getModel = () => 'gpt-4o-mini';
 
 export const summarizeMessages = async (
   messages: MessageFromDatabase[],
