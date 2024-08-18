@@ -16,7 +16,7 @@ services:
       - .env
     environment:
       - TZ=Asia/Seoul
-      - MAX_OLD_SPACE_SIZE=1024
+      - MAX_OLD_SPACE_SIZE=4096
     logging:
       driver: "json-file"
       options:
