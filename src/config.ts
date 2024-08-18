@@ -14,6 +14,8 @@ interface Config {
   GEMINI_API_KEY: string | undefined;
   ENV: 'prod' | 'dev';
   GITHUB_BASEURL: string;
+
+  CACHE_CLEAR_CHECK_TIME_MS: number;
 }
 
 const envFilePath = process.env.NODE_ENV === 'prod' ? '.env' : '.env.dev';
@@ -42,4 +44,6 @@ export const config: Config = {
   GITHUB_BASEURL: `https://raw.githubusercontent.com/iconttv/iconttv-discord-hook/${
     process.env.NODE_ENV === 'prod' ? 'main' : 'develop'
   }`,
+
+  CACHE_CLEAR_CHECK_TIME_MS: 10 * 60 * 1000,
 };

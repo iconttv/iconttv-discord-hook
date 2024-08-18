@@ -5,6 +5,7 @@ import { IconRepository } from '../icons/index.js';
 import { IconFunzinnuRepository } from '../icons/funzinnu/index.js';
 import { IconSmalljuzi6974Repository } from '../icons/smalljuzi6974/index.js';
 import { cloneDeep } from 'lodash';
+import { config } from '../../config.js';
 
 // 1hour
 const MAX_CACHE_AGE = 60 * 60 * 1000;
@@ -16,6 +17,7 @@ interface MatchIconCacheElement {
 
 export default class IconSearchEngine {
   private static _instance: IconSearchEngine;
+  private static _clearIntervalId: NodeJS.Timeout;
   private _repositories: Record<string, IconRepository>;
   private _cache: Record<string, MatchIconCacheElement>;
 
@@ -34,8 +36,23 @@ export default class IconSearchEngine {
   }
 
   static get instance() {
-    if (!this._instance) this._instance = new IconSearchEngine();
+    if (!this._instance) {
+      this._instance = new IconSearchEngine();
+      this._clearIntervalId = setInterval(
+        this._instance.clearOldCache,
+        config.CACHE_CLEAR_CHECK_TIME_MS
+      );
+    }
     return this._instance;
+  }
+
+  clearOldCache() {
+    for (const key in this._cache) {
+      const cache = this._cache[key];
+      if (Date.now() - cache.createdAt > MAX_CACHE_AGE) {
+        delete this._cache[key];
+      }
+    }
   }
 
   async searchIcon(
