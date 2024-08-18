@@ -10,7 +10,7 @@ services:
       resources:
         limits:
           cpus: "2"
-          memory: 2G
+          memory: 4G
     user: 1000:1000
     env_file:
       - .env
