@@ -1,4 +1,3 @@
-version: '3'
 services:
   iconttv-discord-hook:
     build:
