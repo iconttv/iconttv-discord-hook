@@ -1,3 +1,5 @@
+import safeJSONStringify from 'safe-json-stringify';
+
 export function parseIconSearchKeyword(text: string): string | null {
   if (!text.startsWith('~')) return null;
   const [iconCommand, ...restArgs] = text.split(' ');
@@ -65,4 +67,12 @@ export function formatDate(date: Date | null | undefined) {
   const seconds = addLeadingZero(date.getSeconds());
 
   return month + '/' + day + ' ' + hours + ':' + minutes + ':' + seconds;
+}
+
+export function jsonStringify(obj: any) {
+  return safeJSONStringify(
+    obj,
+    (_, value) => (typeof value === 'bigint' ? value.toString() : value),
+    2
+  );
 }

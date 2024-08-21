@@ -1,4 +1,4 @@
-import safeJSONStringify from 'safe-json-stringify';
+import { jsonStringify } from './index';
 import { config } from '../config';
 import logger from '../lib/logger';
 
@@ -59,11 +59,7 @@ class Webhook {
   async __sendBody(body: any) {
     if (!body) return;
 
-    const bodyString = safeJSONStringify(
-      body,
-      (_, value) => (typeof value === 'bigint' ? value.toString() : value),
-      2
-    );
+    const bodyString = jsonStringify(body);
     // const file = new Blob([bodyString], { type: 'text/plain' });
     const file = new Blob([bodyString], { type: 'application/json' });
 

@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "cross-env NODE_ENV=dev nodemon ./src/index.ts",
     "build": "tsc",
-    "start": "cross-env NODE_ENV=prod node ./dist/index.js",
+    "start": "cross-env NODE_ENV=prod node ./dist/index.js --use_strict",
     "cmd-dev": "cross-env NODE_ENV=dev ts-node ./src/deploy-commands.ts",
     "cmd-prod": "cross-env NODE_ENV=prod ts-node ./src/deploy-commands.ts",
     "eslint": "eslint src/ --ext .ts",
@@ -17,6 +17,7 @@
     "lint:format": "yarn lint --fix"
   },
   "devDependencies": {
+    "@types/airbnb__node-memwatch": "^2.0.3",
     "@types/lodash": "^4.14.202",
     "@types/node": "^20.9.4",
     "@types/safe-json-stringify": "^1.1.5",
@@ -29,6 +30,7 @@
     "typescript": "^5.3.2"
   },
   "dependencies": {
+    "@airbnb/node-memwatch": "^2.0.0",
     "@google/generative-ai": "^0.11.4",
     "axios": "^1.6.2",
     "discord.js": "^14.15.3",
