@@ -1,6 +1,6 @@
 import OpenAi from 'openai';
 import { GoogleGenerativeAIError } from '@google/generative-ai';
-import logger from '../lib/logger.js';
+import logger from '../lib/logger';
 
 const parseGoogleError = (
   // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars

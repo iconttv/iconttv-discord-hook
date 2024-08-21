@@ -1,5 +1,5 @@
-import { generateImage } from '../utils/image/openai.js';
-import { saveAiRequestBuilder } from './common.js';
+import { generateImage } from '../utils/image/openai';
+import { saveAiRequestBuilder } from './common';
 
 export const generateImageFromUser = async (
   guildId: string,

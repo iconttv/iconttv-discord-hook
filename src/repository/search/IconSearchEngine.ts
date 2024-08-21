@@ -1,11 +1,11 @@
-import logger, { channel_log_message } from '../../lib/logger.js';
-import { Icon } from '../../models/index.js';
-import { MessageLogContext } from '../../utils/discord/index.js';
-import { IconRepository } from '../icons/index.js';
-import { IconFunzinnuRepository } from '../icons/funzinnu/index.js';
-import { IconSmalljuzi6974Repository } from '../icons/smalljuzi6974/index.js';
+import logger, { channel_log_message } from '../../lib/logger';
+import { Icon } from '../../models/index';
+import { MessageLogContext } from '../../utils/discord/index';
+import { IconRepository } from '../icons/index';
+import { IconFunzinnuRepository } from '../icons/funzinnu/index';
+import { IconSmalljuzi6974Repository } from '../icons/smalljuzi6974/index';
 import { cloneDeep } from 'lodash';
-import { config } from '../../config.js';
+import { config } from '../../config';
 
 // 1hour
 const MAX_CACHE_AGE = 60 * 60 * 1000;

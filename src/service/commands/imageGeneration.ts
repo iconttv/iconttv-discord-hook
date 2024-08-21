@@ -1,8 +1,8 @@
 import { CommandInteraction, SlashCommandBuilder } from 'discord.js';
-import logger from '../../lib/logger.js';
-import { generateImageFromUser } from '../imageService.js';
-import { replyMessagePerError } from '../../utils/error.js';
-import { createUserProfileEmbed } from '../../utils/discord/index.js';
+import logger from '../../lib/logger';
+import { generateImageFromUser } from '../imageService';
+import { replyMessagePerError } from '../../utils/error';
+import { createUserProfileEmbed } from '../../utils/discord/index';
 
 export const data = new SlashCommandBuilder()
   .setName('itvimgen')

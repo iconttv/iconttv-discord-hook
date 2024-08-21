@@ -1,9 +1,9 @@
 import OpenAI from 'openai';
-import { config } from '../../config.js';
-import logger from '../../lib/logger.js';
-import { LogAiRequest, MessageFromDatabase } from '../../type/index.js';
-import { makeChunk } from '../index.js';
-import { convertMessagesToPrompt } from '../message.js';
+import { config } from '../../config';
+import logger from '../../lib/logger';
+import { LogAiRequest, MessageFromDatabase } from '../../type/index';
+import { makeChunk } from '../index';
+import { convertMessagesToPrompt } from '../message';
 
 const openai = new OpenAI({
   apiKey: config.OPENAI_API_KEY,

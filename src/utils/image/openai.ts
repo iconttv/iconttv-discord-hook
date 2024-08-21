@@ -1,7 +1,7 @@
 import OpenAI from 'openai';
-import { config } from '../../config.js';
-import logger from '../../lib/logger.js';
-import { LogAiRequest } from '../../type/index.js';
+import { config } from '../../config';
+import logger from '../../lib/logger';
+import { LogAiRequest } from '../../type/index';
 
 const openai = new OpenAI({
   apiKey: config.OPENAI_API_KEY,

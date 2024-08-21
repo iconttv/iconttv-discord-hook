@@ -1,11 +1,11 @@
 import axios from 'axios';
-import { IconRepository } from './index.js';
-import { Icon, IconttvIcon } from '../../models/index.js';
-import { IconttvResponse } from '../../models/response.js';
-import { getIconttvUrl } from '../../utils/iconttv.js';
+import { IconRepository } from './index';
+import { Icon, IconttvIcon } from '../../models/index';
+import { IconttvResponse } from '../../models/response';
+import { getIconttvUrl } from '../../utils/iconttv';
 import { cloneDeep } from 'lodash';
-import logger from '../../lib/logger.js';
-import { acquireLock } from '../../utils/index.js';
+import logger from '../../lib/logger';
+import { acquireLock } from '../../utils/index';
 
 // 12 hours
 const EXPIRE_TIME = 12 * 60 * 60 * 1000;

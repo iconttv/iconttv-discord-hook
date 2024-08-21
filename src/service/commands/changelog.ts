@@ -1,6 +1,6 @@
 import { CommandInteraction, SlashCommandBuilder } from 'discord.js';
-import logger from '../../lib/logger.js';
-import { config } from '../../config.js';
+import logger from '../../lib/logger';
+import { config } from '../../config';
 
 export const data = new SlashCommandBuilder()
   .setName('itvchangelog')

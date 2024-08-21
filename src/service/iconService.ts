@@ -1,14 +1,14 @@
 import { Message } from 'discord.js';
-import logger, { channel_log_message } from '../lib/logger.js';
-import IconSearchEngine from '../repository/search/IconSearchEngine.js';
-import { parseIconSearchKeyword } from '../utils/index.js';
+import logger, { channel_log_message } from '../lib/logger';
+import IconSearchEngine from '../repository/search/IconSearchEngine';
+import { parseIconSearchKeyword } from '../utils/index';
 import {
   sendIconMessageEmbed,
   isAnonMessage,
   sendIconMessage,
   deleteMessage,
   getMessageLogContext,
-} from '../utils/discord/index.js';
+} from '../utils/discord/index';
 
 export const replaceIcon = async (message: Message) => {
   const { content: messageText } = message;

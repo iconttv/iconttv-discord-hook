@@ -7,11 +7,11 @@ import {
   SafetySetting,
   Content as GenerateContentRequestContent,
 } from '@google/generative-ai';
-import { config } from '../../config.js';
-import logger from '../../lib/logger.js';
-import { LogAiRequest, MessageFromDatabase } from '../../type/index.js';
-import { convertMessagesToPrompt } from '../message.js';
-import { makeChunk } from '../index.js';
+import { config } from '../../config';
+import logger from '../../lib/logger';
+import { LogAiRequest, MessageFromDatabase } from '../../type/index';
+import { convertMessagesToPrompt } from '../message';
+import { makeChunk } from '../index';
 
 const genAI = new GoogleGenerativeAI(config.GEMINI_API_KEY || '');
 

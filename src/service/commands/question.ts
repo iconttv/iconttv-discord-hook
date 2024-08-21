@@ -3,10 +3,10 @@ import {
   PermissionFlagsBits,
   SlashCommandBuilder,
 } from 'discord.js';
-import logger from '../../lib/logger.js';
-import { questionLastMessages } from '../messageService.js';
-import { rejectGPTRequestAndGetMessage } from '../../utils/auth.js';
-import { replyMessagePerError } from '../../utils/error.js';
+import logger from '../../lib/logger';
+import { questionLastMessages } from '../messageService';
+import { rejectGPTRequestAndGetMessage } from '../../utils/auth';
+import { replyMessagePerError } from '../../utils/error';
 
 export const data = new SlashCommandBuilder()
   .setName('itvques')

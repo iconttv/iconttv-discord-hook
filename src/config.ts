@@ -1,5 +1,5 @@
 import * as dotenv from 'dotenv';
-import logger from './lib/logger.js';
+import logger from './lib/logger';
 import { existsSync } from 'fs';
 
 interface Config {
@@ -32,14 +32,14 @@ if (existsSync(envFilePath)) {
 }
 
 export const config: Config = {
-  WEBHOOK_DISCORD: process.env.WEBHOOK_DISCORD,
-  DISCORD_BOT_TOKEN: process.env.DISCORD_BOT_TOKEN,
-  DISCORD_CLIENT_ID: process.env.DISCORD_CLIENT_ID,
+  WEBHOOK_DISCORD: process.env.WEBHOOK_DISCORD!,
+  DISCORD_BOT_TOKEN: process.env.DISCORD_BOT_TOKEN!,
+  DISCORD_CLIENT_ID: process.env.DISCORD_CLIENT_ID!,
   MONGODB_HOST: process.env.MONGODB_HOST!,
   MONGODB_PORT: process.env.MONGODB_PORT!,
-  MONGODB_USERNAME: process.env.MONGODB_USERNAME,
-  MONGODB_PASSWORD: process.env.MONGODB_PASSWORD,
-  MONGODB_DATABASE: process.env.MONGODB_DATABASE,
+  MONGODB_USERNAME: process.env.MONGODB_USERNAME!,
+  MONGODB_PASSWORD: process.env.MONGODB_PASSWORD!,
+  MONGODB_DATABASE: process.env.MONGODB_DATABASE!,
   OPENAI_API_KEY: process.env.OPENAI_API_KEY,
   GEMINI_API_KEY: process.env.GEMINI_API_KEY,
   ENV: process.env.NODE_ENV === 'prod' ? 'prod' : 'dev',

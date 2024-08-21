@@ -1,12 +1,12 @@
 import {
   questionMessages as openaiQuestionMessages,
   summarizeMessages as openaiSummarizeMessages,
-} from './openai.js';
+} from './openai';
 
 import {
   questionMessages as geminiQuestionMessages,
   summarizeMessages as geminiSummarizeMessages,
-} from './gemini.js';
+} from './gemini';
 
 export {
   openaiQuestionMessages,

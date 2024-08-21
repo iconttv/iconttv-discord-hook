@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { Icon } from '../../models/index.js';
-import Singleton from '../../utils/singleton.js';
+import { Icon } from '../../models/index';
+import Singleton from '../../utils/singleton';
 
 export abstract class IconRepository extends Singleton {
   /**

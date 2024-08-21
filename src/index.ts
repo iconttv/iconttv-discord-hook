@@ -1,10 +1,10 @@
 import memwatch from '@airbnb/node-memwatch';
-import client from './lib/discord.js';
-import { registerEvents } from './controller/index.js';
-import { config } from './config.js';
-import { getConnection } from './database/index.js';
-import logger from './lib/logger.js';
-import { jsonStringify } from './utils/index.js';
+import client from './lib/discord';
+import { registerEvents } from './controller/index';
+import { config } from './config';
+import { getConnection } from './database/index';
+import logger from './lib/logger';
+import { jsonStringify } from './utils/index';
 
 (async () => {
   memwatch.on('stats', stats => {

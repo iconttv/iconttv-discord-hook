@@ -1,8 +1,8 @@
 import { Events, Interaction, Client } from 'discord.js';
-import logger from '../lib/logger.js';
-import { onMessageCreate } from './onMessageCreate.js';
-import { onCommandInteractionCreate } from './onCommandInteractionCreate.js';
-import { webhook } from '../utils/webhook.js';
+import logger from '../lib/logger';
+import { onMessageCreate } from './onMessageCreate';
+import { onCommandInteractionCreate } from './onCommandInteractionCreate';
+import { webhook } from '../utils/webhook';
 
 export const registerEvents = (client: Client) => {
   client.once(Events.ClientReady, event => {

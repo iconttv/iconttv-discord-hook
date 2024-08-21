@@ -5,7 +5,7 @@ import {
 } from 'discord.js';
 import { readdirSync } from 'fs';
 import path from 'path';
-import logger from '../../lib/logger.js';
+import logger from '../../lib/logger';
 import { pathToFileURL } from 'url';
 
 type SlashCommandHandler = (interaction: Interaction) => Promise<void>;

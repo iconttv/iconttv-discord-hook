@@ -1,7 +1,3 @@
-import { Icon } from '../../models/index.js';
-import path from 'path';
-import client from '../../lib/discord.js';
-
 import {
   EmbedBuilder,
   type Collection,
@@ -19,9 +15,13 @@ import {
   APIEmbed,
   EmbedData,
 } from 'discord.js';
-import { getRandomTelecomIP } from '../telecomIP.js';
-import GuildMemberCache from '../../repository/search/GuildMemberCache.js';
-import logger from '../../lib/logger.js';
+import path from 'path';
+
+import { Icon } from '../../models/index';
+import client from '../../lib/discord';
+import { getRandomTelecomIP } from '../telecomIP';
+import GuildMemberCache from '../../repository/search/GuildMemberCache';
+import logger from '../../lib/logger';
 
 export interface MessageLogContext {
   senderName: string;
