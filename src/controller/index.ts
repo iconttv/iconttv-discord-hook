@@ -2,17 +2,25 @@ import { Events, Interaction, Client } from 'discord.js';
 import logger from '../lib/logger.js';
 import { onMessageCreate } from './onMessageCreate.js';
 import { onCommandInteractionCreate } from './onCommandInteractionCreate.js';
+import { webhook } from '../utils/webhook.js';
 
 export const registerEvents = (client: Client) => {
+  client.once(Events.ClientReady, event => {
+    webhook.sendMessage('Ready', event, 'info');
+    logger.info(`Logged in as ${event.user.tag}`);
+  });
+
   client.on(Events.Debug, message => {
     logger.debug(message);
   });
 
   client.on(Events.Warn, error => {
+    webhook.sendMessage('Warn', error, 'warning');
     logger.warn(error);
   });
 
   client.on(Events.Error, error => {
+    webhook.sendMessage('Error', error, 'error');
     logger.error(error);
   });
 
@@ -28,6 +36,7 @@ export const registerEvents = (client: Client) => {
     try {
       await onMessageCreate(message);
     } catch (e) {
+      webhook.sendMessage('MessageCreateError', e, 'error');
       logger.error(e);
     }
   });
@@ -36,6 +45,7 @@ export const registerEvents = (client: Client) => {
     try {
       onCommandInteractionCreate(interaction);
     } catch (e) {
+      webhook.sendMessage('InteractionCreateError', e, 'error');
       logger.error(e);
     }
   });

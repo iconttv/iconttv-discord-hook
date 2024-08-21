@@ -3,6 +3,7 @@ import logger from './lib/logger.js';
 import { existsSync } from 'fs';
 
 interface Config {
+  WEBHOOK_DISCORD: string;
   DISCORD_BOT_TOKEN: string;
   DISCORD_CLIENT_ID: string;
   MONGODB_HOST: string;
@@ -31,6 +32,7 @@ if (existsSync(envFilePath)) {
 }
 
 export const config: Config = {
+  WEBHOOK_DISCORD: process.env.WEBHOOK_DISCORD,
   DISCORD_BOT_TOKEN: process.env.DISCORD_BOT_TOKEN,
   DISCORD_CLIENT_ID: process.env.DISCORD_CLIENT_ID,
   MONGODB_HOST: process.env.MONGODB_HOST!,
