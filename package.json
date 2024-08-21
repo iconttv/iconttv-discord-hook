@@ -7,7 +7,7 @@
     "node": "20.x"
   },
   "scripts": {
-    "dev": "cross-env NODE_ENV=dev nodemon ./src/index.ts",
+    "dev": "cross-env NODE_ENV=dev nodemon ./src/index.ts --use_strict",
     "build": "tsc",
     "start": "cross-env NODE_ENV=prod node ./dist/index.js --use_strict",
     "cmd-dev": "cross-env NODE_ENV=dev ts-node ./src/deploy-commands.ts",
