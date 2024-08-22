@@ -3,7 +3,6 @@ import { IconRepository } from './index';
 import { Icon, IconttvIcon } from '../../models/index';
 import { IconttvResponse } from '../../models/response';
 import { getIconttvUrl } from '../../utils/iconttv';
-import { cloneDeep } from 'lodash';
 import logger from '../../lib/logger';
 import { acquireLock } from '../../utils/index';
 
@@ -16,6 +15,10 @@ export class IconttvRepository implements IconRepository {
   private fetchedAt: number = 0;
 
   _streamerName: string | undefined;
+
+  constructor() {
+    logger.debug(`IconttvRepository ${this._streamerName} Created`);
+  }
 
   private async fetchIconList() {
     logger.debug(`Fetch ${this._streamerName}'s icon list`);
@@ -72,7 +75,7 @@ export class IconttvRepository implements IconRepository {
         : matchIcons[0].uri,
       isRemoteImage: true,
     };
-    return cloneDeep(matchIcon);
+    return matchIcon;
   }
 
   imagePathResolver(imagePath: string): string {

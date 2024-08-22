@@ -4,8 +4,8 @@ import { MessageLogContext } from '../../utils/discord/index';
 import { IconRepository } from '../icons/index';
 import { IconFunzinnuRepository } from '../icons/funzinnu/index';
 import { IconSmalljuzi6974Repository } from '../icons/smalljuzi6974/index';
-import { cloneDeep } from 'lodash';
 import { config } from '../../config';
+import { copyIcon } from '../../utils/iconttv';
 
 // 1hour
 const MAX_CACHE_AGE = 60 * 60 * 1000;
@@ -19,9 +19,10 @@ export default class IconSearchEngine {
   private static _instance: IconSearchEngine;
   private static _clearIntervalId: NodeJS.Timeout;
   private _repositories: Record<string, IconRepository>;
-  private _cache: Record<string, MatchIconCacheElement>;
+  private _cache: Record<string, MatchIconCacheElement | null>;
 
   private constructor() {
+    logger.debug(`IconSearchEngine Created`);
     this._repositories = {
       smalljuzi6974: new IconSmalljuzi6974Repository(),
       funzinnu: new IconFunzinnuRepository(),
@@ -49,7 +50,13 @@ export default class IconSearchEngine {
   clearOldCache() {
     for (const key in this._cache) {
       const cache = this._cache[key];
+      if (cache === null) {
+        delete this._cache[key];
+        continue;
+      }
+
       if (Date.now() - cache.createdAt > MAX_CACHE_AGE) {
+        this._cache[key] = null;
         delete this._cache[key];
       }
     }
@@ -64,16 +71,13 @@ export default class IconSearchEngine {
     const cacheKey = `${guildId} ${searchKeyword}`;
     const cachedValue = this._cache[cacheKey];
     if (cachedValue) {
-      if (!this.isExpiredCache(cachedValue.createdAt)) {
-        logger.debug(
-          channel_log_message(
-            `Found "${searchKeyword}" in memory cache`,
-            messageLogContext
-          )
-        );
-        return cloneDeep(cachedValue.icon);
-      }
-      delete this._cache[cacheKey];
+      logger.debug(
+        channel_log_message(
+          `Found "${searchKeyword}" in memory cache`,
+          messageLogContext
+        )
+      );
+      return copyIcon(cachedValue.icon);
     }
 
     const iconProviders: [string, IconRepository][] =
@@ -100,7 +104,7 @@ export default class IconSearchEngine {
           icon: matchIcon,
           createdAt: Date.now(),
         };
-        return matchIcon;
+        return copyIcon(matchIcon);
       }
     }
 

@@ -1,3 +1,5 @@
+import { Icon } from '../models';
+
 export function getIconttvUrl(urlpath: string): string {
   const ICONTTV_IMAGE_PREFIX = 'https://api.probius.dev/twitch-icons/cdn';
 
@@ -19,4 +21,12 @@ export function getIconttvUrl(urlpath: string): string {
   url.searchParams.set('size', '100');
 
   return url.toString();
+}
+
+export function copyIcon(icon: Icon): Icon {
+  return {
+    keywords: [...icon.keywords],
+    imagePath: icon.imagePath,
+    isRemoteImage: icon.isRemoteImage,
+  };
 }

@@ -1,5 +1,6 @@
 import { GuildMember } from 'discord.js';
 import { config } from '../../config';
+import logger from '../../lib/logger';
 
 interface GuildMemberCacheStorage {
   value: GuildMember;
@@ -9,7 +10,11 @@ interface GuildMemberCacheStorage {
 export default class GuildMemberCache {
   private static _instance: GuildMemberCache;
   private static _clearIntervalId: NodeJS.Timeout;
-  private _guildNameCache: Record<string, GuildMemberCacheStorage> = {};
+  private _guildNameCache: Record<string, GuildMemberCacheStorage | null> = {};
+
+  private constructor() {
+    logger.debug(`GuildMemberCache Created`);
+  }
 
   static get instance() {
     if (!this._instance) {
@@ -25,7 +30,13 @@ export default class GuildMemberCache {
   clearOldCache() {
     for (const key in this._guildNameCache) {
       const cache = this._guildNameCache[key];
+      if (cache === null) {
+        delete this._guildNameCache[key];
+        continue;
+      }
+
       if (Date.now() - cache.createdAt > 10 * 60 * 1000) {
+        this._guildNameCache[key] = null;
         delete this._guildNameCache[key];
       }
     }
@@ -34,10 +45,7 @@ export default class GuildMemberCache {
   getCache(key: string): GuildMember | null {
     if (!(key in this._guildNameCache)) return null;
     const result = this._guildNameCache[key];
-    if (Date.now() - result.createdAt > 60 * 1000) {
-      delete this._guildNameCache[key];
-      return null;
-    }
+    if (result === null) return null;
     return result.value;
   }
 
