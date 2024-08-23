@@ -34,10 +34,18 @@ export const replaceIcon = async (message: Message) => {
     )
   );
 
-  sendIconMessageEmbed(message, matchIcon, isAnonMessage(messageText))
+  await sendIconMessageEmbed(message, matchIcon, isAnonMessage(messageText))
+    .then(() => {
+      logger.debug(
+        channel_log_message('Icon Posted Successfully', messageLogContext)
+      );
+    })
     .catch(e => {
       logger.error(
-        channel_log_message(`Icon Embeded Post Failed: ${e}`, messageLogContext)
+        channel_log_message(
+          `Icon Embeded Post Failed. Try to send plain messsage. ${e}`,
+          messageLogContext
+        )
       );
       return sendIconMessage(message, matchIcon);
     })
@@ -45,22 +53,17 @@ export const replaceIcon = async (message: Message) => {
       logger.error(
         channel_log_message(`Icon Post Failed: ${e}`, messageLogContext)
       );
-    })
-    .then(() => {
-      logger.debug(
-        channel_log_message('Icon Posted Successfully', messageLogContext)
-      );
     });
 
-  deleteMessage(message)
-    .catch(e => {
-      logger.error(
-        channel_log_message(`Message Deletion Failed: ${e}`, messageLogContext)
-      );
-    })
+  await deleteMessage(message)
     .then(() => {
       logger.debug(
         channel_log_message('Message Deleted Successfully', messageLogContext)
+      );
+    })
+    .catch(e => {
+      logger.error(
+        channel_log_message(`Message Deletion Failed. ${e}`, messageLogContext)
       );
     });
 };

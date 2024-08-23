@@ -9,16 +9,12 @@ import { acquireLock } from '../../utils/index';
 // 12 hours
 const EXPIRE_TIME = 12 * 60 * 60 * 1000;
 
-export class IconttvRepository implements IconRepository {
+export class IconttvRepository extends IconRepository {
   private isIconLoading = false;
   private iconList: IconttvIcon[] = [];
   private fetchedAt: number = 0;
 
   _streamerName: string | undefined;
-
-  constructor() {
-    logger.debug(`IconttvRepository ${this._streamerName} Created`);
-  }
 
   private async fetchIconList() {
     logger.debug(`Fetch ${this._streamerName}'s icon list`);

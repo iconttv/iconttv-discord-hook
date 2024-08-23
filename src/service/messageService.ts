@@ -1,7 +1,7 @@
 import { Message } from 'discord.js';
 import logger from '../lib/logger';
 import MessageModel from '../database/model/MessageModel';
-import { getMessageContext } from '../utils/discord/index';
+import { getMessageLogContext } from '../utils/discord/index';
 import {
   openaiQuestionMessages,
   openaiSummarizeMessages,
@@ -17,8 +17,8 @@ const useOpenai = () => Math.random() < 0.5;
 
 export const saveMessage = async (message: Message) => {
   try {
-    const context = getMessageContext(message);
-    if (!context) return;
+    const context = getMessageLogContext(message);
+    if (!context || !context.guildMember || !context.channel) return;
 
     const messageModel = new MessageModel({
       guildId: context.guildId,
@@ -38,6 +38,9 @@ export const saveMessage = async (message: Message) => {
     });
 
     await messageModel.save();
+    logger.debug(
+      `Message Saved! "${context.senderName} - ${context.senderMessage}"`
+    );
   } catch (e) {
     logger.error(e);
   }

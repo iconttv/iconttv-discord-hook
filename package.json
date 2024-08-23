@@ -7,9 +7,9 @@
     "node": "20.x"
   },
   "scripts": {
-    "dev": "cross-env NODE_ENV=dev nodemon ./src/index.ts --use_strict",
+    "dev": "cross-env NODE_ENV=dev nodemon ./src/index.ts --use_strict --trace-gc --trace-gc-verbose",
     "build": "tsc",
-    "start": "cross-env NODE_ENV=prod node ./dist/index.js --use_strict",
+    "start": "cross-env NODE_ENV=prod node ./dist/index.js --use_strict --trace-gc --trace-gc-verbose",
     "cmd-dev": "cross-env NODE_ENV=dev ts-node ./src/deploy-commands.ts",
     "cmd-prod": "cross-env NODE_ENV=prod ts-node ./src/deploy-commands.ts",
     "eslint": "eslint src/ --ext .ts",

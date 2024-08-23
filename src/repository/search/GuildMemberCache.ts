@@ -36,6 +36,7 @@ export default class GuildMemberCache {
       }
 
       if (Date.now() - cache.createdAt > 10 * 60 * 1000) {
+        logger.debug(`GuildMemberCache delete old cache ${key}`);
         this._guildNameCache[key] = null;
         delete this._guildNameCache[key];
       }

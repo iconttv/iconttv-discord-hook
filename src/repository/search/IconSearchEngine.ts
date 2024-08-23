@@ -56,6 +56,7 @@ export default class IconSearchEngine {
       }
 
       if (Date.now() - cache.createdAt > MAX_CACHE_AGE) {
+        logger.debug(`IconSearchEngine delete old cache ${key}`);
         this._cache[key] = null;
         delete this._cache[key];
       }

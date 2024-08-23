@@ -16,13 +16,20 @@ export function channel_log_message(logMessage: string, context: object) {
 const logDir = resolve(__dirname, '../../logs');
 
 const loggerFormat = winston.format.printf(info => {
-  return `${info.timestamp} [${info.level.toUpperCase()}] ${info.message}`;
+  let logMessage = `${info.timestamp} [${info.level.toUpperCase()}] ${
+    info.message
+  }`;
+  if (info.stack) {
+    logMessage += ` ${info.stack}`;
+  }
+  return logMessage;
 });
 
 const winstonFormat = winston.format.combine(
   winston.format.timestamp({
     format: () => moment().format('YYYY-MM-DDTHH:mm:ss.SSSZ'),
   }),
+  winston.format.errors({ stack: true }),
   loggerFormat
 );
 
@@ -31,7 +38,10 @@ const logger = winston.createLogger({
   format: winstonFormat,
   transports: [
     new winston.transports.Console({
-      format: winston.format.colorize({ all: true }),
+      format: winston.format.combine(
+        winston.format.colorize({ all: true }),
+        winston.format.errors({ stack: true })
+      ),
       level: 'silly',
     }),
     new dailyRotateFile({
