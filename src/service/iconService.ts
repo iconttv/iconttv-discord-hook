@@ -30,6 +30,7 @@ export const replaceIcon = async (message: Message) => {
   );
   if (!matchIcon) return;
 
+  logger.debug(`replaceIcon-4 Icon Found "${message.content}"`);
   logger.info(
     channel_log_message(
       `Icon Found: ${JSON.stringify(matchIcon)}`,
@@ -37,7 +38,8 @@ export const replaceIcon = async (message: Message) => {
     )
   );
 
-  await sendIconMessageEmbed(message, matchIcon, isAnonMessage(messageText))
+  logger.debug(`replaceIcon-5 Before Send Icon "${message.content}"`);
+  sendIconMessageEmbed(message, matchIcon, isAnonMessage(messageText))
     .then(() => {
       logger.debug(
         channel_log_message('Icon Posted Successfully', messageLogContext)
@@ -58,7 +60,8 @@ export const replaceIcon = async (message: Message) => {
       );
     });
 
-  await deleteMessage(message)
+  logger.debug(`replaceIcon-5 Before Delete Icon "${message.content}"`);
+  deleteMessage(message)
     .then(() => {
       logger.debug(
         channel_log_message('Message Deleted Successfully', messageLogContext)

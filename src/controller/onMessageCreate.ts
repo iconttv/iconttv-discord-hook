@@ -4,6 +4,7 @@ import { saveMessage } from '../service/messageService';
 import logger from '../lib/logger';
 
 export const onMessageCreate = async (message: Message) => {
-  logger.debug(`0. Message Received. content: "${message.content}"`);
+  logger.debug(`Hello Message. content: "${message.content}"`);
   await Promise.allSettled([saveMessage(message), replaceIcon(message)]);
+  logger.debug(`Goodbye Message. content: "${message.content}"`);
 };
