@@ -13,15 +13,15 @@ import {
 export const replaceIcon = async (message: Message) => {
   const { content: messageText } = message;
 
-  logger.debug(`1. Before Parse Keyword "${message.content}"`);
+  logger.debug(`replaceIcon-1 Before Parse Keyword "${message.content}"`);
   const searchKeyword = parseIconSearchKeyword(messageText);
   if (!searchKeyword) return;
 
-  logger.debug(`2. Before Create Message Context "${message.content}"`);
+  logger.debug(`replaceIcon-2 Before Create Message Context "${message.content}"`);
   const messageLogContext = getMessageLogContext(message);
   if (!messageLogContext) return;
 
-  logger.debug(`3. Before Search Icon "${message.content}"`);
+  logger.debug(`replaceIcon-3 Before Search Icon "${message.content}"`);
   const matchIcon = await IconSearchEngine.instance.searchIcon(
     searchKeyword,
     messageLogContext.guildId,

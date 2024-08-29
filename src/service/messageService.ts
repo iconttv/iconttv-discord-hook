@@ -17,12 +17,14 @@ const useOpenai = () => Math.random() < 0.5;
 
 export const saveMessage = async (message: Message) => {
   try {
-    logger.debug(`1. Before Create Message Context "${message.content}"`);
+    logger.debug(
+      `saveMessage-1 Before Create Message Context "${message.content}"`
+    );
     const context = getMessageLogContext(message);
     if (!context || !context.guildMember || !context.channel) return;
 
     logger.debug(
-      `2. Before Create Message Model "${context.senderName} - ${context.senderMessage}"`
+      `saveMessage-2 Before Create Message Model "${context.senderName} - ${context.senderMessage}"`
     );
     const messageModel = new MessageModel({
       guildId: context.guildId,
@@ -42,11 +44,11 @@ export const saveMessage = async (message: Message) => {
     });
 
     logger.debug(
-      `3. Before Mesasge Save "${context.senderName} - ${context.senderMessage}"`
+      `saveMessage-3 Before Mesasge Save "${context.senderName} - ${context.senderMessage}"`
     );
     await messageModel.save();
     logger.debug(
-      `4. Message Saved! "${context.senderName} - ${context.senderMessage}"`
+      `saveMessage-4 Message Saved! "${context.senderName} - ${context.senderMessage}"`
     );
   } catch (e) {
     logger.error(e);
