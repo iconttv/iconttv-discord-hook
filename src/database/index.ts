@@ -10,5 +10,8 @@ export const getConnection = () => {
     '/' +
     `${config.MONGODB_DATABASE}?authSource=admin`;
 
-  return mongoose.connect(url, { dbName: config.MONGODB_DATABASE });
+  return mongoose.connect(url, {
+    dbName: config.MONGODB_DATABASE,
+    maxPoolSize: 10,
+  });
 };
