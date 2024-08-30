@@ -55,7 +55,7 @@ export default class IconSearchEngine {
         continue;
       }
 
-      if (Date.now() - cache.createdAt > MAX_CACHE_AGE) {
+      if (this.isExpiredCache(cache.createdAt)) {
         logger.debug(`IconSearchEngine delete old cache ${key}`);
         this._cache[key] = null;
         delete this._cache[key];
@@ -71,6 +71,7 @@ export default class IconSearchEngine {
   ): Promise<Icon | null> {
     const cacheKey = `${guildId} ${searchKeyword}`;
     const cachedValue = this._cache[cacheKey];
+    logger.debug(`searchIcon-1 Before check cachedValue "${searchKeyword}"`);
     if (cachedValue) {
       logger.debug(
         channel_log_message(
@@ -88,6 +89,7 @@ export default class IconSearchEngine {
             providers.includes(repositoryProvider)
           );
 
+    logger.debug(`searchIcon-2 Before iterate providers "${searchKeyword}"`);
     for (const [providerName, iconProvider] of iconProviders) {
       const matchIcon = await iconProvider.findOne(searchKeyword);
       if (matchIcon) {

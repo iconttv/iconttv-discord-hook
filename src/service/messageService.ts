@@ -42,11 +42,15 @@ export const saveMessage = async (message: Message) => {
       raw: JSON.stringify(message),
       createdAt: context.createdAt,
     });
+    messageModel.isNew = true;
 
     logger.debug(
       `saveMessage-3 Before Mesasge Save "${context.senderName} - ${context.senderMessage}"`
     );
-    await messageModel.save();
+    await messageModel.save({
+      w: 0,
+      wtimeout: 1000,
+    });
     logger.debug(
       `saveMessage-4 Message Saved! "${context.senderName} - ${context.senderMessage}"`
     );
