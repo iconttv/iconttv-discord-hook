@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import { config } from '../config';
 
-export const getConnection = () => {
+export const createMongooseConnection = () => {
   const url =
     'mongodb://' +
     `${config.MONGODB_USERNAME}:${config.MONGODB_PASSWORD}` +
@@ -10,8 +10,9 @@ export const getConnection = () => {
     '/' +
     `${config.MONGODB_DATABASE}?authSource=admin`;
 
-  return mongoose.connect(url, {
+  mongoose.connect(url, {
     dbName: config.MONGODB_DATABASE,
     maxPoolSize: 10,
   });
+  mongoose.set('debug', true);
 };
