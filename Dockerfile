@@ -26,6 +26,6 @@ COPY --from=builder /app/yarn.lock ./yarn.lock
 ENV NODE_ENV=prod
 ENV MAX_OLD_SPACE_SIZE=4096
 
-ENTRYPOINT ["sh", "-c", "node", "--max-old-space-size=${MAX_OLD_SPACE_SIZE}"]
+ENTRYPOINT ["sh", "-c", "node --max-old-space-size=${MAX_OLD_SPACE_SIZE} $0 $@"]
 
 CMD ["dist/index.js"]
