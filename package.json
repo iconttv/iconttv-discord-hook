@@ -7,9 +7,11 @@
     "node": "20.x"
   },
   "scripts": {
-    "dev": "cross-env NODE_ENV=dev nodemon ./src/index.ts --use_strict --trace-gc --trace-gc-verbose",
+    "dev": "cross-env NODE_ENV=dev nodemon ./src/index.ts",
     "build": "tsc",
-    "start": "cross-env NODE_ENV=prod node ./dist/index.js --use_strict --trace-gc --trace-gc-verbose",
+    "start": "cross-env NODE_ENV=prod node ./dist/index.js",
+    "archive-dev": "cross-env NODE_ENV=dev nodemon ./src/archive.ts",
+    "archive-start": "cross-env NODE_ENV=prod node ./dist/archive.js",
     "cmd-dev": "cross-env NODE_ENV=dev ts-node ./src/deploy-commands.ts",
     "cmd-prod": "cross-env NODE_ENV=prod ts-node ./src/deploy-commands.ts",
     "eslint": "eslint src/ --ext .ts",
@@ -33,7 +35,7 @@
     "discord.js": "^14.15.3",
     "dotenv": "^16.3.1",
     "moment": "^2.29.4",
-    "mongoose": "^8.4.0",
+    "mongoose": "^8.6.1",
     "openai": "^4.47.1",
     "safe-json-stringify": "^1.2.0",
     "winston": "^3.11.0",

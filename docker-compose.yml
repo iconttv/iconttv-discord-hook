@@ -9,13 +9,12 @@ services:
       resources:
         limits:
           cpus: "2"
-          memory: 4G
+          memory: 1G
     user: 1000:1000
     env_file:
       - .env
     environment:
       - TZ=Asia/Seoul
-      - MAX_OLD_SPACE_SIZE=4096
     logging:
       driver: "json-file"
       options:
@@ -23,4 +22,29 @@ services:
         max-size: "10m"
     volumes:
       - ./logs:/app/logs
+    restart: unless-stopped
+  
+  iconttv-discord-hook-archive:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    container_name: iconttv-discord-hook-archive
+    shm_size: '2gb'
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 1G
+    user: 1000:1000
+    env_file:
+      - .env
+    environment:
+      - TZ=Asia/Seoul
+    logging:
+      driver: "json-file"
+      options:
+        max-file: "5"
+        max-size: "10m"
+    volumes:
+      - ./logs/archive:/app/logs
     restart: unless-stopped
