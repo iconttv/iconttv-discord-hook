@@ -5,7 +5,7 @@ import { webhook } from '../../utils/webhook';
 
 export const registerEventsArchive = (client: Client) => {
   client.once(Events.ClientReady, event => {
-    webhook.sendMessage('MessageArchive Ready', event, 'info');
+    webhook.sendMessage('MessageArchive Ready', null, 'info');
     logger.info(`MessageStore Logged in as ${event.user.tag}`);
   });
 
