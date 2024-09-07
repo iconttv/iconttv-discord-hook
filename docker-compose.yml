@@ -4,12 +4,12 @@ services:
       context: .
       dockerfile: ./Dockerfile
     container_name: iconttv-discord-hook
-    shm_size: '512m'
+    shm_size: '1g'
     deploy:
       resources:
         limits:
           cpus: "2"
-          memory: 1G
+          memory: 512m
     command: dist/index.js
     user: 1000:1000
     env_file:
@@ -30,12 +30,12 @@ services:
       context: .
       dockerfile: ./Dockerfile
     container_name: iconttv-discord-hook-archive
-    shm_size: '512m'
+    shm_size: '1g'
     deploy:
       resources:
         limits:
           cpus: "2"
-          memory: 1G
+          memory: 512m
     command: dist/archive.js
     user: 1000:1000
     env_file:
