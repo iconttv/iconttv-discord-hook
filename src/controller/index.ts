@@ -6,7 +6,7 @@ import { webhook } from '../utils/webhook';
 
 export const registerEvents = (client: Client) => {
   client.once(Events.ClientReady, event => {
-    webhook.sendMessage('Ready', event, 'info');
+    webhook.sendMessage('MainApp Ready', event, 'info');
     logger.info(`Logged in as ${event.user.tag}`);
   });
 
