@@ -4,7 +4,7 @@ services:
       context: .
       dockerfile: ./Dockerfile
     container_name: iconttv-discord-hook
-    shm_size: '2gb'
+    shm_size: '512m'
     deploy:
       resources:
         limits:
@@ -29,7 +29,7 @@ services:
       context: .
       dockerfile: ./Dockerfile
     container_name: iconttv-discord-hook-archive
-    shm_size: '2gb'
+    shm_size: '512m'
     deploy:
       resources:
         limits:
