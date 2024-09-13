@@ -20,7 +20,7 @@ import path from 'path';
 import { Icon } from '../../models/index';
 import client from '../../lib/discord';
 import { getRandomTelecomIP } from '../telecomIP';
-import GuildMemberCache from '../../repository/search/GuildMemberCache';
+// import GuildMemberCache from '../../repository/search/GuildMemberCache';
 import logger from '../../lib/logger';
 
 export interface MessageLogContext {
@@ -79,8 +79,8 @@ export function getAbsoluteIconFilePath(icon: Icon) {
 }
 
 function getGuildMemberFromMessage(message: Message): GuildMember | undefined {
-  const cachedValue = GuildMemberCache.instance.getCache(message.author.id);
-  if (cachedValue) return cachedValue;
+  // const cachedValue = GuildMemberCache.instance.getCache(message.author.id);
+  // if (cachedValue) return cachedValue;
 
   const guild = client.guilds.cache.find(
     (g: Guild) => g.id === message.guildId
@@ -101,7 +101,7 @@ function getGuildMemberFromGuildAndUserId(
   );
   if (!member) return;
 
-  GuildMemberCache.instance.setCache(userId, member);
+  // GuildMemberCache.instance.setCache(userId, member);
   return member;
 }
 
