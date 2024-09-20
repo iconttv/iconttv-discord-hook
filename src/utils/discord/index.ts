@@ -186,7 +186,7 @@ export async function sendIconMessageEmbed(
       }
     );
 
-    await message.channel.send({
+    return await message.channel.send({
       flags: MessageFlags.SuppressNotifications,
       embeds: [userProfileEmbed.setDescription(matchIcon.keywords[0])],
     });
@@ -212,7 +212,7 @@ export async function sendIconMessageEmbed(
       }
     );
 
-    await message.channel.send({
+    return await message.channel.send({
       flags: MessageFlags.SuppressNotifications,
       embeds: [userProfileEmbed.setDescription(imageAttachment.description)],
       files: [imageAttachment],
@@ -221,7 +221,7 @@ export async function sendIconMessageEmbed(
 }
 
 export async function sendIconMessage(message: Message, matchIcon: Icon) {
-  await message.channel.send({
+  return await message.channel.send({
     flags: MessageFlags.SuppressNotifications,
     files: [{ attachment: matchIcon.imagePath }],
   });

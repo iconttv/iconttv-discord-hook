@@ -17,7 +17,9 @@ export const replaceIcon = async (message: Message) => {
   const searchKeyword = parseIconSearchKeyword(messageText);
   if (!searchKeyword) return;
 
-  logger.debug(`replaceIcon-2 Before Create Message Context "${message.content}"`);
+  logger.debug(
+    `replaceIcon-2 Before Create Message Context "${message.content}"`
+  );
   const messageLogContext = getMessageLogContext(message);
   if (!messageLogContext) return;
 
@@ -40,9 +42,10 @@ export const replaceIcon = async (message: Message) => {
 
   logger.debug(`replaceIcon-5 Before Send Icon "${message.content}"`);
   sendIconMessageEmbed(message, matchIcon, isAnonMessage(messageText))
-    .then(() => {
+    .then(message => {
+      const sendMessageContext = getMessageLogContext(message);
       logger.debug(
-        channel_log_message('Icon Posted Successfully', messageLogContext)
+        channel_log_message('Icon Posted Successfully', sendMessageContext!)
       );
     })
     .catch(e => {
