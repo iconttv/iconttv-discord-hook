@@ -66,8 +66,8 @@ export default class IconSearchEngine {
   async searchIcon(
     searchKeyword: string,
     guildId: string | null,
-    providers: string[] = [],
-    messageLogContext: MessageLogContext | Record<string, unknown> = {}
+    providers: string[] | undefined,
+    messageLogContext: MessageLogContext | Record<string, unknown> | undefined
   ): Promise<Icon | null> {
     // const cacheKey = `${guildId} ${searchKeyword}`;
     // const cachedValue = this._cache[cacheKey];
@@ -82,15 +82,14 @@ export default class IconSearchEngine {
     //   return copyIcon(cachedValue.icon);
     // }
 
-    const iconProviders: [string, IconRepository][] =
-      providers.length === 0
-        ? Object.entries(this._repositories)
-        : Object.entries(this._repositories).filter(([repositoryProvider]) =>
-            providers.includes(repositoryProvider)
-          );
-
     logger.debug(`searchIcon-2 Before iterate providers "${searchKeyword}"`);
-    for (const [providerName, iconProvider] of iconProviders) {
+    for (const [providerName, iconProvider] of Object.entries(
+      this._repositories
+    )) {
+      if (providers && !providers.includes(providerName)) {
+        continue;
+      }
+
       const matchIcon = await iconProvider.findOne(searchKeyword);
       if (matchIcon) {
         matchIcon.imagePath = iconProvider.imagePathResolver(
