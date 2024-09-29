@@ -184,11 +184,11 @@ export async function sendIconMessageEmbed(
           height: 100,
         },
       }
-    );
+    ).setDescription(matchIcon.keywords[0]);
 
     return await message.channel.send({
       flags: MessageFlags.SuppressNotifications,
-      embeds: [userProfileEmbed.setDescription(matchIcon.keywords[0])],
+      embeds: [userProfileEmbed],
     });
   } else {
     // 첨부 이미지 이름을 한글로하면 임베드가 되지 않음.
@@ -210,11 +210,11 @@ export async function sendIconMessageEmbed(
           height: 100,
         },
       }
-    );
+    ).setDescription(imageAttachment.description);
 
     return await message.channel.send({
       flags: MessageFlags.SuppressNotifications,
-      embeds: [userProfileEmbed.setDescription(imageAttachment.description)],
+      embeds: [userProfileEmbed],
       files: [imageAttachment],
     });
   }
