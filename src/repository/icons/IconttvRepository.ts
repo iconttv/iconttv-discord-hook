@@ -37,18 +37,22 @@ export class IconttvRepository extends IconRepository {
     this.fetchedAt = Date.now();
   }
 
-  async findOne(searchKeyword: string): Promise<Icon | null> {
-    const isExpired = Date.now() - this.fetchedAt > EXPIRE_TIME;
-    if (isExpired || !this.iconList || !this.iconList.length) {
-      try {
-        await acquireLock(() => this.isIconLoading, 2000);
-        if (this.iconList && this.iconList.length) {
-          // 다른 메시지 요청에서 목록을 이미 가져온 경우
-          return this.findOne(searchKeyword);
-        }
+  isEmpty() {
+    return !this.iconList || !this.iconList.length;
+  }
 
+  isExpired() {
+    return !this.fetchedAt || Date.now() - this.fetchedAt > EXPIRE_TIME;
+  }
+
+  async findOne(searchKeyword: string): Promise<Icon | null> {
+    if (this.isEmpty() || this.isExpired()) {
+      try {
+        await acquireLock(() => this.isIconLoading, 10 * 1000);
         this.isIconLoading = true;
-        await this.fetchIconList();
+        if (this.isEmpty() || this.isExpired()) {
+          await this.fetchIconList();
+        }
       } catch (e) {
         logger.error(e);
         return null;
