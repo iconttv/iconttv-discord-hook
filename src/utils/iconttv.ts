@@ -19,7 +19,6 @@ export function getIconttvUrl(urlpath: string): string {
   const url = new URL(urlString);
 
   url.searchParams.set('size', '100');
-  url.searchParams.set('nocache', '');
 
   return url.toString();
 }
