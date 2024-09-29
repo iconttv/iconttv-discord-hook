@@ -3,7 +3,7 @@ import dailyRotateFile from 'winston-daily-rotate-file';
 import moment from 'moment';
 import { resolve } from 'path';
 
-export function channel_log_message(logMessage: string, context: object) {
+export function channel_log_message(logMessage: string, context: object = {}) {
   return JSON.stringify(
     {
       message: logMessage,
