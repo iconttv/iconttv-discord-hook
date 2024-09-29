@@ -86,7 +86,7 @@ export default class IconSearchEngine {
     for (const [providerName, iconProvider] of Object.entries(
       this._repositories
     )) {
-      if (providers && !providers.includes(providerName)) {
+      if (providers && providers.length && !providers.includes(providerName)) {
         continue;
       }
 
