@@ -38,11 +38,11 @@ export class IconttvRepository extends IconRepository {
   }
 
   isEmpty() {
-    return !this.iconList || !this.iconList.length;
+    return !(this.iconList && this.iconList.length);
   }
 
   isExpired() {
-    return !this.fetchedAt || Date.now() - this.fetchedAt > EXPIRE_TIME;
+    return !(this.fetchedAt && Date.now() - this.fetchedAt < EXPIRE_TIME);
   }
 
   async findOne(searchKeyword: string): Promise<Icon | null> {
