@@ -5,12 +5,15 @@ import { resolve } from 'path';
 
 export function channel_log_message(logMessage: string, context: object = {}) {
   try {
-    return JSON.stringify(
-      {
-        message: logMessage,
-        ...context,
-      },
-      (key, value) => (typeof value === 'bigint' ? value.toString() : value)
+    const logObject = {
+      message: logMessage,
+      ...context,
+    };
+    if ('channel' in logObject) {
+      logObject.channel = {};
+    }
+    return JSON.stringify(logObject, (key, value) =>
+      typeof value === 'bigint' ? value.toString() : value
     );
   } catch (e) {
     logger.error(e);

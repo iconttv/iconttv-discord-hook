@@ -21,7 +21,7 @@ export const saveMessage = async (message: Message) => {
       `saveMessage-1 Before Create Message Context "${message.content}"`
     );
     const context = getMessageLogContext(message);
-    if (!context || !context.guildMember || !context.channel) return;
+    if (!context || !context.guildMember || !context.channelId) return;
 
     logger.debug(
       `saveMessage-2 Before Create Message Model "${context.senderName} - ${context.senderMessage}"`
