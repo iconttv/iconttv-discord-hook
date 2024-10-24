@@ -234,6 +234,16 @@ export const getMessageLogContext = (
   const channel = getChannelFromMessage(message);
   const senderName = guildMember ? getSenderName(guildMember) : '';
 
+  const channel_truncated: GuildBasedChannel | undefined = (() => {
+    if (channel) {
+      return {
+        ...channel,
+        messages: null,
+      } as unknown as GuildBasedChannel;
+    }
+    return undefined;
+  })();
+
   return {
     senderName,
     senderMessage: message.content,
@@ -246,7 +256,7 @@ export const getMessageLogContext = (
     guildMember,
     guildName: guildMember?.guild?.name || '',
     guildId: guildMember?.guild?.id || '',
-    channel,
+    channel: channel_truncated,
     channelName: channel?.name || '',
     channelId: channel?.id || '',
     threadName: message.thread?.name,
