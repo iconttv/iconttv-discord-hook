@@ -4,13 +4,18 @@ import moment from 'moment';
 import { resolve } from 'path';
 
 export function channel_log_message(logMessage: string, context: object = {}) {
-  return JSON.stringify(
-    {
-      message: logMessage,
-      ...context,
-    },
-    (key, value) => (typeof value === 'bigint' ? value.toString() : value)
-  );
+  try {
+    return JSON.stringify(
+      {
+        message: logMessage,
+        ...context,
+      },
+      (key, value) => (typeof value === 'bigint' ? value.toString() : value)
+    );
+  } catch (e) {
+    logger.error(e);
+    return { message: logMessage, context: context?.toString() };
+  }
 }
 
 const logDir = resolve(__dirname, '../../logs');
