@@ -238,7 +238,14 @@ export const getMessageLogContext = (
     if (channel) {
       return {
         ...channel,
-        messages: null,
+        guild: {
+          ...channel.guild,
+          members: null,
+          channels: null,
+          roles: null,
+          emojis: null,
+          stickers: null,
+        },
       } as unknown as GuildBasedChannel;
     }
     return undefined;
