@@ -1,6 +1,5 @@
 import {
   EmbedBuilder,
-  type Collection,
   type Guild,
   type GuildMember,
   Message,
