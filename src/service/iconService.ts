@@ -16,13 +16,9 @@ export const replaceIcon = async (message: Message) => {
   const [searchKeyword, restText] = parseIconSearchKeyword(messageText);
   if (!searchKeyword || restText.length) return;
 
-  logger.debug(
-    `replaceIcon-2 Before Create Message Context "${message.content}"`
-  );
   const messageLogContext = getMessageLogContext(message);
   if (!messageLogContext) return;
 
-  logger.debug(`replaceIcon-3 Before Search Icon "${message.content}"`);
   const matchIcon = await IconSearchEngine.instance.searchIcon(
     searchKeyword,
     messageLogContext.guildId,
@@ -31,7 +27,6 @@ export const replaceIcon = async (message: Message) => {
   );
   if (!matchIcon) return;
 
-  logger.debug(`replaceIcon-4 Icon Found "${message.content}"`);
   logger.info(
     channel_log_message(
       `Icon Found: ${JSON.stringify(matchIcon)}`,
@@ -39,7 +34,6 @@ export const replaceIcon = async (message: Message) => {
     )
   );
 
-  logger.debug(`replaceIcon-5 Before Send Icon "${message.content}"`);
   sendIconMessageEmbed(message, matchIcon, isAnonMessage(messageText))
     .then(message => {
       const sendMessageContext = getMessageLogContext(message);
@@ -62,7 +56,6 @@ export const replaceIcon = async (message: Message) => {
       );
     });
 
-  logger.debug(`replaceIcon-5 Before Delete Icon "${message.content}"`);
   deleteMessage(message)
     .then(() => {
       logger.debug(
