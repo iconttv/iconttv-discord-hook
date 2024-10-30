@@ -13,9 +13,8 @@ import {
 export const replaceIcon = async (message: Message) => {
   const { content: messageText } = message;
 
-  logger.debug(`replaceIcon-1 Before Parse Keyword "${message.content}"`);
-  const searchKeyword = parseIconSearchKeyword(messageText);
-  if (!searchKeyword) return;
+  const [searchKeyword, restText] = parseIconSearchKeyword(messageText);
+  if (!searchKeyword || restText.length) return;
 
   logger.debug(
     `replaceIcon-2 Before Create Message Context "${message.content}"`

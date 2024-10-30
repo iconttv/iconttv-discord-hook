@@ -1,12 +1,11 @@
 import safeJSONStringify from 'safe-json-stringify';
 
-export function parseIconSearchKeyword(text: string): string | null {
-  if (!text.startsWith('~')) return null;
+export function parseIconSearchKeyword(text: string): [string | null, string] {
+  if (!text.startsWith('~')) return [null, text];
   const [iconCommand, ...restArgs] = text.split(' ');
-  if (restArgs.includes(' ')) return null;
 
   // remove `~` prefix
-  return iconCommand.slice(1);
+  return [iconCommand.slice(1), restArgs.join(' ')];
 }
 
 export async function sleep(sleepMs: number): Promise<void> {
