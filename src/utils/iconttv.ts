@@ -19,7 +19,11 @@ export function getIconttvUrl(urlpath: string): string {
   const url = new URL(urlString);
 
   url.searchParams.set('size', '100');
-  if (url.pathname.includes('.gif') || url.pathname.includes('.webp')) {
+  if (
+    Math.random() > 0.5 ||
+    url.pathname.includes('.gif') ||
+    url.pathname.includes('.webp')
+  ) {
     url.searchParams.set('nocache', 'true');
   }
 
