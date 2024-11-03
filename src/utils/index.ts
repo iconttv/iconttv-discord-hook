@@ -68,7 +68,7 @@ export function formatDate(date: Date | null | undefined) {
   return month + '/' + day + ' ' + hours + ':' + minutes + ':' + seconds;
 }
 
-export function jsonStringify(obj: any) {
+export function jsonStringify(obj: object) {
   return safeJSONStringify(
     obj,
     (_, value) => (typeof value === 'bigint' ? value.toString() : value),

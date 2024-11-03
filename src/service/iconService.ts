@@ -14,7 +14,8 @@ export const replaceIcon = async (message: Message) => {
   const { content: messageText } = message;
 
   const [searchKeyword, restText] = parseIconSearchKeyword(messageText);
-  if (!searchKeyword || restText.length) return;
+  const isAnon = isAnonMessage(messageText);
+  if (!searchKeyword || (!isAnon && restText.length)) return;
 
   const messageLogContext = getMessageLogContext(message);
   if (!messageLogContext) return;
@@ -34,7 +35,7 @@ export const replaceIcon = async (message: Message) => {
     )
   );
 
-  sendIconMessageEmbed(message, matchIcon, isAnonMessage(messageText))
+  sendIconMessageEmbed(message, matchIcon, isAnon)
     .then(message => {
       const sendMessageContext = getMessageLogContext(message);
       logger.debug(

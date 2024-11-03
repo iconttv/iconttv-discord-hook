@@ -19,7 +19,6 @@ import path from 'path';
 import { Icon } from '../../models/index';
 import client from '../../lib/discord';
 import { getRandomTelecomIP } from '../telecomIP';
-// import GuildMemberCache from '../../repository/search/GuildMemberCache';
 import logger from '../../lib/logger';
 
 export interface MessageLogContext {
