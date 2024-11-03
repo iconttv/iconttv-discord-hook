@@ -35,7 +35,7 @@ export const replaceIcon = async (message: Message) => {
     )
   );
 
-  sendIconMessageEmbed(message, matchIcon, isAnon)
+  sendIconMessageEmbed(message, searchKeyword, matchIcon, isAnon)
     .then(message => {
       const sendMessageContext = getMessageLogContext(message);
       logger.debug(

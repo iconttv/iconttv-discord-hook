@@ -166,6 +166,7 @@ export async function deleteMessage(message: Message) {
 
 export async function sendIconMessageEmbed(
   message: Message,
+  matchKeyword: string,
   matchIcon: Icon,
   asAnonUser: boolean
 ) {
@@ -182,7 +183,7 @@ export async function sendIconMessageEmbed(
           height: 100,
         },
       }
-    ).setDescription(matchIcon.keywords[0]);
+    ).setDescription(matchKeyword);
 
     return await message.channel.send({
       flags: MessageFlags.SuppressNotifications,
@@ -193,7 +194,7 @@ export async function sendIconMessageEmbed(
     const imageExtension = matchIcon.imagePath.split('.').pop();
     const imageAttachment = new AttachmentBuilder(matchIcon.imagePath, {
       name: `image.${imageExtension}`,
-      description: matchIcon.keywords[0],
+      description: matchKeyword,
     });
 
     const userProfileEmbed = createUserProfileEmbed(
