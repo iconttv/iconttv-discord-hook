@@ -19,13 +19,13 @@ export function getIconttvUrl(urlpath: string): string {
   const url = new URL(urlString);
 
   url.searchParams.set('size', '100');
-  // if (
-  //   Math.random() > 0.5 ||
-  //   url.pathname.includes('.gif') ||
-  //   url.pathname.includes('.webp')
-  // ) {
-  //   url.searchParams.set('nocache', 'true');
-  // }
+  if (
+    Math.random() > 0.5 ||
+    url.pathname.includes('.gif') ||
+    url.pathname.includes('.webp')
+  ) {
+    url.searchParams.set('nocache', 'true');
+  }
 
   return url.toString();
 }
