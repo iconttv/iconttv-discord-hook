@@ -7,9 +7,8 @@ import {
   constructSummarizationResult,
   convertMessagesToPrompt,
 } from '../message';
-import { zodResponseFormat } from 'openai/src/helpers/zod';
 
-import { SummarizeOutputSchema } from './types';
+import { SummarizeOutputSchemaOpenai } from './types';
 
 const openai = new OpenAI({
   apiKey: config.OPENAI_API_KEY,
@@ -40,10 +39,10 @@ export const summarizeMessages = async (
       frequency_penalty: 0.5 + Math.random() * 0.1,
       presence_penalty: -0.3 + Math.random() * 0.2,
       temperature: 0.5 + Math.random() * 0.2,
-      response_format: zodResponseFormat(
-        SummarizeOutputSchema,
-        'summarizations'
-      ),
+      response_format: {
+        type: 'json_schema',
+        json_schema: SummarizeOutputSchemaOpenai,
+      },
     };
 
   let summarizationText: string | undefined;

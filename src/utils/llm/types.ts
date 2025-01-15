@@ -1,14 +1,42 @@
 import { SchemaType } from '@google/generative-ai';
-import { z } from 'zod';
+import { ResponseFormatJSONSchema } from 'openai/resources';
 
-export const SummarizeOutputSchema = z.object({
-  topics: z.array(
-    z.object({
-      topic: z.string(),
-      startMessageId: z.string(),
-    })
-  ),
-});
+/**
+ * import { zodResponseFormat } from 'openai/src/helpers/zod';
+ * throws when dynamic import
+ */
+export const SummarizeOutputSchemaOpenai: ResponseFormatJSONSchema.JSONSchema =
+  {
+    name: 'summarization',
+    strict: true,
+    schema: {
+      type: 'object',
+      properties: {
+        topics: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              topic: {
+                type: 'string',
+                description: 'A topic from conversation',
+                nullable: false,
+              },
+              startMessageId: {
+                type: 'string',
+                description: 'A start message id of the topic',
+                nullable: false,
+              },
+            },
+            additionalProperties: false,
+            required: ['topic', 'startMessageId'],
+          },
+        },
+      },
+      additionalProperties: false,
+      required: ['topics'],
+    },
+  };
 
 export const SummarizeOutputSchemaGemini = {
   type: SchemaType.ARRAY,
@@ -30,4 +58,9 @@ export const SummarizeOutputSchemaGemini = {
   },
 };
 
-export type SummarizationOutput = z.infer<typeof SummarizeOutputSchema>;
+export interface SummarizationOutput {
+  topics: {
+    topic: string;
+    startMessageId: string;
+  }[];
+}
