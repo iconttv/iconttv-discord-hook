@@ -91,6 +91,8 @@ export const summarizeLastMessages = async (
 
   const summarization = await summarizer(
     messages,
+    guildId,
+    channelId,
     saveAiRequestBuilder(guildId, channelId, senderId, { hours, count })
   );
 

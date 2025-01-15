@@ -6,9 +6,12 @@ export type LogAiRequest = (
 ) => Promise<void>;
 
 export interface MessageFromDatabase {
-  guildName?: string | null | undefined;
-  channelName?: string | null | undefined;
-  senderName?: string | null | undefined;
-  message?: string | null | undefined;
-  createdAt?: Date | null | undefined;
+  guildId?: string | null;
+  channelId?: string | null;
+  messageId?: string | null;
+  guildName?: string | null;
+  channelName?: string | null;
+  senderName?: string | null;
+  message?: string | null;
+  createdAt?: Date | null;
 }

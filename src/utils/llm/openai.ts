@@ -3,7 +3,13 @@ import { config } from '../../config';
 import logger from '../../lib/logger';
 import { LogAiRequest, MessageFromDatabase } from '../../type/index';
 import { makeChunk } from '../index';
-import { convertMessagesToPrompt } from '../message';
+import {
+  constructSummarizationResult,
+  convertMessagesToPrompt,
+} from '../message';
+import { zodResponseFormat } from 'openai/src/helpers/zod';
+
+import { SummarizeOutputSchema } from './types';
 
 const openai = new OpenAI({
   apiKey: config.OPENAI_API_KEY,
@@ -13,6 +19,8 @@ const getModel = () => 'gpt-4o-mini';
 
 export const summarizeMessages = async (
   messages: MessageFromDatabase[],
+  guildId: string,
+  channelId: string,
   logOpenaiRequest: LogAiRequest | undefined
 ): Promise<string | undefined> => {
   const promptSystem = await fetch(
@@ -23,7 +31,6 @@ export const summarizeMessages = async (
       logger.error(e);
       throw e;
     });
-
   const messageChunks = makeChunk(messages, 500);
   const messagePrompts = messageChunks.map(convertMessagesToPrompt);
 
@@ -33,18 +40,22 @@ export const summarizeMessages = async (
       frequency_penalty: 0.5 + Math.random() * 0.1,
       presence_penalty: -0.3 + Math.random() * 0.2,
       temperature: 0.5 + Math.random() * 0.2,
+      response_format: zodResponseFormat(
+        SummarizeOutputSchema,
+        'summarizations'
+      ),
     };
 
-  let summarization: string | undefined;
+  let summarizationText: string | undefined;
   for (const messagePrompt of messagePrompts) {
     const chatCompletionMessage: OpenAI.ChatCompletionMessageParam[] = [
       { role: 'system', content: promptSystem },
     ];
 
-    if (summarization !== undefined && summarization.length > 0) {
+    if (summarizationText !== undefined && summarizationText.length > 0) {
       chatCompletionMessage.push({
         role: 'user',
-        content: summarization,
+        content: summarizationText,
       });
     }
     chatCompletionMessage.push({
@@ -77,13 +88,14 @@ export const summarizeMessages = async (
       });
 
     if (!chatCompletion.choices[0].message.content) break;
-
-    summarization = chatCompletion.choices[0].message.content
-      .trim()
-      .replace('[SUMM]', '')
-      .replace('[REVIEW]', '')
-      .replace('한줄평:', '');
+    summarizationText = chatCompletion.choices[0].message.content;
   }
+
+  const summarization = constructSummarizationResult(
+    guildId,
+    channelId,
+    summarizationText
+  );
 
   return summarization + `\n(${model})`;
 };

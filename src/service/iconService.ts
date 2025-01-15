@@ -37,6 +37,10 @@ export const replaceIcon = async (message: Message) => {
 
   sendIconMessageEmbed(message, searchKeyword, matchIcon, isAnon)
     .then(message => {
+      if (!message) {
+        return;
+      }
+
       const sendMessageContext = getMessageLogContext(message);
       logger.debug(
         channel_log_message('Icon Posted Successfully', sendMessageContext!)

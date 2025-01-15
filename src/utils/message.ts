@@ -1,36 +1,44 @@
 import { MessageType } from 'discord.js';
 import { MessageFromDatabase } from '../type/index';
-import { formatDate, replaceLaughs } from './index';
+import { replaceLaughs } from './index';
 import logger from '../lib/logger';
 import MessageModel from '../database/model/MessageModel';
+import { SummarizationOutput } from './llm/types';
 
 export const convertMessagesToPrompt = (messages: MessageFromDatabase[]) => {
-  const conversations = [];
-  let currentUserName = '';
-  let currentMessageWithTimestamp = '';
-  for (const message of messages) {
-    const mmdd = formatDate(message.createdAt);
-    const timestamp = mmdd.length ? `(${mmdd})` : '';
-    const normalizedMessageWithTimestamp = `${replaceLaughs(
-      message.message
-    )} ${timestamp}`;
+  const validMessages = messages.filter(
+    message =>
+      typeof message.senderName === 'string' &&
+      typeof message.messageId === 'string' &&
+      typeof message.message === 'string' &&
+      message.message.length > 0
+  );
 
-    if (currentUserName === message.senderName) {
-      currentMessageWithTimestamp += `\n${normalizedMessageWithTimestamp}`;
-    } else {
-      if (currentUserName && currentMessageWithTimestamp) {
-        conversations.push(
-          `[${currentUserName}] ${currentMessageWithTimestamp}`
-        );
+  let formattedString = '';
+  let currentSender: string | null = null;
+
+  validMessages.forEach(msg => {
+    const sender = msg.senderName;
+
+    // 사용자가 변경된 경우 새로운 <user>와 <body> 태그 시작
+    if (sender !== currentSender) {
+      if (currentSender !== null) {
+        formattedString += `</body>`; // 이전 사용자의 <body> 닫기
       }
-
-      currentUserName = `${message.senderName}`;
-      currentMessageWithTimestamp = normalizedMessageWithTimestamp;
+      formattedString += `<user>${sender}</user><body>`; // 새로운 사용자 시작
+      currentSender = sender as string; // 현재 작성자 업데이트
     }
+
+    // 메시지를 추가
+    formattedString += `${replaceLaughs(msg.message)}<id>${msg.messageId}</id>`;
+  });
+
+  // 마지막 사용자의 <body> 태그 닫기
+  if (currentSender !== null) {
+    formattedString += `</body>`;
   }
-  conversations.push(`[${currentUserName}] ${currentMessageWithTimestamp}`);
-  const conversation = conversations.join('\n');
-  return conversation;
+
+  return formattedString;
 };
 
 const getLastHourMessages = async (
@@ -51,7 +59,16 @@ const getLastHourMessages = async (
         },
         createdAt: { $gte: hoursAgo },
       },
-      { guildName: 1, channelName: 1, senderName: 1, message: 1, createdAt: 1 }
+      {
+        guildId: 1,
+        channelId: 1,
+        messageId: 1,
+        guildName: 1,
+        channelName: 1,
+        senderName: 1,
+        message: 1,
+        createdAt: 1,
+      }
     )
       .sort({ createdAt: -1 })
       .exec();
@@ -76,7 +93,16 @@ const getLastNMessages = async (
           $nin: [MessageType.ChatInputCommand, MessageType.ContextMenuCommand],
         },
       },
-      { guildName: 1, channelName: 1, senderName: 1, message: 1, createdAt: 1 }
+      {
+        guildId: 1,
+        channelId: 1,
+        messageId: 1,
+        guildName: 1,
+        channelName: 1,
+        senderName: 1,
+        message: 1,
+        createdAt: 1,
+      }
     )
       .sort({ createdAt: -1 })
       .limit(count)
@@ -108,4 +134,40 @@ export const getLastMessages = async (
 
   logger.debug(`Fetched ${filteredMessages.length} messages.`);
   return filteredMessages;
+};
+
+const unwrapJsonBlocks = (jsonRaw: string): string => {
+  let text = jsonRaw.trim();
+  const startToken = '```json';
+  const endToken = '```';
+  if (text.startsWith(startToken)) text = text.slice(startToken.length);
+  if (text.endsWith(endToken)) text = text.slice(0, -endToken.length);
+  return text;
+};
+
+export const constructSummarizationResult = (
+  guildId: string,
+  channelId: string,
+  summarization?: string
+): string => {
+  if (!summarization) return '요약된 내용이 없습니다.';
+
+  const summarizationJson: SummarizationOutput = JSON.parse(
+    unwrapJsonBlocks(summarization)
+  );
+  const result = summarizationJson.topics
+    .reduce((prev, curr) => {
+      return (
+        prev +
+        '\n' +
+        `- ${curr.topic} ` +
+        `https://discord.com/channels/${guildId}/${channelId}/${curr.startMessageId}`
+      );
+    }, '')
+    .trim();
+
+  if (result.length === 0) {
+    return '요약된 내용이 없습니다.';
+  }
+  return result;
 };

@@ -10,8 +10,12 @@ import {
 import { config } from '../../config';
 import logger from '../../lib/logger';
 import { LogAiRequest, MessageFromDatabase } from '../../type/index';
-import { convertMessagesToPrompt } from '../message';
+import {
+  constructSummarizationResult,
+  convertMessagesToPrompt,
+} from '../message';
 import { makeChunk } from '../index';
+import { SummarizeOutputSchemaGemini } from './types';
 
 const genAI = new GoogleGenerativeAI(config.GEMINI_API_KEY || '');
 
@@ -48,6 +52,8 @@ const unsafeSafetySettings: SafetySetting[] = [
 
 export const summarizeMessages = async (
   messages: MessageFromDatabase[],
+  guildId: string,
+  channelId: string,
   logRequest: LogAiRequest | undefined
 ): Promise<string | undefined> => {
   const promptSystem = await fetch(
@@ -62,6 +68,10 @@ export const summarizeMessages = async (
   const modelName = getModel();
   const modelParams: ModelParams = {
     model: modelName,
+    generationConfig: {
+      responseMimeType: 'application/json',
+      responseSchema: SummarizeOutputSchemaGemini,
+    },
   };
 
   const generateParams = {
@@ -76,14 +86,14 @@ export const summarizeMessages = async (
   const messageChunks = makeChunk(messages, 1000);
   const messagePrompts = messageChunks.map(convertMessagesToPrompt);
 
-  let summarization: string | undefined;
+  let summarizationText: string | undefined;
   for (const messagePrompt of messagePrompts) {
     const generateContents: GenerateContentRequestContent[] = [];
 
-    if (summarization !== undefined && summarization.length > 0) {
+    if (summarizationText !== undefined && summarizationText.length > 0) {
       generateContents.push({
         role: 'user',
-        parts: [{ text: summarization }],
+        parts: [{ text: summarizationText }],
       });
     }
     generateContents.push({
@@ -110,11 +120,7 @@ export const summarizeMessages = async (
       }
       const text = response.text();
 
-      summarization = text
-        .trim()
-        .replace('[SUMM]', '')
-        .replace('[REVIEW]', '')
-        .replace('한줄평:', '');
+      summarizationText = text;
     } catch (e) {
       if (logRequest !== undefined) {
         await logRequest(
@@ -127,6 +133,12 @@ export const summarizeMessages = async (
       throw e;
     }
   }
+
+  const summarization = constructSummarizationResult(
+    guildId,
+    channelId,
+    summarizationText
+  );
 
   return summarization + `\n(${modelName})`;
 };

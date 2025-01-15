@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
-    "target": "ES2023",
-    "module": "NodeNext",
+    "target": "es6",
+    "module": "CommonJS",
     "declaration": true,
     "removeComments": true,
     "emitDecoratorMetadata": true,
@@ -14,7 +14,6 @@
     "skipLibCheck": true,
     "strict": true,
     "resolveJsonModule": true,
-    "moduleResolution": "NodeNext",
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]

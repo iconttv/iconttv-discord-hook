@@ -6,7 +6,6 @@ import {
 import { readdirSync } from 'fs';
 import path from 'path';
 import logger from '../../lib/logger';
-import { pathToFileURL } from 'url';
 
 type SlashCommandHandler = (interaction: Interaction) => Promise<void>;
 
@@ -41,9 +40,10 @@ export const readCommands = (() => {
     );
 
     for (const file of commandFiles) {
-      const filePath = path.join(foldersPath, file);
-      const filePathUrl = pathToFileURL(filePath).href;
-      const commandConfig = (await import(filePathUrl)) as SlashCommand;
+      // const filePath = path.join(foldersPath, file);
+      // const filePathUrl = pathToFileURL(filePath).href;
+      logger.debug(`Dynamic import ${file}`);
+      const commandConfig = (await import(`./${file}`)) as SlashCommand;
 
       logger.debug(JSON.stringify(commandConfig));
 
@@ -52,7 +52,7 @@ export const readCommands = (() => {
         cachedCommandHandler[commandConfig.data.name] = commandConfig.execute;
       } else {
         logger.warn(
-          `The command at ${filePath} is missing a required "data" or "execute" property.`
+          `The command at ${file} is missing a required "data" or "execute" property.`
         );
       }
     }

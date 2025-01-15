@@ -13,6 +13,7 @@ import {
   Embed,
   APIEmbed,
   EmbedData,
+  ChannelType,
 } from 'discord.js';
 import path from 'path';
 
@@ -170,6 +171,10 @@ export async function sendIconMessageEmbed(
   matchIcon: Icon,
   asAnonUser: boolean
 ) {
+  if (message.channel.type !== ChannelType.GuildText) {
+    return;
+  }
+
   if (matchIcon.isRemoteImage) {
     const userProfileEmbed = createUserProfileEmbed(
       message,
@@ -220,6 +225,10 @@ export async function sendIconMessageEmbed(
 }
 
 export async function sendIconMessage(message: Message, matchIcon: Icon) {
+  if (message.channel.type !== ChannelType.GuildText) {
+    return;
+  }
+
   return await message.channel.send({
     flags: MessageFlags.SuppressNotifications,
     files: [{ attachment: matchIcon.imagePath }],
