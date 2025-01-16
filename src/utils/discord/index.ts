@@ -14,6 +14,7 @@ import {
   APIEmbed,
   EmbedData,
   ChannelType,
+  TextChannel,
 } from 'discord.js';
 import path from 'path';
 
@@ -171,10 +172,6 @@ export async function sendIconMessageEmbed(
   matchIcon: Icon,
   asAnonUser: boolean
 ) {
-  if (message.channel.type !== ChannelType.GuildText) {
-    return;
-  }
-
   if (matchIcon.isRemoteImage) {
     const userProfileEmbed = createUserProfileEmbed(
       message,
@@ -190,7 +187,12 @@ export async function sendIconMessageEmbed(
       }
     ).setDescription(matchKeyword);
 
-    return await message.channel.send({
+    /**
+     * https://github.com/discordjs/discord.js/issues/3622
+     * 위에서 분기문으로 return 전송 가능한 채널이어도 전송 못할 수 있음.
+     * 그냥 에러 발생하는게 더 안정적일 것 같음
+     */
+    return await (message.channel as TextChannel).send({
       flags: MessageFlags.SuppressNotifications,
       embeds: [userProfileEmbed],
     });
@@ -216,7 +218,7 @@ export async function sendIconMessageEmbed(
       }
     ).setDescription(imageAttachment.description);
 
-    return await message.channel.send({
+    return await (message.channel as TextChannel).send({
       flags: MessageFlags.SuppressNotifications,
       embeds: [userProfileEmbed],
       files: [imageAttachment],
@@ -225,11 +227,7 @@ export async function sendIconMessageEmbed(
 }
 
 export async function sendIconMessage(message: Message, matchIcon: Icon) {
-  if (message.channel.type !== ChannelType.GuildText) {
-    return;
-  }
-
-  return await message.channel.send({
+  return await (message.channel as TextChannel).send({
     flags: MessageFlags.SuppressNotifications,
     files: [{ attachment: matchIcon.imagePath }],
   });
