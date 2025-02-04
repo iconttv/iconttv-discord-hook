@@ -13,6 +13,7 @@ interface Config {
   MONGODB_DATABASE: string;
   OPENAI_API_KEY: string | undefined;
   GEMINI_API_KEY: string | undefined;
+  NOVELAI_API_KEY: string | undefined;
   ENV: 'prod' | 'dev';
   GITHUB_BASEURL: string;
 
@@ -42,6 +43,7 @@ export const config: Config = {
   MONGODB_DATABASE: process.env.MONGODB_DATABASE!,
   OPENAI_API_KEY: process.env.OPENAI_API_KEY,
   GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+  NOVELAI_API_KEY: process.env.NOVELAI_API_KEY,
   ENV: process.env.NODE_ENV === 'prod' ? 'prod' : 'dev',
   GITHUB_BASEURL: `https://raw.githubusercontent.com/iconttv/iconttv-discord-hook/${
     process.env.NODE_ENV === 'prod' ? 'main' : 'develop'

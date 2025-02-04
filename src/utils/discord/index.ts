@@ -13,7 +13,6 @@ import {
   Embed,
   APIEmbed,
   EmbedData,
-  ChannelType,
   TextChannel,
 } from 'discord.js';
 import path from 'path';
@@ -277,3 +276,17 @@ export const getMessageLogContext = (
     createdAt: message.createdAt,
   };
 };
+
+/**
+ *
+ * @param image base64 encoded
+ */
+export function base64ImageToAttachment(image: string, ext = 'png') {
+  const base64Image = image.startsWith('data:')
+    ? image
+    : `data:image/${ext};base64,${image}`;
+
+  const imageStream = Buffer.from(base64Image.split('base64,')[1], 'base64');
+  const file = new AttachmentBuilder(imageStream, { name: `image.${ext}` });
+  return file;
+}

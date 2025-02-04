@@ -63,3 +63,5 @@ export const purgeAndRegisterCommands = async () => {
   await purgeCommands();
   await registerCommands();
 };
+
+purgeAndRegisterCommands();

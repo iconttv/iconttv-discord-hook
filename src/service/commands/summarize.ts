@@ -10,7 +10,9 @@ export const data = new SlashCommandBuilder()
   .addNumberOption(option =>
     option
       .setName('hours')
-      .setDescription('n 시간 전까지 대화 내용 요약. 1 <= n <= 12')
+      .setDescription(
+        'n 시간 전까지 대화 내용 요약. 1 <= n <= 12. (기본값: 없음)'
+      )
       .setMinValue(1)
       .setMaxValue(12)
       .setRequired(false)
@@ -20,7 +22,7 @@ export const data = new SlashCommandBuilder()
       .setName('count')
       .setDescription(
         'n 개의 대화 내용을 요약. 25 <= n <= 3000.' +
-          '너무 많은 양을 요청할 시 요약이 불가능할 수 있습니다.'
+          '너무 많은 양을 요청할 시 요약이 불가능할 수 있습니다. (기본값: 300)'
       )
       .setMinValue(25)
       .setMaxValue(3000)
