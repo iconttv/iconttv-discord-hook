@@ -1,3 +1,3 @@
-1.0.0.dev9
+1.0.0.dev10
 
-- 이미지 전송 안되는 오류 수정
+- novelai image api 추가

@@ -14,6 +14,7 @@
 DISCORD_BOT_TOKEN=your-token-here
 DISCORD_CLIENT_ID=your-bot-client-id
 SQLITE3_FILE=database.sqlite
+...
 ```
 
 ## 실행 순서
