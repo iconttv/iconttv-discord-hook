@@ -116,15 +116,15 @@ export const execute = async (interaction: CommandInteraction) => {
         ],
       });
     } else {
-      const attachment = base64ImageToAttachment(imageUrl);
+      const attachment = base64ImageToAttachment(imageUrl, { spoiler: true });
 
       await interaction.editReply({
         embeds: [
-          userProfileEmbed
-            .setDescription(
-              `[${serviceProvider}] ${prompt}\n  =>  ${revisedPrompt} ${executionTimeSecMessage}`
-            )
-            .setImage(`attachment://${attachment.name}`),
+          userProfileEmbed.setDescription(
+            `[${serviceProvider}] ${prompt}\n  =>  ${revisedPrompt} ${executionTimeSecMessage}`
+          ),
+          // .setImage(`attachment://${attachment.name}`),
+          // disable in order to make spoiler image
         ],
         files: [attachment],
       });

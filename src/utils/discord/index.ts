@@ -281,12 +281,17 @@ export const getMessageLogContext = (
  *
  * @param image base64 encoded
  */
-export function base64ImageToAttachment(image: string, ext = 'png') {
+export function base64ImageToAttachment(
+  image: string,
+  { ext = 'png', spoiler = false }: { ext?: string; spoiler?: boolean }
+) {
   const base64Image = image.startsWith('data:')
     ? image
     : `data:image/${ext};base64,${image}`;
 
   const imageStream = Buffer.from(base64Image.split('base64,')[1], 'base64');
-  const file = new AttachmentBuilder(imageStream, { name: `image.${ext}` });
+  const file = new AttachmentBuilder(imageStream, {
+    name: `${spoiler ? 'SPOILER_' : ''}image.${ext}`,
+  });
   return file;
 }
