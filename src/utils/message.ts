@@ -155,7 +155,7 @@ export const constructSummarizationResult = (
   const summarizationJson: SummarizationOutput = JSON.parse(
     unwrapJsonBlocks(summarization)
   );
-  const result = summarizationJson.topics
+  const topics = summarizationJson.topics
     .reduce((prev, curr) => {
       return (
         prev +
@@ -166,8 +166,7 @@ export const constructSummarizationResult = (
     }, '')
     .trim();
 
-  if (result.length === 0) {
-    return '요약된 내용이 없습니다.';
-  }
-  return result;
+  return `${topics.length === 0 ? '요약된 내용이 없습니다.' : topics}\n\n${
+    summarizationJson.comment
+  }`;
 };
