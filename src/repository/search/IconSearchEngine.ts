@@ -1,6 +1,6 @@
 import logger, { channel_log_message } from '../../lib/logger';
 import { Icon } from '../../models/index';
-import { MessageLogContext } from '../../utils/discord/index';
+import { LogContext } from '../../utils/discord/index';
 import { IconRepository } from '../icons/index';
 import { IconFunzinnuRepository } from '../icons/funzinnu/index';
 import { IconSmalljuzi6974Repository } from '../icons/smalljuzi6974/index';
@@ -67,7 +67,7 @@ export default class IconSearchEngine {
     searchKeyword: string,
     guildId: string | null,
     providers: string[] | undefined,
-    messageLogContext: MessageLogContext | Record<string, unknown> | undefined
+    messageLogContext: LogContext | Record<string, unknown> | undefined
   ): Promise<Icon | null> {
     // const cacheKey = `${guildId} ${searchKeyword}`;
     // const cachedValue = this._cache[cacheKey];

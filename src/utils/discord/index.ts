@@ -14,6 +14,7 @@ import {
   APIEmbed,
   EmbedData,
   TextChannel,
+  Interaction,
 } from 'discord.js';
 import path from 'path';
 
@@ -22,7 +23,7 @@ import client from '../../lib/discord';
 import { getRandomTelecomIP } from '../telecomIP';
 import logger from '../../lib/logger';
 
-export interface MessageLogContext {
+export interface LogContext {
   senderName: string;
   senderMessage: string;
   senderId: string;
@@ -77,45 +78,38 @@ export function getAbsoluteIconFilePath(icon: Icon) {
   return path.join(ICON_DIRECTORY_ROOT, icon.imagePath);
 }
 
-function getGuildMemberFromMessage(message: Message): GuildMember | undefined {
-  // const cachedValue = GuildMemberCache.instance.getCache(message.author.id);
-  // if (cachedValue) return cachedValue;
-
-  const guild = client.guilds.cache.find(
-    (g: Guild) => g.id === message.guildId
-  );
-  if (!guild) return;
-
-  return getGuildMemberFromGuildAndUserId(guild, message.author.id);
+export function getSenderId(
+  message: Message | Interaction | CommandInteraction
+) {
+  return message instanceof Message
+    ? message.author.id
+    : message.member?.user.id ?? message.user.id;
 }
 
-function getGuildMemberFromGuildAndUserId(
-  guild: Guild | null,
-  userId: string
-): GuildMember | undefined {
-  if (!guild) return;
+function getGuild(guildId: string | null) {
+  const guild = client.guilds.cache.find((g: Guild) => g.id === guildId);
+  return guild;
+}
 
-  const member = guild.members.cache.find(
-    (gm: GuildMember) => gm.id === userId
+/**
+ *
+ * @param guildId
+ * @param memberId isMessage ? message.author.id : message.member?.user.id ?? message.user.id
+ * @returns
+ */
+function getGuildMember(guildId: string | null, memberId: string | null) {
+  const guild = getGuild(guildId);
+  const member = guild?.members.cache.find(
+    (gm: GuildMember) => gm.id === memberId
   );
-  if (!member) return;
-
-  // GuildMemberCache.instance.setCache(userId, member);
   return member;
 }
 
-function getGuildMember(
-  message: Message | CommandInteraction
-): GuildMember | undefined {
-  if (message instanceof Message) return getGuildMemberFromMessage(message);
-  return getGuildMemberFromGuildAndUserId(message.guild, message.user.id);
-}
-
-function getChannelFromMessage(message: Message) {
-  const channel = message.guild?.channels.cache.find(
-    channel => channel.id === message.channelId
+function getChannel(guildId: string | null, channelId: string | null) {
+  const guild = getGuild(guildId);
+  const channel = guild?.channels.cache.find(
+    channel => channel.id === channelId
   );
-  if (!channel) return undefined;
   return channel;
 }
 
@@ -138,7 +132,7 @@ export function createUserProfileEmbed(
       ? message.author.defaultAvatarURL
       : message.user.defaultAvatarURL;
   } else {
-    const guildMember = getGuildMember(message);
+    const guildMember = getGuildMember(message.guildId, getSenderId(message));
     // author.name =
     //   guildMember?.nickname ??
     //   guildMember?.user.globalName ??
@@ -232,11 +226,16 @@ export async function sendIconMessage(message: Message, matchIcon: Icon) {
   });
 }
 
-export const getMessageLogContext = (
-  message: Message
-): MessageLogContext | undefined => {
-  const guildMember = getGuildMemberFromMessage(message);
-  const channel = getChannelFromMessage(message);
+export const getLogContext = (
+  message: Message | Interaction | CommandInteraction
+): LogContext | undefined => {
+  // const guildMember = getGuildMemberFromMessage(message);
+  // const channel = getChannelFromMessage(message);
+  const isMessage = message instanceof Message;
+
+  const guildMember = getGuildMember(message.guildId, getSenderId(message));
+  const channel = getChannel(message.guildId, message.channelId);
+
   const senderName = guildMember ? getSenderName(guildMember) : '';
 
   const channel_truncated: GuildBasedChannel | undefined = (() => {
@@ -258,21 +257,23 @@ export const getMessageLogContext = (
 
   return {
     senderName,
-    senderMessage: message.content,
+    senderMessage: isMessage ? message.content : `${message.context}`,
     senderId: guildMember?.id || '',
     messageId: message.id,
     messageType: message.type,
-    attachments: message.attachments.map(attachment => attachment.toJSON()),
-    components: message.components,
-    embeds: message.embeds,
+    attachments: isMessage
+      ? message.attachments.map(attachment => attachment.toJSON())
+      : [],
+    components: isMessage ? message.components : [],
+    embeds: isMessage ? message.embeds : [],
     guildMember,
     guildName: guildMember?.guild?.name || '',
     guildId: guildMember?.guild?.id || '',
     channel: channel_truncated,
     channelName: channel?.name || '',
     channelId: channel?.id || '',
-    threadName: message.thread?.name,
-    threadId: message.thread?.id,
+    threadName: isMessage ? message.thread?.name : undefined,
+    threadId: isMessage ? message.thread?.id : undefined,
     createdAt: message.createdAt,
   };
 };

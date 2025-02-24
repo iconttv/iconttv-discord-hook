@@ -50,7 +50,6 @@ export const execute = async (interaction: CommandInteraction) => {
     await interaction.reply(`hours, count 둘 중 하나만 입력 가능합니다.`);
   }
 
-  const channelId = interaction.channelId;
   const guildId = interaction.guildId;
   if (!guildId) {
     await interaction.reply(`해당 기능을 사용할 수 없는 대화방입니다.`);
@@ -70,13 +69,7 @@ export const execute = async (interaction: CommandInteraction) => {
 
   let summarization, executionTimeSecMessage;
   try {
-    summarization = await summarizeLastMessages(
-      guildId,
-      channelId,
-      interaction.member?.user.id,
-      hours,
-      count
-    );
+    summarization = await summarizeLastMessages(interaction, hours, count);
   } catch (e) {
     logger.error(e);
     executionTimeSecMessage = `(${((Date.now() - start) / 1000).toFixed(

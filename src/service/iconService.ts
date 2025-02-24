@@ -7,7 +7,7 @@ import {
   isAnonMessage,
   sendIconMessage,
   deleteMessage,
-  getMessageLogContext,
+  getLogContext,
 } from '../utils/discord/index';
 
 export const replaceIcon = async (message: Message) => {
@@ -17,7 +17,7 @@ export const replaceIcon = async (message: Message) => {
   const isAnon = isAnonMessage(messageText);
   if (!searchKeyword || (!isAnon && restText.length)) return;
 
-  const messageLogContext = getMessageLogContext(message);
+  const messageLogContext = getLogContext(message);
   if (!messageLogContext) return;
 
   const matchIcon = await IconSearchEngine.instance.searchIcon(
@@ -41,7 +41,7 @@ export const replaceIcon = async (message: Message) => {
         return;
       }
 
-      const sendMessageContext = getMessageLogContext(message);
+      const sendMessageContext = getLogContext(message);
       logger.debug(
         channel_log_message('Icon Posted Successfully', sendMessageContext!)
       );

@@ -1,14 +1,17 @@
 import OpenAI from 'openai';
 import { config } from '../../config';
 import logger from '../../lib/logger';
-import { LogAiRequest, MessageFromDatabase } from '../../type/index';
 import { makeChunk } from '../index';
 import {
   constructSummarizationResult,
   convertMessagesToPrompt,
 } from '../message';
 
-import { SummarizeOutputSchemaOpenai } from './types';
+import {
+  QuestionMessageProps,
+  SummarizeMessagesProps,
+  SummarizeOutputSchemaOpenai,
+} from './types';
 
 const openai = new OpenAI({
   apiKey: config.OPENAI_API_KEY,
@@ -16,13 +19,14 @@ const openai = new OpenAI({
 
 const getModel = () => 'gpt-4o-mini';
 
-export const summarizeMessages = async (
-  messages: MessageFromDatabase[],
-  guildId: string,
-  channelId: string,
-  logOpenaiRequest: LogAiRequest | undefined
-): Promise<string | undefined> => {
-  const promptSystem = await fetch(
+export const summarizeMessages = async ({
+  messages,
+  guildId,
+  channelId,
+  logRequest,
+  context,
+}: SummarizeMessagesProps): Promise<string | undefined> => {
+  const promptSystemPromise = fetch(
     `${config.GITHUB_BASEURL}/src/utils/llm/prompt-summarization.txt`
   )
     .then(res => res.text())
@@ -30,6 +34,19 @@ export const summarizeMessages = async (
       logger.error(e);
       throw e;
     });
+  const promptPersonaPromise = fetch(
+    `${config.GITHUB_BASEURL}/src/utils/llm/prompt-persona.txt`
+  )
+    .then(res => res.text())
+    .catch(e => {
+      logger.error(e);
+      throw e;
+    });
+  const [promptSystem, promptPersona] = await Promise.all([
+    promptSystemPromise,
+    promptPersonaPromise,
+  ]);
+
   const messageChunks = makeChunk(messages, 500);
   const messagePrompts = messageChunks.map(convertMessagesToPrompt);
 
@@ -48,7 +65,14 @@ export const summarizeMessages = async (
   let summarizationText: string | undefined;
   for (const messagePrompt of messagePrompts) {
     const chatCompletionMessage: OpenAI.ChatCompletionMessageParam[] = [
-      { role: 'system', content: promptSystem },
+      {
+        role: 'system',
+        content: promptSystem
+          .replace('{{ channelName }}', context?.channelName || '')
+          .replace('{{ guildName }}', context?.guildName || '')
+          .replace('{{ datetime }}', new Date().toLocaleString())
+          .replace('{{ persona }}', promptPersona),
+      },
     ];
 
     if (summarizationText !== undefined && summarizationText.length > 0) {
@@ -70,16 +94,16 @@ export const summarizeMessages = async (
     const chatCompletion = await openai.chat.completions
       .create(openaiParams)
       .then(async res => {
-        if (logOpenaiRequest !== undefined) {
-          await logOpenaiRequest('openai', model, openaiParams, res).catch(e =>
+        if (logRequest !== undefined) {
+          await logRequest('openai', model, openaiParams, res).catch(e =>
             logger.error(e)
           );
         }
         return res;
       })
       .catch(async e => {
-        if (logOpenaiRequest !== undefined) {
-          await logOpenaiRequest('openai', model, openaiParams, e).catch(e =>
+        if (logRequest !== undefined) {
+          await logRequest('openai', model, openaiParams, e).catch(e =>
             logger.error(e)
           );
         }
@@ -99,11 +123,11 @@ export const summarizeMessages = async (
   return summarization + `\n(${model})`;
 };
 
-export const questionMessages = async (
-  messages: MessageFromDatabase[],
-  question: string,
-  logOpenaiRequest: LogAiRequest | undefined
-): Promise<string | undefined> => {
+export const questionMessages = async ({
+  messages,
+  question,
+  logRequest,
+}: QuestionMessageProps): Promise<string | undefined> => {
   const promptSystem = await fetch(
     `${config.GITHUB_BASEURL}/src/utils/llm/prompt-question.txt`
   )
@@ -136,16 +160,16 @@ export const questionMessages = async (
   const chatCompletion = await openai.chat.completions
     .create(openaiParams)
     .then(async res => {
-      if (logOpenaiRequest !== undefined) {
-        await logOpenaiRequest('openai', model, openaiParams, res).catch(e =>
+      if (logRequest !== undefined) {
+        await logRequest('openai', model, openaiParams, res).catch(e =>
           logger.error(e)
         );
       }
       return res;
     })
     .catch(async e => {
-      if (logOpenaiRequest !== undefined) {
-        await logOpenaiRequest('openai', model, openaiParams, e).catch(e =>
+      if (logRequest !== undefined) {
+        await logRequest('openai', model, openaiParams, e).catch(e =>
           logger.error(e)
         );
       }

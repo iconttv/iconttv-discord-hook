@@ -1,26 +1,19 @@
-import { Message } from 'discord.js';
+import { CommandInteraction, Interaction, Message } from 'discord.js';
 import logger from '../lib/logger';
 import MessageModel from '../database/model/MessageModel';
-import { getMessageLogContext } from '../utils/discord/index';
-import {
-  openaiQuestionMessages,
-  openaiSummarizeMessages,
-  geminiQuestionMessages,
-  geminiSummarizeMessages,
-} from '../utils/llm/index';
+import { getLogContext, getSenderId } from '../utils/discord/index';
+import { summarizeMessages, questionMessages } from '../utils/llm/index';
 import MessageSummarizationModel from '../database/model/MessageSummarizationModel';
 import { unreplaceLaughs } from '../utils/index';
 import { saveAiRequestBuilder } from './common';
 import { getLastMessages } from '../utils/message';
-
-const useOpenai = () => Math.random() < 0.5;
 
 export const saveMessage = async (message: Message) => {
   try {
     logger.debug(
       `saveMessage-1 Before Create Message Context "${message.content}"`
     );
-    const context = getMessageLogContext(message);
+    const context = getLogContext(message);
     if (!context || !context.guildMember || !context.channelId) return;
 
     logger.debug(
@@ -60,12 +53,16 @@ export const saveMessage = async (message: Message) => {
 };
 
 export const summarizeLastMessages = async (
-  guildId: string,
-  channelId: string,
-  senderId: string | undefined,
+  trigger: Message | Interaction | CommandInteraction,
   hours: number | undefined = undefined,
   count: number | undefined = undefined
 ) => {
+  const { guildId, channelId } = trigger;
+  const senderId = getSenderId(trigger);
+  if (!guildId || !channelId || !senderId) {
+    return;
+  }
+
   const minsOld = new Date();
   minsOld.setMilliseconds(minsOld.getMilliseconds() - 5 * 60 * 1000);
 
@@ -85,16 +82,16 @@ export const summarizeLastMessages = async (
   }
 
   const messages = await getLastMessages(guildId, channelId, hours, count);
-  const summarizer = useOpenai()
-    ? openaiSummarizeMessages
-    : geminiSummarizeMessages;
-
-  const summarization = await summarizer(
+  const summarization = await summarizeMessages({
     messages,
     guildId,
     channelId,
-    saveAiRequestBuilder(guildId, channelId, senderId, { hours, count })
-  );
+    context: getLogContext(trigger),
+    logRequest: saveAiRequestBuilder(guildId, channelId, senderId, {
+      hours,
+      count,
+    }),
+  });
 
   if (summarization) {
     try {
@@ -122,13 +119,14 @@ export const questionLastMessages = async (
   question: string
 ) => {
   const messages = await getLastMessages(guildId, channelId, undefined, count);
-  const quentioner = useOpenai()
-    ? openaiQuestionMessages
-    : geminiQuestionMessages;
-  const answer = await quentioner(
+
+  const answer = await questionMessages({
     messages,
     question,
-    saveAiRequestBuilder(guildId, channelId, senderId, { question, count })
-  );
+    logRequest: saveAiRequestBuilder(guildId, channelId, senderId, {
+      question,
+      count,
+    }),
+  });
   return unreplaceLaughs(answer);
 };

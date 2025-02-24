@@ -1,5 +1,21 @@
-import { SchemaType } from '@google/generative-ai';
+import { ObjectSchema, SchemaType } from '@google/generative-ai';
 import { ResponseFormatJSONSchema } from 'openai/resources';
+import { LogAiRequest, MessageFromDatabase } from '../../type';
+import { LogContext } from '../discord';
+
+export interface SummarizeMessagesProps {
+  messages: MessageFromDatabase[];
+  guildId: string;
+  channelId: string;
+  logRequest: LogAiRequest | undefined;
+  context?: LogContext;
+}
+export interface QuestionMessageProps {
+  messages: MessageFromDatabase[];
+  question: string;
+  logRequest: LogAiRequest | undefined;
+  context?: LogContext;
+}
 
 /**
  * import { zodResponseFormat } from 'openai/src/helpers/zod';
@@ -32,30 +48,45 @@ export const SummarizeOutputSchemaOpenai: ResponseFormatJSONSchema.JSONSchema =
             required: ['topic', 'startMessageId'],
           },
         },
+        comment: {
+          type: 'string',
+          nullable: false,
+        },
       },
       additionalProperties: false,
-      required: ['topics'],
+      required: ['topics', 'comment'],
     },
   };
 
-export const SummarizeOutputSchemaGemini = {
-  type: SchemaType.ARRAY,
-  items: {
-    type: SchemaType.OBJECT,
-    properties: {
-      topic: {
-        type: SchemaType.STRING,
-        description: 'A topic from conversation',
-        nullable: false,
+export const SummarizeOutputSchemaGemini: ObjectSchema = {
+  type: SchemaType.OBJECT,
+  properties: {
+    topics: {
+      type: SchemaType.ARRAY,
+      items: {
+        type: SchemaType.OBJECT,
+        properties: {
+          topic: {
+            type: SchemaType.STRING,
+            description: 'A topic from conversation',
+            nullable: false,
+          },
+          startMessageId: {
+            type: SchemaType.STRING,
+            description: 'A start message id of the topic',
+            nullable: false,
+          },
+        },
+        required: ['topic', 'startMessageId'],
       },
-      startMessageId: {
-        type: SchemaType.STRING,
-        description: 'A start message id of the topic',
-        nullable: false,
-      },
+      nullable: false,
     },
-    required: ['topic', 'startMessageId'],
+    comment: {
+      type: SchemaType.STRING,
+      nullable: false,
+    },
   },
+  required: ['topics', 'comment'],
 };
 
 export interface SummarizationOutput {
@@ -63,4 +94,5 @@ export interface SummarizationOutput {
     topic: string;
     startMessageId: string;
   }[];
+  comment: string;
 }

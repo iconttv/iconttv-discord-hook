@@ -9,13 +9,16 @@ import {
 } from '@google/generative-ai';
 import { config } from '../../config';
 import logger from '../../lib/logger';
-import { LogAiRequest, MessageFromDatabase } from '../../type/index';
 import {
   constructSummarizationResult,
   convertMessagesToPrompt,
 } from '../message';
 import { makeChunk } from '../index';
-import { SummarizeOutputSchemaGemini } from './types';
+import {
+  QuestionMessageProps,
+  SummarizeMessagesProps,
+  SummarizeOutputSchemaGemini,
+} from './types';
 
 const genAI = new GoogleGenerativeAI(config.GEMINI_API_KEY || '');
 
@@ -50,13 +53,14 @@ const unsafeSafetySettings: SafetySetting[] = [
   },
 ];
 
-export const summarizeMessages = async (
-  messages: MessageFromDatabase[],
-  guildId: string,
-  channelId: string,
-  logRequest: LogAiRequest | undefined
-): Promise<string | undefined> => {
-  const promptSystem = await fetch(
+export const summarizeMessages = async ({
+  messages,
+  guildId,
+  channelId,
+  logRequest,
+  context,
+}: SummarizeMessagesProps): Promise<string | undefined> => {
+  const promptSystemPromise = fetch(
     `${config.GITHUB_BASEURL}/src/utils/llm/prompt-summarization.txt`
   )
     .then(res => res.text())
@@ -64,6 +68,18 @@ export const summarizeMessages = async (
       logger.error(e);
       throw e;
     });
+  const promptPersonaPromise = fetch(
+    `${config.GITHUB_BASEURL}/src/utils/llm/prompt-persona.txt`
+  )
+    .then(res => res.text())
+    .catch(e => {
+      logger.error(e);
+      throw e;
+    });
+  const [promptSystem, promptPersona] = await Promise.all([
+    promptSystemPromise,
+    promptPersonaPromise,
+  ]);
 
   const modelName = getModel();
   const modelParams: ModelParams = {
@@ -74,12 +90,26 @@ export const summarizeMessages = async (
     },
   };
 
-  const generateParams = {
+  const generateParams: GenerateContentRequest = {
     generationConfig: {
       temperature: 0.5 + Math.random() * 0.2,
+      frequencyPenalty: 0.5,
+      presencePenalty: -0.3 + Math.random() * 0.2,
     },
     safetySettings: [...unsafeSafetySettings],
-    systemInstruction: promptSystem,
+    systemInstruction: {
+      role: 'system',
+      parts: [
+        {
+          text: promptSystem
+            .replace('{{ channelName }}', context?.channelName || '')
+            .replace('{{ guildName }}', context?.guildName || '')
+            .replace('{{ datetime }}', new Date().toLocaleString())
+            .replace('{{ persona }}', promptPersona),
+        },
+      ],
+    },
+    contents: [],
   };
   const model = genAI.getGenerativeModel(modelParams);
 
@@ -143,11 +173,11 @@ export const summarizeMessages = async (
   return summarization + `\n(${modelName})`;
 };
 
-export const questionMessages = async (
-  messages: MessageFromDatabase[],
-  question: string,
-  logRequest: LogAiRequest | undefined
-): Promise<string | undefined> => {
+export const questionMessages = async ({
+  messages,
+  question,
+  logRequest,
+}: QuestionMessageProps): Promise<string | undefined> => {
   const promptSystem = await fetch(
     `${config.GITHUB_BASEURL}/src/utils/llm/prompt-question.txt`
   )
