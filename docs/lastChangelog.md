@@ -1,3 +1,3 @@
-1.0.0.dev10
+1.0.0.dev11
 
-- novelai image api 추가
+- 채팅 요약에 한 줄 평 추가
