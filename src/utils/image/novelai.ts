@@ -7,12 +7,13 @@ import { processZip } from '../io';
 const novelAiConfig = {
   API_URL: 'https://image.novelai.net/ai/generate-image',
   API_KEY: config.NOVELAI_API_KEY,
-  MODEL: 'nai-diffusion-4-curated-preview',
+  MODEL: 'nai-diffusion-4-full',
+  // MODEL: 'nai-diffusion-4-curated-preview',
   MODEL_V3: 'nai-diffusion-3',
   MODEL_V3_FURRY: 'nai-diffusion-furry-3',
   WIDTH: 1024,
   HEIGHT: 1024,
-  SAMPLER: 'k_dpmpp_2m_sde',
+  SAMPLER: 'k_dpmpp_2s_ancestral', // 'k_dpmpp_2m_sde',
   STEPS: 26,
   GUIDANCE: 6,
   NEGATIVE_PROMPT:
