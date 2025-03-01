@@ -11,11 +11,15 @@ const novelAiConfig = {
   // MODEL: 'nai-diffusion-4-curated-preview',
   MODEL_V3: 'nai-diffusion-3',
   MODEL_V3_FURRY: 'nai-diffusion-furry-3',
-  WIDTH: 1024,
-  HEIGHT: 1024,
+  // WIDTH: 1024,
+  // HEIGHT: 1024,
+  WIDTH: 832,
+  HEIGHT: 1216,
   SAMPLER: 'k_dpmpp_2s_ancestral', // 'k_dpmpp_2m_sde',
-  STEPS: 26,
+  STEPS: 28, // max free value
   GUIDANCE: 6,
+  SKIP_CFG_ABOVE_SIGMA: 19.343056794463642, // Prompt Guidance; `Variety+` toggle
+  DYNAMIC_THRESHOLDING: true, // Prompt Guidance; `Descrip` toggle
   NEGATIVE_PROMPT:
     'blurry, lowres, error, film grain, scan artifacts, worst quality, ' +
     'bad quality, jpeg artifacts, very displeasing, chromatic aberration, ' +
@@ -41,17 +45,17 @@ const generateParametersV3 = (prompt: string) =>
     steps: novelAiConfig.STEPS,
     n_samples: 1,
     ucPreset: 0,
-    qualityToggle: true,
+    qualityToggle: false,
     sm: false,
     sm_dyn: false,
-    dynamic_thresholding: false,
+    dynamic_thresholding: novelAiConfig.DYNAMIC_THRESHOLDING,
     controlnet_strength: 1,
     legacy: false,
     add_original_image: true,
     cfg_rescale: 0,
     noise_schedule: 'karras',
     legacy_v3_extend: false,
-    skip_cfg_above_sigma: null,
+    skip_cfg_above_sigma: novelAiConfig.SKIP_CFG_ABOVE_SIGMA,
     // seed: 599538579,
     characterPrompts: [
       {
@@ -79,15 +83,15 @@ const generateParametersV4 = (prompt: string) => ({
   steps: novelAiConfig.STEPS,
   n_samples: 1,
   ucPreset: 0,
-  qualityToggle: true,
-  dynamic_thresholding: false,
+  qualityToggle: false,
+  dynamic_thresholding: novelAiConfig.DYNAMIC_THRESHOLDING,
   controlnet_strength: 1,
   legacy: false,
   add_original_image: true,
   cfg_rescale: 0,
   noise_schedule: 'karras',
   legacy_v3_extend: false,
-  skip_cfg_above_sigma: null,
+  skip_cfg_above_sigma: novelAiConfig.SKIP_CFG_ABOVE_SIGMA,
   use_coords: false,
   // seed: 3722663874,
   characterPrompts: [],
