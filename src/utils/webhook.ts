@@ -18,6 +18,7 @@ class Webhook {
   // adapted from https://gist.github.com/dragonwocky/ea61c8d21db17913a43da92efe0de634
   async sendMessage(
     message: string,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     body?: any,
     level: 'info' | 'warning' | 'error' = 'info'
   ) {
@@ -56,6 +57,7 @@ class Webhook {
     logger.debug(`Success to send discord webhook. ${responseText}`);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async __sendBody(body: any) {
     if (!body) return;
 
