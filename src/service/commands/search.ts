@@ -34,7 +34,11 @@ export const execute = async (interaction: CommandInteraction) => {
 
   await interaction.deferReply();
   try {
-    const searchResult = await searchMessage(guildId, keyword, channelId);
+    const searchResult = await searchMessage(
+      guildId,
+      keyword,
+      inChannel ? channelId : null
+    );
     const beautifulMessage = searchResult
       .map(
         result =>

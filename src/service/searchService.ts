@@ -1,6 +1,7 @@
 import { Client } from '@elastic/elasticsearch';
 import { config } from '../config';
 import { getMessageLink } from '../utils/message';
+import logger from '../lib/logger';
 
 let _client: Client;
 
@@ -26,27 +27,54 @@ export const searchMessage = async (
   channelId: string | null
 ) => {
   const client = getClient();
-  const matchConditions = channelId
-    ? [
-        {
-          match: {
-            guildId: guildId,
+  const matchConditions =
+    channelId !== null
+      ? [
+          {
+            match: {
+              guildId: guildId,
+            },
           },
-        },
-        {
-          match: {
-            channelId: channelId,
+          {
+            match: {
+              channelId: channelId,
+            },
           },
-        },
-      ]
-    : [
-        {
-          match: {
-            guildId: guildId,
+        ]
+      : [
+          {
+            match: {
+              guildId: guildId,
+            },
           },
-        },
-      ];
+        ];
 
+  logger.debug({
+    index: 'iconttv-discord-message_*',
+    size: 10,
+    _source: ['@timestamp', 'guildId', 'channelId', 'messageId', 'message'],
+    query: {
+      bool: {
+        must: [
+          ...matchConditions,
+          {
+            fuzzy: {
+              message: {
+                value: keyword,
+              },
+            },
+          },
+        ],
+      },
+    },
+    sort: [
+      {
+        '@timestamp': {
+          order: 'desc',
+        },
+      },
+    ],
+  });
   const result = await client.search({
     index: 'iconttv-discord-message_*',
     size: 10,
