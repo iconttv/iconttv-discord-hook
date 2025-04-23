@@ -13,6 +13,8 @@ declare global {
       GEMINI_API_KEY: string;
       NOVELAI_API_KEY: string;
       NODE_ENV: 'dev' | 'prod';
+      ELASTIC_HOST: string;
+      ELASTIC_API: string;
     }
   }
 }

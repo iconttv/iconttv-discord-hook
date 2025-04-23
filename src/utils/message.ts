@@ -145,6 +145,12 @@ const unwrapJsonBlocks = (jsonRaw: string): string => {
   return text;
 };
 
+export const getMessageLink = (
+  guildId: string,
+  channelId: string,
+  messageId: string
+) => `https://discord.com/channels/${guildId}/${channelId}/${messageId}`;
+
 export const constructSummarizationResult = (
   guildId: string,
   channelId: string,
@@ -161,7 +167,7 @@ export const constructSummarizationResult = (
         prev +
         '\n' +
         `- ${curr.topic} ` +
-        `https://discord.com/channels/${guildId}/${channelId}/${curr.startMessageId}`
+        getMessageLink(guildId, channelId, curr.startMessageId)
       );
     }, '')
     .trim();
