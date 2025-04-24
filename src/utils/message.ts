@@ -58,6 +58,7 @@ const getLastHourMessages = async (
           $nin: [MessageType.ChatInputCommand, MessageType.ContextMenuCommand],
         },
         createdAt: { $gte: hoursAgo },
+        isDeleted: { $ne: true },
       },
       {
         guildId: 1,
@@ -92,6 +93,7 @@ const getLastNMessages = async (
         messageType: {
           $nin: [MessageType.ChatInputCommand, MessageType.ContextMenuCommand],
         },
+        isDeleted: { $ne: true },
       },
       {
         guildId: 1,
