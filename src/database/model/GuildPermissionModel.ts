@@ -8,6 +8,12 @@ export const guildPermissionSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now },
   updatedBy: String,
 });
+guildPermissionSchema.index(
+  {
+    guildId: 1,
+  },
+  { unique: true }
+);
 
 const GuildPermissionModel = mongoose.model(
   'GuildPermission',

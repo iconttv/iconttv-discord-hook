@@ -41,6 +41,15 @@ export const registerEvents = (client: Client) => {
     }
   });
 
+  client.on(Events.MessageUpdate, async (_oldMessage, newMessage) => {
+    try {
+      await onMessageCreate(newMessage);
+    } catch (e) {
+      webhook.sendMessage('MessageCreateError', e, 'error');
+      logger.error(e);
+    }
+  });
+
   client.on(Events.InteractionCreate, async (interaction: Interaction) => {
     try {
       onCommandInteractionCreate(interaction);

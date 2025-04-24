@@ -1,56 +1,11 @@
 import { CommandInteraction, Interaction, Message } from 'discord.js';
 import logger from '../lib/logger';
-import MessageModel from '../database/model/MessageModel';
 import { getLogContext, getSenderId } from '../utils/discord/index';
 import { summarizeMessages, questionMessages } from '../utils/llm/index';
 import MessageSummarizationModel from '../database/model/MessageSummarizationModel';
 import { unreplaceLaughs } from '../utils/index';
 import { saveAiRequestBuilder } from './common';
 import { getLastMessages } from '../utils/message';
-
-export const saveMessage = async (message: Message) => {
-  try {
-    logger.debug(
-      `saveMessage-1 Before Create Message Context "${message.content}"`
-    );
-    const context = getLogContext(message);
-    if (!context || !context.guildMember || !context.channelId) return;
-
-    logger.debug(
-      `saveMessage-2 Before Create Message Model "${context.senderName} - ${context.senderMessage}"`
-    );
-    const messageModel = new MessageModel({
-      guildId: context.guildId,
-      channelId: context.channelId,
-      messageId: context.messageId,
-      messageType: context.messageType,
-      message: context.senderMessage,
-      attachments: context.attachments,
-      components: context.components,
-      embeds: context.embeds,
-      senderId: context.senderId,
-      guildName: context.guildName,
-      channelName: context.channelName,
-      senderName: context.senderName,
-      raw: JSON.stringify(message),
-      createdAt: context.createdAt,
-    });
-    messageModel.isNew = true;
-
-    logger.debug(
-      `saveMessage-3 Before Mesasge Save "${context.senderName} - ${context.senderMessage}"`
-    );
-    await messageModel.save({
-      w: 0,
-      wtimeout: 1000,
-    });
-    logger.debug(
-      `saveMessage-4 Message Saved! "${context.senderName} - ${context.senderMessage}"`
-    );
-  } catch (e) {
-    logger.error(e);
-  }
-};
 
 export const summarizeLastMessages = async (
   trigger: Message | Interaction | CommandInteraction,

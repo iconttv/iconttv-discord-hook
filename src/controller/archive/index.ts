@@ -1,6 +1,11 @@
 import { Events, Client } from 'discord.js';
 import logger from '../../lib/logger';
-import { saveMessage } from '../../service/messageService';
+import {
+  bulkDeleteMessage,
+  deleteMessage,
+  saveMessage,
+  updateMessage,
+} from '../../service/archive/message';
 import { webhook } from '../../utils/webhook';
 
 export const registerEventsArchive = (client: Client) => {
@@ -13,5 +18,15 @@ export const registerEventsArchive = (client: Client) => {
     await saveMessage(message);
   });
 
-  // client.on(Events.MessageUpdate, async (oldMessage, newMessage) => {});
+  client.on(Events.MessageUpdate, async (oldMessage, newMessage) => {
+    await updateMessage(oldMessage, newMessage);
+  });
+
+  client.on(Events.MessageDelete, async message => {
+    await deleteMessage(message);
+  });
+
+  client.on(Events.MessageBulkDelete, async messages => {
+    await bulkDeleteMessage(messages);
+  });
 };

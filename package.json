@@ -9,7 +9,7 @@
     "dev": "cross-env NODE_ENV=dev nodemon --exec tsx ./src/index.ts",
     "build": "tsc",
     "start": "cross-env NODE_ENV=prod node ./dist/index.js",
-    "archive-dev": "cross-env NODE_ENV=dev nodemon ./src/archive.ts",
+    "archive-dev": "cross-env NODE_ENV=dev nodemon --exec tsx ./src/archive.ts",
     "archive-start": "cross-env NODE_ENV=prod node ./dist/archive.js",
     "cmd-dev": "cross-env NODE_ENV=dev tsx ./src/deploy-commands.ts",
     "cmd-prod": "cross-env NODE_ENV=prod tsx ./src/deploy-commands.ts",

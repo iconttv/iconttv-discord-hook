@@ -11,6 +11,10 @@ export const AiRequestSchema = new mongoose.Schema({
   response: Object,
   createdAt: { type: Date, default: Date.now },
 });
+AiRequestSchema.index({
+  guildId: 1,
+  channelId: 1,
+});
 
 const AiRequestModel = mongoose.model('AiRequest', AiRequestSchema);
 

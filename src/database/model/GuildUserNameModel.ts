@@ -7,5 +7,12 @@ export const guildUserNameSchema = new mongoose.Schema({
   anonUserName: { type: String, required: true },
   createdAt: { type: Date, default: Date.now },
 });
+guildUserNameSchema.index(
+  {
+    guildId: 1,
+    userId: 1,
+  },
+  { unique: true }
+);
 
 export default mongoose.model('GuildUserName', guildUserNameSchema);
