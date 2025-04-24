@@ -1,6 +1,7 @@
 import { CommandInteraction, SlashCommandBuilder } from 'discord.js';
 import logger from '../../lib/logger';
 import { searchMessage } from '../searchService';
+import { trimText, truncateText } from '../../utils';
 
 export const data = new SlashCommandBuilder()
   .setName('itvsc')
@@ -42,9 +43,10 @@ export const execute = async (interaction: CommandInteraction) => {
     const beautifulMessage = searchResult
       .map(
         result =>
-          `- [${result['@timestamp']}] ${result.message
-            .replace('\n', '')
-            .replace('\t', '')} ${result.link}`
+          `- [${result['@timestamp']}] ${truncateText(
+            trimText(result.message),
+            30
+          )} ${result.link}`
       )
       .join('\n');
     await interaction.editReply(

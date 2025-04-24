@@ -75,3 +75,14 @@ export function jsonStringify(obj: object) {
     2
   );
 }
+
+export function trimText(text: string) {
+  return text.trim().replace('\n', '').replace('\t', '');
+}
+
+export function truncateText(text: string, length: number) {
+  if (text.length > length) {
+    return `${text.slice(0, length - 3)}...`;
+  }
+  return text;
+}
