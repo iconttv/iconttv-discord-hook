@@ -91,10 +91,9 @@ export const execute = async (interaction: CommandInteraction) => {
     const beautifulMessage = searchResult
       .map(
         result =>
-          `- [${result['@timestamp']}] ${truncateText(
-            trimText(result.message),
-            30
-          )} ${result.link}`
+          `- ${truncateText(trimText(result.message), 30)} ${result.link} (${
+            result['@timestamp']
+          })`
       )
       .join('\n');
     await interaction.editReply(beautifulMessage);
