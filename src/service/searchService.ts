@@ -69,54 +69,81 @@ export const searchMessage = async (
   channelId: string | null
 ) => {
   const client = getClient();
-  const matchConditions =
-    channelId !== null
-      ? [
-          {
-            match: {
-              guildId: guildId,
-            },
-          },
-          {
-            match: {
-              channelId: channelId,
-            },
-          },
-        ]
-      : [
-          {
-            match: {
-              guildId: guildId,
-            },
-          },
-        ];
+  const matchConditions = [
+    {
+      match: {
+        guildId: guildId,
+      },
+    },
+    {
+      exists: { field: 'message' },
+    },
+    {
+      exists: { field: 'guildId' },
+    },
+    {
+      exists: { field: 'channelId' },
+    },
+    {
+      exists: { field: 'messageId' },
+    },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ] as any[];
+  if (channelId !== null) {
+    matchConditions.push({
+      match: {
+        channelId: channelId,
+      },
+    });
+  }
 
   const result = await client.search({
     index: 'iconttv-discord-message_*',
     size: 10,
     _source: ['@timestamp', 'guildId', 'channelId', 'messageId', 'message'],
     query: {
-      bool: {
-        must: [
-          ...matchConditions,
+      function_score: {
+        query: {
+          bool: {
+            must: [
+              ...matchConditions,
+              {
+                fuzzy: {
+                  message: {
+                    value: keyword,
+                    fuzziness: 'AUTO',
+                  },
+                },
+              },
+            ],
+          },
+        },
+        functions: [
           {
-            fuzzy: {
-              message: {
-                value: keyword,
+            gauss: {
+              '@timestamp': {
+                origin: 'now',
+                scale: '30d', // 30일 이내는 점수가 1에 가깝게 증가
+                decay: 0.5, // 시간이 30일 차이나면 점수가 반으로 감소
               },
             },
+            weight: 2, // 가중치를 조절해서 날짜 점수 영향력 조절
           },
         ],
+        score_mode: 'sum',
+        boost_mode: 'sum',
       },
     },
     sort: [
       {
-        '@timestamp': {
+        _score: {
           order: 'desc',
         },
       },
     ],
   });
+
+  logger.debug(result.hits.hits);
 
   const searchResult = result.hits.hits.map(hit => {
     const source = hit._source as {
@@ -146,27 +173,33 @@ export const searchMessageEmbedding = async (
   channelId: string | null
 ) => {
   const client = getClient();
-  const matchConditions =
-    channelId !== null
-      ? [
-          {
-            match: {
-              guildId: guildId,
-            },
-          },
-          {
-            match: {
-              channelId: channelId,
-            },
-          },
-        ]
-      : [
-          {
-            match: {
-              guildId: guildId,
-            },
-          },
-        ];
+  const matchConditions = [
+    {
+      match: {
+        guildId: guildId,
+      },
+    },
+    {
+      exists: { field: 'content_text' },
+    },
+    {
+      exists: { field: 'guildId' },
+    },
+    {
+      exists: { field: 'channelId' },
+    },
+    {
+      exists: { field: 'messageId' },
+    },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ] as any[];
+  if (channelId !== null) {
+    matchConditions.push({
+      match: {
+        channelId: channelId,
+      },
+    });
+  }
   const queryEmbedding = await getEmbedding(searchWords);
 
   const result = await client.search({
@@ -186,7 +219,7 @@ export const searchMessageEmbedding = async (
       script_score: {
         query: {
           bool: {
-            must: [...matchConditions, { match_all: {} }],
+            must: matchConditions,
           },
         },
         script: {
