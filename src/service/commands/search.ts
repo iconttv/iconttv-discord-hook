@@ -1,6 +1,6 @@
 import { CommandInteraction, SlashCommandBuilder } from 'discord.js';
 import logger from '../../lib/logger';
-import { searchMessage } from '../searchService';
+import { searchMessage, searchMessageEmbedding } from '../searchService';
 import { trimText, truncateText } from '../../utils';
 
 export const data = new SlashCommandBuilder()
@@ -21,7 +21,9 @@ export const execute = async (interaction: CommandInteraction) => {
   const inChannel = interaction.options.get('channel')?.value ?? false;
   logger.debug(`keyword: ${keyword}, channel: ${inChannel}`);
 
-  if (!keyword || keyword.length === 0) {
+  const searchWord = keyword.trim();
+
+  if (!searchWord || searchWord.length === 0) {
     await interaction.reply(`검색어가 입력되지 않았습니다.`);
     return;
   }
@@ -34,12 +36,58 @@ export const execute = async (interaction: CommandInteraction) => {
   }
 
   await interaction.deferReply();
-  try {
-    const searchResult = await searchMessage(
-      guildId,
-      keyword,
-      inChannel ? channelId : null
-    );
+
+  let searchResult:
+    | {
+        '@timestamp': string;
+        message: string;
+        link: string;
+      }[]
+    | null = null;
+
+  /**
+   * if keyword is just one word or some short word,
+   * cosine similarity score is too high in meaning less results.
+   */
+  const useEmbeddingSearch =
+    searchWord.length > 10 || searchWord.split(' ').length > 1;
+
+  if (useEmbeddingSearch) {
+    try {
+      searchResult = await searchMessageEmbedding(
+        guildId,
+        searchWord,
+        inChannel ? channelId : null
+      );
+      logger.debug('search result found from embedding search');
+      if (!searchResult || searchResult.length === 0) {
+        throw new Error('embedding search result is empty');
+      }
+    } catch (e) {
+      logger.warn('embedding search failed. fallback to fuzzy search.');
+      logger.warn(e);
+      searchResult = null;
+    }
+  }
+
+  if (searchResult === null) {
+    try {
+      searchResult = await searchMessage(
+        guildId,
+        searchWord,
+        inChannel ? channelId : null
+      );
+    } catch (e) {
+      logger.error('fuzzy search failed.');
+      logger.error(e);
+    }
+  }
+
+  if (searchResult === null) {
+    await interaction.editReply('검색 기능에 에러가 발생했습니다.');
+  } else if (searchResult.length === 0) {
+    await interaction.editReply('검색 결과가 없습니다.');
+  } else {
     const beautifulMessage = searchResult
       .map(
         result =>
@@ -49,11 +97,6 @@ export const execute = async (interaction: CommandInteraction) => {
           )} ${result.link}`
       )
       .join('\n');
-    await interaction.editReply(
-      beautifulMessage.length ? beautifulMessage : '검색 결과가 없습니다.'
-    );
-  } catch (e) {
-    logger.error(e);
-    await interaction.editReply('검색 기능에 에러가 발생했습니다.');
+    await interaction.editReply(beautifulMessage);
   }
 };

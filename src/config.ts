@@ -14,8 +14,12 @@ interface Config {
   OPENAI_API_KEY: string | undefined;
   GEMINI_API_KEY: string | undefined;
   NOVELAI_API_KEY: string | undefined;
-  ELASTIC_HOST: string;
-  ELASTIC_API: string;
+  ELASTIC_HOST: string | undefined;
+  ELASTIC_API: string | undefined;
+
+  EMBEDDING_CUSTOM_API_HOST: string | undefined;
+  EMBEDDING_CUSTOM_API_AUTH_HEADER: string | undefined;
+
   ENV: 'prod' | 'dev';
   GITHUB_BASEURL: string;
 
@@ -52,6 +56,10 @@ export const config: Config = {
   }`,
   ELASTIC_HOST: process.env.ELASTIC_HOST,
   ELASTIC_API: process.env.ELASTIC_API,
+
+  EMBEDDING_CUSTOM_API_HOST: process.env.EMBEDDING_CUSTOM_API_HOST,
+  EMBEDDING_CUSTOM_API_AUTH_HEADER:
+    process.env.EMBEDDING_CUSTOM_API_AUTH_HEADER,
 
   CACHE_CLEAR_CHECK_TIME_MS: 10 * 60 * 1000,
 };

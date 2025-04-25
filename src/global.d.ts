@@ -15,6 +15,8 @@ declare global {
       NODE_ENV: 'dev' | 'prod';
       ELASTIC_HOST: string;
       ELASTIC_API: string;
+      EMBEDDING_CUSTOM_API_HOST: string;
+      EMBEDDING_CUSTOM_API_AUTH_HEADER: string;
     }
   }
 }
