@@ -14,10 +14,18 @@ import {
 } from './types';
 
 const openai = new OpenAI({
+  baseURL: config.OPENAI_API_BASEURL,
   apiKey: config.OPENAI_API_KEY,
 });
 
-const getModel = () => 'gpt-4o-mini';
+const models = config.OPENAI_API_MODEL.split(',')
+  .map(model => model.trim())
+  .filter(model => model.length > 0);
+
+const getModel = () => {
+  const idx = Math.floor(Math.random() * models.length);
+  return models[idx];
+};
 
 export const summarizeMessages = async ({
   messages,

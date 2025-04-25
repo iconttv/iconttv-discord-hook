@@ -9,7 +9,12 @@ declare global {
       MONGODB_USERNAME: string;
       MONGODB_PASSWORD: string;
       MONGODB_DATABASE: string;
+
+      OPENAI_API_BASEURL: string;
       OPENAI_API_KEY: string;
+      OPENAI_API_MODEL: string;
+      IMAGE_OPENAI_API_KEY: string;
+
       GEMINI_API_KEY: string;
       NOVELAI_API_KEY: string;
       NODE_ENV: 'dev' | 'prod';

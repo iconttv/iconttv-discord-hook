@@ -11,7 +11,12 @@ interface Config {
   MONGODB_USERNAME: string;
   MONGODB_PASSWORD: string;
   MONGODB_DATABASE: string;
+
+  OPENAI_API_BASEURL: string | undefined;
   OPENAI_API_KEY: string | undefined;
+  OPENAI_API_MODEL: string;
+  IMAGE_OPENAI_API_KEY: string | undefined;
+
   GEMINI_API_KEY: string | undefined;
   NOVELAI_API_KEY: string | undefined;
   ELASTIC_HOST: string | undefined;
@@ -47,7 +52,12 @@ export const config: Config = {
   MONGODB_USERNAME: process.env.MONGODB_USERNAME!,
   MONGODB_PASSWORD: process.env.MONGODB_PASSWORD!,
   MONGODB_DATABASE: process.env.MONGODB_DATABASE!,
+
+  OPENAI_API_BASEURL: process.env.OPENAI_API_BASEURL,
   OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+  OPENAI_API_MODEL: process.env.OPENAI_API_MODEL,
+  IMAGE_OPENAI_API_KEY: process.env.IMAGE_OPENAI_API_KEY,
+
   GEMINI_API_KEY: process.env.GEMINI_API_KEY,
   NOVELAI_API_KEY: process.env.NOVELAI_API_KEY,
   ENV: process.env.NODE_ENV === 'prod' ? 'prod' : 'dev',

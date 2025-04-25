@@ -4,7 +4,7 @@ import logger from '../../lib/logger';
 import { LogAiRequest } from '../../type/index';
 
 const openai = new OpenAI({
-  apiKey: config.OPENAI_API_KEY,
+  apiKey: config.IMAGE_OPENAI_API_KEY,
 });
 
 export const generateImage = async (
