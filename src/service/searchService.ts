@@ -233,7 +233,7 @@ export const searchMessageEmbedding = async (
             String chunkType = doc['chunkType'].value;
             double typeWeight = 0.0;
             if (chunkType != null && (chunkType == 'attachment_image' || chunkType == 'attachment_file')) {
-              typeWeight = 0.5;
+              typeWeight = 0.3;
             }
 
             double datePenaltyFactor = -0.2;
