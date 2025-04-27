@@ -204,7 +204,7 @@ export const searchMessageEmbedding = async (
 
   const result = await client.search({
     index: 'iconttv-discord-message-embedding_*',
-    size: 10,
+    size: 8,
     min_score: 1.5,
     _source: [
       '@timestamp',
@@ -223,8 +223,31 @@ export const searchMessageEmbedding = async (
           },
         },
         script: {
-          source: "cosineSimilarity(params.embedding, 'embedding') + 1.0",
-          params: { embedding: queryEmbedding },
+          source: `
+            double cosineSim = cosineSimilarity(params.query_vector, 'embedding') + 1.0;
+
+            long timeMillis = doc['@timestamp'].value.toInstant().toEpochMilli();
+            long nowMillis = params.now;
+            double daysDiff = (nowMillis - timeMillis) / (1000.0 * 60.0 * 60.0 * 24.0);
+
+            String chunkType = doc['chunkType'].value;
+            double typeWeight = 0.0;
+            if (chunkType != null && (chunkType == 'attachment_image' || chunkType == 'attachment_file')) {
+              typeWeight = 0.5;
+            }
+
+            double datePenaltyFactor = -0.2;
+            double datePenalty = 0.0;
+            if (daysDiff > 60) {
+              datePenalty = (daysDiff - 60) / 365.0;
+            }
+
+            return cosineSim + typeWeight + (datePenalty * datePenaltyFactor);
+          `,
+          params: {
+            query_vector: queryEmbedding,
+            now: Date.now(),
+          },
         },
       },
     },
