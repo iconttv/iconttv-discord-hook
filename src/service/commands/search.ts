@@ -14,11 +14,19 @@ export const data = new SlashCommandBuilder()
       .setName('channel')
       .setDescription('현재 채널 내에서만 검색')
       .setRequired(false)
+  )
+  .addBooleanOption(option =>
+    option
+      .setName('embedding')
+      .setDescription('use embedding vector')
+      .setRequired(false)
   );
 
 export const execute = async (interaction: CommandInteraction) => {
   const keyword = interaction.options.get('keyword')?.value?.toString() ?? '';
   const inChannel = interaction.options.get('channel')?.value ?? false;
+  const useEmbedding = interaction.options.get('embedding')?.value ?? false;
+
   logger.debug(`keyword: ${keyword}, channel: ${inChannel}`);
 
   const searchWord = keyword.trim();
@@ -46,31 +54,20 @@ export const execute = async (interaction: CommandInteraction) => {
     | null = null;
 
   /**
-   * if keyword is just one word or some short word,
-   * cosine similarity score is too high in meaning less results.
+   * 대부분 경우에 텍스트 검색이 더 효율적임.
    */
-  const useEmbeddingSearch =
-    searchWord.length > 10 || searchWord.split(' ').length > 1;
-
-  if (useEmbeddingSearch) {
+  if (useEmbedding) {
     try {
       searchResult = await searchMessageEmbedding(
         guildId,
         searchWord,
         inChannel ? channelId : null
       );
-      logger.debug('search result found from embedding search');
-      if (!searchResult || searchResult.length === 0) {
-        throw new Error('embedding search result is empty');
-      }
     } catch (e) {
-      logger.warn('embedding search failed. fallback to fuzzy search.');
+      logger.warn('embedding search failed.');
       logger.warn(e);
-      searchResult = null;
     }
-  }
-
-  if (searchResult === null) {
+  } else {
     try {
       searchResult = await searchMessage(
         guildId,
