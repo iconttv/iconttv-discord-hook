@@ -34,7 +34,10 @@ const getClient = () => {
   return _client;
 };
 
-const getEmbedding = async (text: string) => {
+const getEmbedding = async (
+  text: string,
+  task: 'retrieval.query' | 'retrieval.passage' = 'retrieval.query'
+) => {
   if (
     !config.EMBEDDING_CUSTOM_API_HOST ||
     config.EMBEDDING_CUSTOM_API_HOST.length === 0
@@ -45,6 +48,7 @@ const getEmbedding = async (text: string) => {
   const response = await fetch(config.EMBEDDING_CUSTOM_API_HOST, {
     method: 'POST',
     body: JSON.stringify({
+      task,
       contents: [{ type: 'text', value: text }],
     }),
     headers: {
@@ -219,7 +223,7 @@ export const searchMessageEmbedding = async (
   const result = await client.search({
     index: 'iconttv-discord-message-embedding_*',
     size: 8,
-    min_score: 1.5,
+    min_score: 1.3,
     _source: [
       '@timestamp',
       'guildId',
@@ -247,13 +251,13 @@ export const searchMessageEmbedding = async (
             String chunkType = doc['chunkType'].value;
             double typeWeight = 0.0;
             if (chunkType != null && (chunkType == 'attachment_image' || chunkType == 'attachment_file')) {
-              typeWeight = 0.15;
+              typeWeight = 0.1;
             }
 
-            double datePenaltyFactor = -0.2;
+            double datePenaltyFactor = -1.5;
             double datePenalty = 0.0;
-            if (daysDiff > 60) {
-              datePenalty = (daysDiff - 60) / 365.0;
+            if (daysDiff > 30) {
+              datePenalty = (daysDiff - 30) / 365.0;
             }
 
             return cosineSim + typeWeight + (datePenalty * datePenaltyFactor);
