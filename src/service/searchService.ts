@@ -141,7 +141,7 @@ export const searchMessage = async (
                 decay: 0.5, // 시간이 30일 차이나면 점수가 반으로 감소
               },
             },
-            weight: 2, // 가중치를 조절해서 날짜 점수 영향력 조절
+            weight: 10, // 가중치를 조절해서 날짜 점수 영향력 조절
           },
         ],
         score_mode: 'sum',
