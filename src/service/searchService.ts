@@ -97,6 +97,22 @@ export const searchMessage = async (
     });
   }
 
+  const queryString = (() => {
+    if (
+      keyword.includes(' AND ') ||
+      keyword.includes(' OR ') ||
+      keyword.includes(' NOT ')
+    ) {
+      return keyword;
+    }
+
+    return keyword
+      .split(' ')
+      .filter(k => k.length > 0)
+      .join(' AND ');
+  })();
+  logger.debug(`queryString: ${queryString}`);
+
   const result = await client.search({
     index: 'iconttv-discord-message_*',
     size: 10,
@@ -108,11 +124,9 @@ export const searchMessage = async (
             must: [
               ...matchConditions,
               {
-                fuzzy: {
-                  message: {
-                    value: keyword,
-                    fuzziness: 'AUTO',
-                  },
+                query_string: {
+                  default_field: 'message',
+                  query: queryString,
                 },
               },
             ],
@@ -233,7 +247,7 @@ export const searchMessageEmbedding = async (
             String chunkType = doc['chunkType'].value;
             double typeWeight = 0.0;
             if (chunkType != null && (chunkType == 'attachment_image' || chunkType == 'attachment_file')) {
-              typeWeight = 0.3;
+              typeWeight = 0.15;
             }
 
             double datePenaltyFactor = -0.2;
