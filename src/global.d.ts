@@ -16,6 +16,7 @@ declare global {
       IMAGE_OPENAI_API_KEY: string;
 
       GEMINI_API_KEY: string;
+
       NOVELAI_API_KEY: string;
       NODE_ENV: 'dev' | 'prod';
       ELASTIC_HOST: string;

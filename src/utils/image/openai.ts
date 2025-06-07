@@ -31,7 +31,7 @@ export const generateImage = async (
   const response = await openai.images
     .generate(openaiParams)
     .then(async res => {
-      if (logOpenaiRequest !== undefined) {
+      if (logOpenaiRequest) {
         await logOpenaiRequest('openai', MODEL, openaiParams, res).catch(e =>
           logger.error(e)
         );
@@ -39,7 +39,7 @@ export const generateImage = async (
       return res;
     })
     .catch(async e => {
-      if (logOpenaiRequest !== undefined) {
+      if (logOpenaiRequest) {
         await logOpenaiRequest('openai', MODEL, openaiParams, e).catch(e =>
           logger.error(e)
         );

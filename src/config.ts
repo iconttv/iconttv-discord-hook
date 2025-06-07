@@ -18,6 +18,7 @@ interface Config {
   IMAGE_OPENAI_API_KEY: string | undefined;
 
   GEMINI_API_KEY: string | undefined;
+
   NOVELAI_API_KEY: string | undefined;
   ELASTIC_HOST: string | undefined;
   ELASTIC_API: string | undefined;
@@ -59,6 +60,7 @@ export const config: Config = {
   IMAGE_OPENAI_API_KEY: process.env.IMAGE_OPENAI_API_KEY,
 
   GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+
   NOVELAI_API_KEY: process.env.NOVELAI_API_KEY,
   ENV: process.env.NODE_ENV === 'prod' ? 'prod' : 'dev',
   GITHUB_BASEURL: `https://raw.githubusercontent.com/iconttv/iconttv-discord-hook/${

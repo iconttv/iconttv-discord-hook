@@ -1,12 +1,12 @@
 import {
-  GoogleGenerativeAI,
+  GoogleGenAI,
   HarmCategory,
   HarmBlockThreshold,
-  ModelParams,
-  GenerateContentRequest,
   SafetySetting,
-  Content as GenerateContentRequestContent,
-} from '@google/generative-ai';
+  GenerateContentParameters,
+  ContentListUnion,
+} from '@google/genai';
+
 import { config } from '../../config';
 import logger from '../../lib/logger';
 import {
@@ -20,20 +20,23 @@ import {
   SummarizeOutputSchemaGemini,
 } from './types';
 
-const genAI = new GoogleGenerativeAI(config.GEMINI_API_KEY || '');
+const genAI = new GoogleGenAI({
+  apiKey: config.GEMINI_API_KEY || '',
+});
 
-const FLASH_PROB = 1.1;
+const FLASH_PROB = 0.6;
 
 // pro is too slow
 const getModel = () =>
-  Math.random() < FLASH_PROB ? 'gemini-1.5-flash' : 'gemini-1.5-pro';
+  Math.random() < FLASH_PROB ? 'gemini-2.0-flash' : 'gemini-2.0-flash-lite';
 
 const unsafeSafetySettings: SafetySetting[] = [
   // {
   //   // https://github.com/google-gemini/generative-ai-js/issues/106
   //   // this category cannot be configurable due to legal issues.
   //   category: HarmCategory.HARM_CATEGORY_UNSPECIFIED,
-  //   threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
+  //   // threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
+  //   threshold: HarmBlockThreshold.BLOCK_NONE,
   // },
   {
     category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
@@ -82,43 +85,41 @@ export const summarizeMessages = async ({
   ]);
 
   const modelName = getModel();
-  const modelParams: ModelParams = {
+
+  const params: GenerateContentParameters = {
+    // ContentListUnion
+    contents: [],
     model: modelName,
-    generationConfig: {
+    // GenerateContentConfig
+    config: {
       responseMimeType: 'application/json',
       responseSchema: SummarizeOutputSchemaGemini,
-    },
-  };
-
-  const generateParams: GenerateContentRequest = {
-    generationConfig: {
       temperature: 0.5 + Math.random() * 0.2,
+      topP: 0.1,
       frequencyPenalty: 0.5,
       presencePenalty: -0.3 + Math.random() * 0.2,
+      safetySettings: [...unsafeSafetySettings],
+      systemInstruction: {
+        role: 'system',
+        parts: [
+          {
+            text: promptSystem
+              .replace('{{ channelName }}', context?.channelName || '')
+              .replace('{{ guildName }}', context?.guildName || '')
+              .replace('{{ datetime }}', new Date().toLocaleString())
+              .replace('{{ persona }}', promptPersona),
+          },
+        ],
+      },
     },
-    safetySettings: [...unsafeSafetySettings],
-    systemInstruction: {
-      role: 'system',
-      parts: [
-        {
-          text: promptSystem
-            .replace('{{ channelName }}', context?.channelName || '')
-            .replace('{{ guildName }}', context?.guildName || '')
-            .replace('{{ datetime }}', new Date().toLocaleString())
-            .replace('{{ persona }}', promptPersona),
-        },
-      ],
-    },
-    contents: [],
   };
-  const model = genAI.getGenerativeModel(modelParams);
 
   const messageChunks = makeChunk(messages, 1000);
   const messagePrompts = messageChunks.map(convertMessagesToPrompt);
 
   let summarizationText: string | undefined;
   for (const messagePrompt of messagePrompts) {
-    const generateContents: GenerateContentRequestContent[] = [];
+    const generateContents: ContentListUnion = [];
 
     if (summarizationText !== undefined && summarizationText.length > 0) {
       generateContents.push({
@@ -131,24 +132,23 @@ export const summarizeMessages = async ({
       parts: [{ text: messagePrompt }],
     });
 
-    const geminiParams: GenerateContentRequest = {
-      ...generateParams,
+    const geminiParams: GenerateContentParameters = {
+      ...params,
       contents: generateContents,
     };
 
     try {
-      const result = await model.generateContent(geminiParams);
+      const response = await genAI.models.generateContent(geminiParams);
 
-      const response = await result.response;
       if (logRequest !== undefined) {
         await logRequest(
           'google',
           modelName,
-          { ...modelParams, ...geminiParams },
+          { ...geminiParams },
           response
         ).catch(e => logger.error(e));
       }
-      const text = response.text();
+      const text = response.text ?? '';
 
       summarizationText = text;
     } catch (e) {
@@ -156,7 +156,7 @@ export const summarizeMessages = async ({
         await logRequest(
           'google',
           modelName,
-          { ...modelParams, ...geminiParams },
+          { ...geminiParams },
           e as object
         ).catch(e => logger.error(e));
       }
@@ -190,46 +190,43 @@ export const questionMessages = async ({
   const messagePrompt = convertMessagesToPrompt(messages);
 
   const modelName = getModel();
-  const modelParams: ModelParams = {
+
+  const params: GenerateContentParameters = {
+    contents: [],
     model: modelName,
+    config: {
+      temperature: 0.5 + Math.random() * 0.2,
+      safetySettings: unsafeSafetySettings,
+      systemInstruction: promptSystem,
+    },
   };
-  const generateParams: GenerateContentRequest = {
+
+  const geminiParams: GenerateContentParameters = {
+    ...params,
     contents: [
       { role: 'user', parts: [{ text: promptSystem }] },
       { role: 'user', parts: [{ text: messagePrompt }] },
       { role: 'user', parts: [{ text: `[Question] ${question}` }] },
     ],
-    generationConfig: {
-      temperature: 0.5 + Math.random() * 0.2,
-    },
-    safetySettings: unsafeSafetySettings,
-    systemInstruction: promptSystem,
   };
-  const model = genAI.getGenerativeModel(modelParams);
 
   try {
-    const result = await model.generateContent(generateParams);
+    const response = await genAI.models.generateContent(geminiParams);
 
-    const response = await result.response;
     if (logRequest !== undefined) {
-      await logRequest(
-        'google',
-        modelName,
-        { ...modelParams, ...generateParams },
-        response
-      ).catch(e => logger.error(e));
+      await logRequest('google', modelName, { ...params }, response).catch(e =>
+        logger.error(e)
+      );
     }
-    const text = response.text();
+    const text = response.text ?? '';
+
     const summarization = text.trim();
     return summarization + `\n(${modelName})`;
   } catch (e) {
     if (logRequest !== undefined) {
-      await logRequest(
-        'google',
-        modelName,
-        { ...modelParams, ...generateParams },
-        e as object
-      ).catch(e => logger.error(e));
+      await logRequest('google', modelName, { ...params }, e as object).catch(
+        e => logger.error(e)
+      );
     }
     throw e;
   }

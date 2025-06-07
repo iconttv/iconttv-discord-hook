@@ -1,13 +1,5 @@
 import OpenAi from 'openai';
-import { GoogleGenerativeAIError } from '@google/generative-ai';
 import logger from '../lib/logger';
-
-const parseGoogleError = (
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
-  e: Record<string, any>
-) => {
-  return `알 수 없는 오류입니다.`;
-};
 
 const parseOpenaiError = (
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -42,10 +34,7 @@ export const replyMessagePerError = async (
     if (e instanceof OpenAi.APIError) {
       return parseOpenaiError(e);
     }
-    if (e instanceof GoogleGenerativeAIError) {
-      return parseGoogleError(e);
-    }
-    return `알 수 없는 오류입니다.`;
+    return `알 수 없는 오류입니다.\n${e}`;
   })();
 
   await reply(`${prefix} ${errorMessage}`);

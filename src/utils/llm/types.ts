@@ -1,4 +1,4 @@
-import { ObjectSchema, SchemaType } from '@google/generative-ai';
+import { Type, SchemaUnion } from '@google/genai';
 import { ResponseFormatJSONSchema } from 'openai/resources';
 import { LogAiRequest, MessageFromDatabase } from '../../type';
 import { LogContext } from '../discord';
@@ -58,21 +58,21 @@ export const SummarizeOutputSchemaOpenai: ResponseFormatJSONSchema.JSONSchema =
     },
   };
 
-export const SummarizeOutputSchemaGemini: ObjectSchema = {
-  type: SchemaType.OBJECT,
+export const SummarizeOutputSchemaGemini: SchemaUnion = {
+  type: Type.OBJECT,
   properties: {
     topics: {
-      type: SchemaType.ARRAY,
+      type: Type.ARRAY,
       items: {
-        type: SchemaType.OBJECT,
+        type: Type.OBJECT,
         properties: {
           topic: {
-            type: SchemaType.STRING,
+            type: Type.STRING,
             description: 'A topic from conversation',
             nullable: false,
           },
           startMessageId: {
-            type: SchemaType.STRING,
+            type: Type.STRING,
             description: 'A start message id of the topic',
             nullable: false,
           },
@@ -82,7 +82,7 @@ export const SummarizeOutputSchemaGemini: ObjectSchema = {
       nullable: false,
     },
     comment: {
-      type: SchemaType.STRING,
+      type: Type.STRING,
       nullable: false,
     },
   },
