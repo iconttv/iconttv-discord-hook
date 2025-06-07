@@ -3,6 +3,8 @@ import { config } from '../../config';
 import logger from '../../lib/logger';
 import { LogAiRequest } from '../../type/index';
 
+const MODEL = 'dall-e-3' as const;
+
 const openai = new OpenAI({
   apiKey: config.IMAGE_OPENAI_API_KEY,
 });
@@ -22,7 +24,7 @@ export const generateImage = async (
 
   const openaiParams: OpenAI.ImageGenerateParams = {
     prompt: `${prePrompt} ${prompt}`,
-    model: 'dall-e-3',
+    model: MODEL,
     n: 1,
     size: '1024x1024',
   };
@@ -30,20 +32,23 @@ export const generateImage = async (
     .generate(openaiParams)
     .then(async res => {
       if (logOpenaiRequest !== undefined) {
-        await logOpenaiRequest('openai', 'dall-e-3', openaiParams, res).catch(
-          e => logger.error(e)
+        await logOpenaiRequest('openai', MODEL, openaiParams, res).catch(e =>
+          logger.error(e)
         );
       }
       return res;
     })
     .catch(async e => {
       if (logOpenaiRequest !== undefined) {
-        await logOpenaiRequest('openai', 'dall-e-3', openaiParams, e).catch(e =>
+        await logOpenaiRequest('openai', MODEL, openaiParams, e).catch(e =>
           logger.error(e)
         );
       }
       throw e;
     });
 
-  return [response.data[0].url, response.data[0].revised_prompt];
+  return [
+    response.data[0].b64_json ?? response.data[0].url,
+    response.data[0].revised_prompt,
+  ];
 };

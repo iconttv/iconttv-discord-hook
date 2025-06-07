@@ -1,4 +1,3 @@
-1.0.3
+1.0.4
 
-- 검색 기능에 임베딩 검색 지원
-- openai 호환 api 사용 지원
+- remove novelai image generation

@@ -1,7 +1,7 @@
 import { saveAiRequestBuilder } from './common';
 import {
   openAiGenerateImage,
-  novelAiGenerateImage,
+  // novelAiGenerateImage,
 } from '../utils/image/index';
 
 export const generateImageFromUser = async (
@@ -17,12 +17,12 @@ export const generateImageFromUser = async (
       saveAiRequestBuilder(guildId, channelId, senderId, { prompt })
     );
   }
-  if (provider === 'novelai') {
-    return novelAiGenerateImage(
-      prompt,
-      saveAiRequestBuilder(guildId, channelId, senderId, { prompt })
-    );
-  }
+  // if (provider === 'novelai') {
+  //   return novelAiGenerateImage(
+  //     prompt,
+  //     saveAiRequestBuilder(guildId, channelId, senderId, { prompt })
+  //   );
+  // }
 
   throw new Error('unavailable provider.');
 };

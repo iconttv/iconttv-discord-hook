@@ -19,7 +19,7 @@ export const data = new SlashCommandBuilder()
     option
       .setName('s')
       .setDescription(
-        '서비스 제공자. 1: openai, 2: novelai. (기본값: 1. 프롬프트에 `anime` 존재할 시 2)'
+        '서비스 제공자. 1: openai'
       )
       .setMinValue(1)
       .setMaxValue(2)
@@ -44,9 +44,10 @@ export const execute = async (interaction: CommandInteraction) => {
 
   const serviceProvider = (() => {
     if (Number.isNaN(rawServiceProvider)) {
-      return prompt.includes('anime')
-        ? serviceProviders[2]
-        : serviceProviders[1];
+      return serviceProviders[1]
+      // return prompt.includes('anime')
+      //   ? serviceProviders[2]
+      //   : serviceProviders[1];
     }
     return serviceProviders[
       rawServiceProvider as keyof typeof serviceProviders
