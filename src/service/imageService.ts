@@ -1,6 +1,7 @@
 import { saveAiRequestBuilder } from './common';
 import {
   openAiGenerateImage,
+  geminiAiGenerateImage,
   // novelAiGenerateImage,
 } from '../utils/image/index';
 
@@ -9,8 +10,14 @@ export const generateImageFromUser = async (
   channelId: string,
   senderId: string | undefined,
   prompt: string,
-  provider: 'openai' | 'novelai'
+  provider: 'openai' | 'gemini' | 'novelai'
 ) => {
+  if (provider === 'gemini') {
+    return geminiAiGenerateImage(
+      prompt,
+      saveAiRequestBuilder(guildId, channelId, senderId, { prompt })
+    );
+  }
   if (provider === 'openai') {
     return openAiGenerateImage(
       prompt,

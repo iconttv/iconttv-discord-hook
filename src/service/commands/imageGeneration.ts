@@ -18,17 +18,15 @@ export const data = new SlashCommandBuilder()
   .addNumberOption(option =>
     option
       .setName('s')
-      .setDescription(
-        '서비스 제공자. 1: openai'
-      )
+      .setDescription('서비스 제공자. 1: gemini, 2: openai (default: 1)')
       .setMinValue(1)
       .setMaxValue(2)
       .setRequired(false)
   );
 
 const serviceProviders = {
-  1: 'openai',
-  2: 'novelai',
+  1: 'gemini',
+  2: 'openai',
 } as const;
 
 export const execute = async (interaction: CommandInteraction) => {
@@ -44,7 +42,7 @@ export const execute = async (interaction: CommandInteraction) => {
 
   const serviceProvider = (() => {
     if (Number.isNaN(rawServiceProvider)) {
-      return serviceProviders[1]
+      return serviceProviders[1];
       // return prompt.includes('anime')
       //   ? serviceProviders[2]
       //   : serviceProviders[1];
