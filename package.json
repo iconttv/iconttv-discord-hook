@@ -19,6 +19,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.9.4",
+    "@types/node-fetch": "^2.6.12",
     "@types/safe-json-stringify": "^1.1.5",
     "@typescript-eslint/eslint-plugin": "^8.31.0",
     "@typescript-eslint/parser": "^8.31.0",
@@ -38,7 +39,7 @@
     "jszip": "^3.10.1",
     "moment": "^2.29.4",
     "mongoose": "^8.6.1",
-    "openai": "^4.78.1",
+    "openai": "^5.1.1",
     "safe-json-stringify": "^1.2.0",
     "winston": "^3.11.0",
     "winston-daily-rotate-file": "^4.7.1"

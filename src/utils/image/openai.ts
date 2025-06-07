@@ -48,7 +48,7 @@ export const generateImage = async (
     });
 
   return [
-    response.data[0].b64_json ?? response.data[0].url,
-    response.data[0].revised_prompt,
+    response.data?.[0].b64_json ?? response.data?.[0].url,
+    response.data?.[0].revised_prompt,
   ];
 };
