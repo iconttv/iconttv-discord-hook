@@ -6,8 +6,8 @@ import { getIconttvUrl } from '../../utils/iconttv';
 import logger from '../../lib/logger';
 import { acquireLock } from '../../utils/index';
 
-// 12 hours
-const EXPIRE_TIME = 12 * 60 * 60 * 1000;
+// 5 minutes
+const EXPIRE_TIME = 5 * 60 * 1000;
 
 export class IconttvRepository extends IconRepository {
   private isIconLoading = false;
