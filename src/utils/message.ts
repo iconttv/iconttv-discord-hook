@@ -121,13 +121,6 @@ const getLastHourMessages = async (
               as: 'vectors',
             },
           },
-          /* 배열 풀기 - vectors가 없을 경우도 보존 (LEFT OUTER JOIN 효과) */
-          {
-            $unwind: {
-              path: '$vectors',
-              preserveNullAndEmptyArrays: true,
-            },
-          },
           {
             $project: {
               guildId: 1,
@@ -202,13 +195,6 @@ const getLastNMessages = async (
                 { $sort: { chunkId: -1 } },
               ],
               as: 'vectors',
-            },
-          },
-          /* 배열 풀기 - vectors가 없을 경우도 보존 (LEFT OUTER JOIN 효과) */
-          {
-            $unwind: {
-              path: '$vectors',
-              preserveNullAndEmptyArrays: true,
             },
           },
           {
