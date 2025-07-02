@@ -1,9 +1,9 @@
 import { MessageType } from 'discord.js';
 import { MessageFromDatabase } from '../type/index';
-import { replaceLaughs } from './index';
+import { isUrl, replaceLaughs } from './index';
 import logger from '../lib/logger';
-import MessageModel from '../database/model/MessageModel';
 import { SummarizationOutput } from './llm/types';
+import mongoose from 'mongoose';
 
 export const convertMessagesToPrompt = (messages: MessageFromDatabase[]) => {
   const validMessages = messages.filter(
@@ -11,7 +11,10 @@ export const convertMessagesToPrompt = (messages: MessageFromDatabase[]) => {
       typeof message.senderName === 'string' &&
       typeof message.messageId === 'string' &&
       typeof message.message === 'string' &&
-      message.message.length > 0
+      (message.message.length > 0 ||
+        (message.message.length === 0 &&
+          message.content_text &&
+          message.content_text.length > 0))
   );
 
   let formattedString = '';
@@ -29,8 +32,26 @@ export const convertMessagesToPrompt = (messages: MessageFromDatabase[]) => {
       currentSender = sender as string; // 현재 작성자 업데이트
     }
 
+    let messageContent: string | undefined = '';
+
     // 메시지를 추가
-    formattedString += `${replaceLaughs(msg.message)}<id>${msg.messageId}</id>`;
+    if (!msg.chunkType) {
+      messageContent = `<text>${replaceLaughs(msg.message) || ''}</text>`;
+    } else {
+      if (msg.chunkType === 'message') {
+        if (isUrl(msg.message)) {
+          messageContent = `<url>${msg.content_text}</url>`;
+        } else {
+          messageContent = `<text>${replaceLaughs(msg.message) || ''}</text>`;
+        }
+      } else if (msg.chunkType === 'attachment_image') {
+        messageContent = `<image>${msg.content_text}</image>`;
+      } else if (msg.chunkType === 'attachment_file') {
+        messageContent = `<file>${msg.content_text}</file>`;
+      }
+    }
+
+    formattedString += `${messageContent}<id>${msg.messageId}</id>`;
   });
 
   // 마지막 사용자의 <body> 태그 닫기
@@ -50,29 +71,87 @@ const getLastHourMessages = async (
   hoursAgo.setMilliseconds(hoursAgo.getMilliseconds() - hours * 60 * 60 * 1000);
 
   try {
-    const messages = await MessageModel.find(
-      {
-        guildId,
-        channelId,
-        messageType: {
-          $nin: [MessageType.ChatInputCommand, MessageType.ContextMenuCommand],
-        },
-        createdAt: { $gte: hoursAgo },
-        isDeleted: { $ne: true },
-      },
-      {
-        guildId: 1,
-        channelId: 1,
-        messageId: 1,
-        guildName: 1,
-        channelName: 1,
-        senderName: 1,
-        message: 1,
-        createdAt: 1,
-      }
-    )
-      .sort({ createdAt: -1 })
-      .exec();
+    const messages = Array.from(
+      await mongoose.connection
+        .collection('messages')
+        .aggregate([
+          {
+            $match: {
+              guildId: guildId,
+              channelId: channelId,
+              messageType: {
+                $nin: [
+                  MessageType.ChatInputCommand,
+                  MessageType.ContextMenuCommand,
+                ],
+              },
+              createdAt: { $gte: hoursAgo },
+              isDeleted: { $ne: true },
+            },
+          },
+          { $sort: { createdAt: -1 } },
+          // { $limit: 300 },
+          {
+            $lookup: {
+              from: 'message_vectors',
+              let: {
+                guildId: '$guildId',
+                channelId: '$channelId',
+                messageId: '$messageId',
+              },
+              pipeline: [
+                {
+                  $match: {
+                    $expr: {
+                      $and: [
+                        { $eq: ['$guildId', '$$guildId'] },
+                        { $eq: ['$channelId', '$$channelId'] },
+                        { $eq: ['$messageId', '$$messageId'] },
+                      ],
+                    },
+                  },
+                },
+                // 마지막에 역정렬 할 것이므로, 내림차순으로 가져오기
+                { $sort: { chunkId: -1 } },
+              ],
+              as: 'vectors',
+            },
+          },
+          /* 배열 풀기 - vectors가 없을 경우도 보존 (LEFT OUTER JOIN 효과) */
+          {
+            $unwind: {
+              path: '$vectors',
+              preserveNullAndEmptyArrays: true,
+            },
+          },
+          {
+            $project: {
+              guildId: 1,
+              channelId: 1,
+              messageId: 1,
+              guildName: 1,
+              channelName: 1,
+              senderName: 1,
+              createdAt: 1,
+              message: 1,
+              content_text: '$vectors.content_text',
+              chunkType: '$vectors.chunkType',
+            },
+          },
+        ])
+        .toArray()
+    ) as {
+      guildId: string;
+      channelId: string;
+      messageId: string;
+      guildName: string;
+      channelName: string;
+      senderName: string;
+      createdAt: Date;
+      message: string;
+      content_text: string | null;
+      chunkType: 'message' | 'attachment_image' | 'attachment_file';
+    }[];
     return messages.reverse();
   } catch (e) {
     logger.error(e);
@@ -86,29 +165,86 @@ const getLastNMessages = async (
   count: number
 ): Promise<MessageFromDatabase[]> => {
   try {
-    const messages = await MessageModel.find(
-      {
-        guildId,
-        channelId,
-        messageType: {
-          $nin: [MessageType.ChatInputCommand, MessageType.ContextMenuCommand],
-        },
-        isDeleted: { $ne: true },
-      },
-      {
-        guildId: 1,
-        channelId: 1,
-        messageId: 1,
-        guildName: 1,
-        channelName: 1,
-        senderName: 1,
-        message: 1,
-        createdAt: 1,
-      }
-    )
-      .sort({ createdAt: -1 })
-      .limit(count)
-      .exec();
+    const messages = Array.from(
+      await mongoose.connection
+        .collection('messages')
+        .aggregate([
+          {
+            $match: {
+              guildId: guildId,
+              channelId: channelId,
+              messageType: {
+                $nin: [
+                  MessageType.ChatInputCommand,
+                  MessageType.ContextMenuCommand,
+                ],
+              },
+              isDeleted: { $ne: true },
+            },
+          },
+          { $sort: { createdAt: -1 } },
+          { $limit: count },
+          {
+            $lookup: {
+              from: 'message_vectors',
+              let: {
+                guildId: '$guildId',
+                channelId: '$channelId',
+                messageId: '$messageId',
+              },
+              pipeline: [
+                {
+                  $match: {
+                    $expr: {
+                      $and: [
+                        { $eq: ['$guildId', '$$guildId'] },
+                        { $eq: ['$channelId', '$$channelId'] },
+                        { $eq: ['$messageId', '$$messageId'] },
+                      ],
+                    },
+                  },
+                },
+                // 마지막에 역정렬 할 것이므로, 내림차순으로 가져오기
+                { $sort: { chunkId: -1 } },
+              ],
+              as: 'vectors',
+            },
+          },
+          /* 배열 풀기 - vectors가 없을 경우도 보존 (LEFT OUTER JOIN 효과) */
+          {
+            $unwind: {
+              path: '$vectors',
+              preserveNullAndEmptyArrays: true,
+            },
+          },
+          {
+            $project: {
+              guildId: 1,
+              channelId: 1,
+              messageId: 1,
+              guildName: 1,
+              channelName: 1,
+              senderName: 1,
+              createdAt: 1,
+              message: 1,
+              content_text: '$vectors.content_text',
+              chunkType: '$vectors.chunkType',
+            },
+          },
+        ])
+        .toArray()
+    ) as {
+      guildId: string;
+      channelId: string;
+      messageId: string;
+      guildName: string;
+      channelName: string;
+      senderName: string;
+      createdAt: Date;
+      message: string;
+      content_text: string | null;
+      chunkType: 'message' | 'attachment_image' | 'attachment_file';
+    }[];
     return messages.reverse();
   } catch (e) {
     logger.error(e);

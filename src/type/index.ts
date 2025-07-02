@@ -14,4 +14,6 @@ export interface MessageFromDatabase {
   senderName?: string | null;
   message?: string | null;
   createdAt?: Date | null;
+  content_text: string | null;
+  chunkType: 'message' | 'attachment_image' | 'attachment_file' | null;
 }

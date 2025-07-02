@@ -155,7 +155,13 @@ export const questionMessages = async ({
       temperature: 0.5 + Math.random() * 0.2,
     };
   const chatCompletionMessage: OpenAI.ChatCompletionMessageParam[] = [
-    { role: 'system', content: promptSystem },
+    {
+      role: 'system',
+      content: promptSystem.replace(
+        '{{ datetime }}',
+        new Date().toLocaleString()
+      ),
+    },
     { role: 'user', content: messagePrompt },
     { role: 'user', content: `[Question] ${question}` },
   ];

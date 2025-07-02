@@ -52,6 +52,15 @@ export function unreplaceLaughs(text: string | null | undefined) {
   return text.replace('(웃음)', 'ㅋㅋㅋㅋㅋㅋㅋ');
 }
 
+export function isUrl(text: string | null | undefined) {
+  if (text === null || text === undefined) return false;
+
+  return (
+    (text.startsWith('https://') || text.startsWith('http://')) &&
+    text.replace(' ', '').length === text.length
+  );
+}
+
 export function formatDate(date: Date | null | undefined) {
   if (date === null || date === undefined) return '';
 

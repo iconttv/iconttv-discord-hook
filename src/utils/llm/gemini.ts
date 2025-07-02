@@ -197,14 +197,16 @@ export const questionMessages = async ({
     config: {
       temperature: 0.5 + Math.random() * 0.2,
       safetySettings: unsafeSafetySettings,
-      systemInstruction: promptSystem,
+      systemInstruction: promptSystem.replace(
+        '{{ datetime }}',
+        new Date().toLocaleString()
+      ),
     },
   };
 
   const geminiParams: GenerateContentParameters = {
     ...params,
     contents: [
-      { role: 'user', parts: [{ text: promptSystem }] },
       { role: 'user', parts: [{ text: messagePrompt }] },
       { role: 'user', parts: [{ text: `[Question] ${question}` }] },
     ],
