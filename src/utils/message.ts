@@ -13,8 +13,8 @@ export const convertMessagesToPrompt = (messages: MessageFromDatabase[]) => {
       typeof message.message === 'string' &&
       (message.message.length > 0 ||
         (message.message.length === 0 &&
-          message.content_text &&
-          message.content_text.length > 0))
+          Array.isArray(message.vectors) &&
+          message.vectors.length > 0))
   );
 
   let formattedString = '';
@@ -35,19 +35,23 @@ export const convertMessagesToPrompt = (messages: MessageFromDatabase[]) => {
     let messageContent: string | undefined = '';
 
     // 메시지를 추가
-    if (!msg.chunkType) {
+    if (!Array.isArray(msg.vectors) || msg.vectors.length === 0) {
       messageContent = `<text>${replaceLaughs(msg.message) || ''}</text>`;
     } else {
-      if (msg.chunkType === 'message') {
-        if (isUrl(msg.message)) {
-          messageContent = `<url>${msg.content_text}</url>`;
-        } else {
-          messageContent = `<text>${replaceLaughs(msg.message) || ''}</text>`;
+      for (const vector of msg.vectors.sort(
+        (a, b) => Number(a.chunkId) - Number(b.chunkId)
+      )) {
+        if (vector.chunkType === 'message') {
+          if (isUrl(msg.message)) {
+            messageContent = `<url>${vector.content_text}</url>`;
+          } else {
+            messageContent = `<text>${replaceLaughs(msg.message) || ''}</text>`;
+          }
+        } else if (vector.chunkType === 'attachment_image') {
+          messageContent = `<image>${vector.content_text}</image>`;
+        } else if (vector.chunkType === 'attachment_file') {
+          messageContent = `<file>${vector.content_text}</file>`;
         }
-      } else if (msg.chunkType === 'attachment_image') {
-        messageContent = `<image>${msg.content_text}</image>`;
-      } else if (msg.chunkType === 'attachment_file') {
-        messageContent = `<file>${msg.content_text}</file>`;
       }
     }
 
@@ -134,24 +138,14 @@ const getLastHourMessages = async (
               senderName: 1,
               createdAt: 1,
               message: 1,
-              content_text: '$vectors.content_text',
-              chunkType: '$vectors.chunkType',
+              'vectors.content_text': 1,
+              'vectors.chunkType': 1,
+              'vectors.chunkId': 1,
             },
           },
         ])
         .toArray()
-    ) as {
-      guildId: string;
-      channelId: string;
-      messageId: string;
-      guildName: string;
-      channelName: string;
-      senderName: string;
-      createdAt: Date;
-      message: string;
-      content_text: string | null;
-      chunkType: 'message' | 'attachment_image' | 'attachment_file';
-    }[];
+    ) as MessageFromDatabase[];
     return messages.reverse();
   } catch (e) {
     logger.error(e);
@@ -166,7 +160,7 @@ const getLastNMessages = async (
 ): Promise<MessageFromDatabase[]> => {
   try {
     const messages = Array.from(
-      await mongoose.connection
+      (await mongoose.connection
         .collection('messages')
         .aggregate([
           {
@@ -227,24 +221,14 @@ const getLastNMessages = async (
               senderName: 1,
               createdAt: 1,
               message: 1,
-              content_text: '$vectors.content_text',
-              chunkType: '$vectors.chunkType',
+              'vectors.content_text': 1,
+              'vectors.chunkType': 1,
+              'vectors.chunkId': 1,
             },
           },
         ])
-        .toArray()
-    ) as {
-      guildId: string;
-      channelId: string;
-      messageId: string;
-      guildName: string;
-      channelName: string;
-      senderName: string;
-      createdAt: Date;
-      message: string;
-      content_text: string | null;
-      chunkType: 'message' | 'attachment_image' | 'attachment_file';
-    }[];
+        .toArray()) as MessageFromDatabase[]
+    );
     return messages.reverse();
   } catch (e) {
     logger.error(e);
