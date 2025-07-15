@@ -55,7 +55,7 @@ export const summarizeMessages = async ({
     promptPersonaPromise,
   ]);
 
-  const messageChunks = makeChunk(messages, 500);
+  const messageChunks = makeChunk(messages, 600);
   const messagePrompts = messageChunks.map(convertMessagesToPrompt);
 
   const model = getModel();

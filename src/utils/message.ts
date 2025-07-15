@@ -28,7 +28,7 @@ export const convertMessagesToPrompt = (messages: MessageFromDatabase[]) => {
       if (currentSender !== null) {
         formattedString += `</body>`; // 이전 사용자의 <body> 닫기
       }
-      formattedString += `<user>${sender}</user><body>`; // 새로운 사용자 시작
+      formattedString += `<user>${sender}</user><body><time>${msg.createdAt}</time>`; // 새로운 사용자 시작
       currentSender = sender as string; // 현재 작성자 업데이트
     }
 
@@ -75,70 +75,70 @@ const getLastHourMessages = async (
   hoursAgo.setMilliseconds(hoursAgo.getMilliseconds() - hours * 60 * 60 * 1000);
 
   try {
-    const messages = Array.from(
-      await mongoose.connection
-        .collection('messages')
-        .aggregate([
-          {
-            $match: {
-              guildId: guildId,
-              channelId: channelId,
-              messageType: {
-                $nin: [
-                  MessageType.ChatInputCommand,
-                  MessageType.ContextMenuCommand,
-                ],
-              },
-              createdAt: { $gte: hoursAgo },
-              isDeleted: { $ne: true },
-            },
+    const pipelineDocuments: mongoose.mongo.BSON.Document[] = [
+      {
+        $match: {
+          guildId: guildId,
+          channelId: channelId,
+          messageType: {
+            $nin: [
+              MessageType.ChatInputCommand,
+              MessageType.ContextMenuCommand,
+            ],
           },
-          { $sort: { createdAt: -1 } },
-          // { $limit: 300 },
-          {
-            $lookup: {
-              from: 'message_vectors',
-              let: {
-                guildId: '$guildId',
-                channelId: '$channelId',
-                messageId: '$messageId',
-              },
-              pipeline: [
-                {
-                  $match: {
-                    $expr: {
-                      $and: [
-                        { $eq: ['$guildId', '$$guildId'] },
-                        { $eq: ['$channelId', '$$channelId'] },
-                        { $eq: ['$messageId', '$$messageId'] },
-                      ],
-                    },
-                  },
+          createdAt: { $gte: hoursAgo },
+          isDeleted: { $ne: true },
+        },
+      },
+      { $sort: { createdAt: -1 } },
+      // { $limit: 300 },
+      {
+        $lookup: {
+          from: 'message_vectors',
+          let: {
+            guildId: '$guildId',
+            channelId: '$channelId',
+            messageId: '$messageId',
+          },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ['$guildId', '$$guildId'] },
+                    { $eq: ['$channelId', '$$channelId'] },
+                    { $eq: ['$messageId', '$$messageId'] },
+                  ],
                 },
-                // 마지막에 역정렬 할 것이므로, 내림차순으로 가져오기
-                { $sort: { chunkId: -1 } },
-              ],
-              as: 'vectors',
+              },
             },
-          },
-          {
-            $project: {
-              guildId: 1,
-              channelId: 1,
-              messageId: 1,
-              guildName: 1,
-              channelName: 1,
-              senderName: 1,
-              createdAt: 1,
-              message: 1,
-              'vectors.content_text': 1,
-              'vectors.chunkType': 1,
-              'vectors.chunkId': 1,
-            },
-          },
-        ])
-        .toArray()
-    ) as MessageFromDatabase[];
+            // 마지막에 역정렬 할 것이므로, 내림차순으로 가져오기
+            { $sort: { chunkId: -1 } },
+          ],
+          as: 'vectors',
+        },
+      },
+      {
+        $project: {
+          guildId: 1,
+          channelId: 1,
+          messageId: 1,
+          guildName: 1,
+          channelName: 1,
+          senderName: 1,
+          createdAt: 1,
+          message: 1,
+          'vectors.content_text': 1,
+          'vectors.chunkType': 1,
+          'vectors.chunkId': 1,
+        },
+      },
+    ];
+
+    const messages = (await mongoose.connection
+      .collection('messages')
+      .aggregate(pipelineDocuments)
+      .toArray()) as MessageFromDatabase[];
     return messages.reverse();
   } catch (e) {
     logger.error(e);
@@ -152,69 +152,70 @@ const getLastNMessages = async (
   count: number
 ): Promise<MessageFromDatabase[]> => {
   try {
-    const messages = Array.from(
-      (await mongoose.connection
-        .collection('messages')
-        .aggregate([
-          {
-            $match: {
-              guildId: guildId,
-              channelId: channelId,
-              messageType: {
-                $nin: [
-                  MessageType.ChatInputCommand,
-                  MessageType.ContextMenuCommand,
-                ],
-              },
-              isDeleted: { $ne: true },
-            },
+    const pipelineDocuments: mongoose.mongo.BSON.Document[] = [
+      {
+        $match: {
+          guildId: guildId,
+          channelId: channelId,
+          messageType: {
+            $nin: [
+              MessageType.ChatInputCommand,
+              MessageType.ContextMenuCommand,
+            ],
           },
-          { $sort: { createdAt: -1 } },
-          { $limit: count },
-          {
-            $lookup: {
-              from: 'message_vectors',
-              let: {
-                guildId: '$guildId',
-                channelId: '$channelId',
-                messageId: '$messageId',
-              },
-              pipeline: [
-                {
-                  $match: {
-                    $expr: {
-                      $and: [
-                        { $eq: ['$guildId', '$$guildId'] },
-                        { $eq: ['$channelId', '$$channelId'] },
-                        { $eq: ['$messageId', '$$messageId'] },
-                      ],
-                    },
-                  },
+          isDeleted: { $ne: true },
+        },
+      },
+      { $sort: { createdAt: -1 } },
+      { $limit: count },
+      {
+        $lookup: {
+          from: 'message_vectors',
+          let: {
+            guildId: '$guildId',
+            channelId: '$channelId',
+            messageId: '$messageId',
+          },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ['$guildId', '$$guildId'] },
+                    { $eq: ['$channelId', '$$channelId'] },
+                    { $eq: ['$messageId', '$$messageId'] },
+                  ],
                 },
-                // 마지막에 역정렬 할 것이므로, 내림차순으로 가져오기
-                { $sort: { chunkId: -1 } },
-              ],
-              as: 'vectors',
+              },
             },
-          },
-          {
-            $project: {
-              guildId: 1,
-              channelId: 1,
-              messageId: 1,
-              guildName: 1,
-              channelName: 1,
-              senderName: 1,
-              createdAt: 1,
-              message: 1,
-              'vectors.content_text': 1,
-              'vectors.chunkType': 1,
-              'vectors.chunkId': 1,
-            },
-          },
-        ])
-        .toArray()) as MessageFromDatabase[]
-    );
+            // 마지막에 역정렬 할 것이므로, 내림차순으로 가져오기
+            { $sort: { chunkId: -1 } },
+          ],
+          as: 'vectors',
+        },
+      },
+      {
+        $project: {
+          guildId: 1,
+          channelId: 1,
+          messageId: 1,
+          guildName: 1,
+          channelName: 1,
+          senderName: 1,
+          createdAt: 1,
+          message: 1,
+          'vectors.content_text': 1,
+          'vectors.chunkType': 1,
+          'vectors.chunkId': 1,
+        },
+      },
+    ];
+
+    const messages = (await mongoose.connection
+      .collection('messages')
+      .aggregate(pipelineDocuments)
+      .toArray()) as MessageFromDatabase[];
+
     return messages.reverse();
   } catch (e) {
     logger.error(e);
@@ -237,7 +238,7 @@ export const getLastMessages = async (
   })();
 
   const filteredMessages = messages
-    .filter(m => m.message?.length)
+    .filter(m => m.message?.length || m.vectors?.length)
     .filter(m => !m.senderName?.startsWith('iconttv-'));
 
   logger.debug(`Fetched ${filteredMessages.length} messages.`);

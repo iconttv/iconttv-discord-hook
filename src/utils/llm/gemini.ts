@@ -28,7 +28,7 @@ const FLASH_PROB = 0.6;
 
 // pro is too slow
 const getModel = () =>
-  Math.random() < FLASH_PROB ? 'gemini-2.0-flash' : 'gemini-2.0-flash-lite';
+  Math.random() < FLASH_PROB ? 'gemini-2.5-flash' : 'gemini-2.5-flash-lite';
 
 const unsafeSafetySettings: SafetySetting[] = [
   // {
