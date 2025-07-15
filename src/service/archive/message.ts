@@ -1,4 +1,6 @@
 import {
+  FetchMessagesOptions,
+  Guild,
   Message,
   OmitPartialGroupDMChannel,
   PartialMessage,
@@ -7,6 +9,7 @@ import {
 import MessageModel from '../../database/model/MessageModel';
 import logger from '../../lib/logger';
 import { getLogContext } from '../../utils/discord';
+import { retry } from 'es-toolkit';
 
 export const saveMessage = async (message: Message) => {
   try {
@@ -162,5 +165,98 @@ export const bulkDeleteMessage = async (
     );
   } catch (e) {
     logger.error(e);
+  }
+};
+
+const saveMessagesBulk = async (messages: Message<boolean>[]) => {
+  const messageModels = [];
+  for (const message of messages) {
+    const context = getLogContext(message);
+    if (!context || !context.guildMember || !context.channelId) continue;
+
+    const messageModel = new MessageModel({
+      guildId: context.guildId,
+      channelId: context.channelId,
+      messageId: context.messageId,
+      messageType: context.messageType,
+      message: context.senderMessage,
+      attachments: context.attachments,
+      components: context.components,
+      embeds: context.embeds,
+      senderId: context.senderId,
+      guildName: context.guildName,
+      channelName: context.channelName,
+      senderName: context.senderName,
+      raw: JSON.stringify(message),
+      createdAt: context.createdAt,
+    });
+    messageModel.isNew = true;
+    messageModels.push(messageModel);
+  }
+  const result = await MessageModel.collection.insertMany(messageModels, {
+    ordered: false, // ignore duplicated
+  });
+  return result;
+};
+
+export const savePreviousMessages = async (guild: Guild) => {
+  // max 100, 이전 메시지 지정 가능
+  const BATCH_SIZE = 100;
+
+  const textChannels = guild.channels.cache.filter(channel => {
+    return (
+      channel.isTextBased() &&
+      channel.viewable &&
+      guild.members.me &&
+      channel.permissionsFor(guild.members.me).has('ViewChannel') &&
+      channel.permissionsFor(guild.members.me).has('ReadMessageHistory')
+    );
+  });
+
+  for (const [channelId, channel] of textChannels) {
+    const channelName = `${guild.name}_${channel.name} (${channelId})`;
+
+    try {
+      if (!('messages' in channel)) {
+        continue;
+      }
+      let lastMessageId: string | undefined = undefined;
+      logger.info(`Traverse ${channelName} lastMessageId: ${lastMessageId}`);
+
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        const options: FetchMessagesOptions = { limit: BATCH_SIZE };
+        if (lastMessageId) {
+          options.before = lastMessageId;
+        }
+
+        const messages = await retry(
+          async () => {
+            const messages = await channel.messages.fetch(options);
+            return messages;
+          },
+          {
+            retries: 5,
+            delay: (attempts: number) => 2 ** attempts,
+          }
+        );
+        if (messages.size === 0) {
+          break; // 더 이상 불러올 메시지가 없으면 종료
+        }
+        lastMessageId = messages.last()?.id;
+
+        try {
+          const messageList = Array.from(messages.values());
+          const result = await saveMessagesBulk(messageList);
+          logger.info(`${channelName} save result ${result}`);
+        } catch (error) {
+          logger.error(`${channelName} failed to save messages ${error}`);
+        }
+      }
+
+      logger.info(`${channelName} save messgeas done`);
+    } catch (error) {
+      logger.error(`${channelName} failed to fetch messages ${error}`);
+    }
   }
 };

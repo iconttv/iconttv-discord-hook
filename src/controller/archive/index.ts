@@ -5,6 +5,7 @@ import {
   deleteMessage,
   saveMessage,
   updateMessage,
+  savePreviousMessages,
 } from '../../service/archive/message';
 import { webhook } from '../../utils/webhook';
 
@@ -12,6 +13,13 @@ export const registerEventsArchive = (client: Client) => {
   client.once(Events.ClientReady, event => {
     webhook.sendMessage('MessageArchive Ready', null, 'info');
     logger.info(`MessageStore Logged in as ${event.user.tag}`);
+  });
+
+  client.on(Events.GuildCreate, async guild => {
+    logger.info(`Client invited to ${guild.name}. fetch all messages.`);
+    setTimeout(() => {
+      savePreviousMessages(guild);
+    }, 0);
   });
 
   client.on(Events.MessageCreate, async message => {
