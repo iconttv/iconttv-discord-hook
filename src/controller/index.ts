@@ -3,6 +3,7 @@ import logger from '../lib/logger';
 import { onMessageCreate } from './onMessageCreate';
 import { onCommandInteractionCreate } from './onCommandInteractionCreate';
 import { webhook } from '../utils/webhook';
+import { onModalSubmit } from './onModalSubmit';
 
 export const registerEvents = (client: Client) => {
   client.once(Events.ClientReady, event => {
@@ -51,11 +52,22 @@ export const registerEvents = (client: Client) => {
   });
 
   client.on(Events.InteractionCreate, async (interaction: Interaction) => {
-    try {
-      onCommandInteractionCreate(interaction);
-    } catch (e) {
-      webhook.sendMessage('InteractionCreateError', e, 'error');
-      logger.error(e);
+    if (interaction.isCommand()) {
+      try {
+        onCommandInteractionCreate(interaction);
+      } catch (e) {
+        webhook.sendMessage('InteractionCreateError', e, 'error');
+        logger.error(e);
+      }
+    }
+
+    if (interaction.isModalSubmit()) {
+      try {
+        onModalSubmit(interaction);
+      } catch (e) {
+        webhook.sendMessage('ModalSubmitError', e, 'error');
+        logger.error(e);
+      }
     }
   });
 };

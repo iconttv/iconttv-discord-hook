@@ -7,11 +7,11 @@ import logger from '../../lib/logger';
 import { questionLastMessages } from '../messageService';
 import { rejectGPTRequestAndGetMessage } from '../../utils/auth';
 import { replyMessagePerError } from '../../utils/error';
+import { getGuildSetting } from '../settingService';
 
 export const data = new SlashCommandBuilder()
   .setName('itvques')
   .setDescription('이전 대화내역을 기반으로 질문을 검색합니다.')
-  .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
   .addStringOption(option =>
     option
       .setName('q')
@@ -31,9 +31,12 @@ export const data = new SlashCommandBuilder()
   );
 
 export const execute = async (interaction: CommandInteraction) => {
+  const guildSetting = await getGuildSetting(interaction);
   if (
-    !interaction.memberPermissions?.has(PermissionFlagsBits.ModerateMembers)
+    !interaction.memberPermissions?.has(PermissionFlagsBits.ModerateMembers) &&
+    !guildSetting?.enableCommandQuestionForEveryone
   ) {
+    await interaction.reply(`해당 기능을 실행할 권한이 부족합니다.`);
     return;
   }
 
