@@ -193,6 +193,10 @@ const saveMessagesBulk = async (messages: Message<boolean>[]) => {
     messageModel.isNew = true;
     messageModels.push(messageModel);
   }
+  if (messageModels.length === 0) {
+    return null;
+  }
+
   const result = await MessageModel.collection.insertMany(messageModels, {
     ordered: false, // ignore duplicated
   });
