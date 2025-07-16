@@ -1,45 +1,57 @@
-import { EmbedBuilder, Message, MessageFlags, TextChannel } from 'discord.js';
+import {
+  AttachmentBuilder,
+  EmbedBuilder,
+  Message,
+  MessageFlags,
+  TextChannel,
+} from 'discord.js';
 import logger, { channel_log_message } from '../lib/logger';
 import sharp from 'sharp';
 import {
   LogContext,
+  base64ImageToAttachment,
   createUserProfileEmbed,
   deleteMessage,
   getLogContext,
 } from '../utils/discord';
 
 /**
- * 200px x 200px 이하의 정사각형 이미지
+ * icon으로 변환해야 할 이미지라면, sharp.Sharp 리턴,
+ * 아니라면 null
  * @param url
  * @returns
  */
-const isIconImage = async (url: string) => {
+const getIconImageBuffer = async (url: string) => {
   try {
     const response = await fetch(url);
     if (!response.ok) {
       logger.info(`Failed to fetch image. ${url} Status: ${response.status}`);
-      return false;
+      return null;
     }
     const contentType = response.headers.get('content-type');
     if (!contentType || !contentType.startsWith('image/')) {
       logger.info(
         `URL does not point to an image. ${url} Content-Type: ${contentType}`
       );
-      return false;
+      return null;
     }
 
     const buffer = await response.arrayBuffer();
-    const metadata = await sharp(buffer).metadata();
+    const imageSharp = sharp(buffer);
+    const metadata = await imageSharp.metadata();
 
     const imageRatio = metadata.height / metadata.width;
-    return (
+    if (
       Math.abs(1 - imageRatio) < 0.1 &&
       metadata.width <= 201 &&
       metadata.height <= 201
-    );
+    ) {
+      return imageSharp;
+    }
+    return null;
   } catch (error) {
     logger.error(`Failed to make sharp object ${error}`);
-    return false;
+    return null;
   }
 };
 
@@ -71,31 +83,42 @@ export const replaceImageToEmbed = async (message: Message) => {
     return;
   }
 
-  if (!(await isIconImage(imageAttachments[0].url))) {
+  const imageSharp = await getIconImageBuffer(imageAttachments[0].url);
+  if (!imageSharp) {
     return;
   }
+  const imageMetadata = await imageSharp.metadata();
+  const imageBuffer = await imageSharp.toBuffer();
+  const newImageAttachment = base64ImageToAttachment(
+    imageBuffer.toString('base64'),
+    {
+      ext: imageMetadata.format,
+    }
+  );
 
   const embedMessage = createUserProfileEmbed(message, undefined, {
-    image: {
-      url: imageAttachments[0].url,
-      height: 100,
-      width: 100,
-    },
     description: message.content,
-  });
+  }).setImage(`attachment://${newImageAttachment.name}`);
 
-  await sendAndDeleteIconImageMessage(message, embedMessage, messageLogContext);
+  await sendAndDeleteIconImageMessage(
+    message,
+    embedMessage,
+    newImageAttachment,
+    messageLogContext
+  );
 };
 
 const sendAndDeleteIconImageMessage = async (
   message: Message,
   embed: EmbedBuilder,
+  attachment: AttachmentBuilder,
   logContext: LogContext
 ) => {
   (message.channel as TextChannel)
     .send({
       flags: MessageFlags.SuppressNotifications,
       embeds: [embed],
+      files: [attachment],
     })
     .then(() => {
       deleteMessage(message)
