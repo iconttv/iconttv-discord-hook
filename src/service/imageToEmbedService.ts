@@ -31,8 +31,9 @@ const isIconImage = async (url: string) => {
     const buffer = await response.arrayBuffer();
     const metadata = await sharp(buffer).metadata();
 
+    const imageRatio = metadata.height / metadata.width;
     return (
-      metadata.width === metadata.height &&
+      Math.abs(1 - imageRatio) < 0.1 &&
       metadata.width <= 201 &&
       metadata.height <= 201
     );
