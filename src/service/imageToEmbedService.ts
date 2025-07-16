@@ -77,7 +77,6 @@ export const replaceImageToEmbed = async (message: Message) => {
   const embedMessage = createUserProfileEmbed(message, undefined, {
     image: {
       url: imageAttachments[0].url,
-      proxy_url: imageAttachments[0].proxyURL,
       height: 100,
       width: 100,
     },
