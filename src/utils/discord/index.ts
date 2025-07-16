@@ -13,7 +13,6 @@ import {
   Embed,
   APIEmbed,
   EmbedData,
-  TextChannel,
   Interaction,
 } from 'discord.js';
 import path from 'path';
@@ -159,7 +158,7 @@ export async function deleteMessage(message: Message) {
   }
 }
 
-export async function sendIconMessageEmbed(
+export function createIconEmbedMessagePayload(
   message: Message,
   matchKeyword: string,
   matchIcon: Icon,
@@ -180,15 +179,10 @@ export async function sendIconMessageEmbed(
       }
     ).setDescription(matchKeyword);
 
-    /**
-     * https://github.com/discordjs/discord.js/issues/3622
-     * 위에서 분기문으로 return 전송 가능한 채널이어도 전송 못할 수 있음.
-     * 그냥 에러 발생하는게 더 안정적일 것 같음
-     */
-    return await (message.channel as TextChannel).send({
+    return {
       flags: MessageFlags.SuppressNotifications,
       embeds: [userProfileEmbed],
-    });
+    } as const;
   } else {
     // 첨부 이미지 이름을 한글로하면 임베드가 되지 않음.
     const imageExtension = matchIcon.imagePath.split('.').pop();
@@ -211,19 +205,19 @@ export async function sendIconMessageEmbed(
       }
     ).setDescription(imageAttachment.description);
 
-    return await (message.channel as TextChannel).send({
+    return {
       flags: MessageFlags.SuppressNotifications,
       embeds: [userProfileEmbed],
       files: [imageAttachment],
-    });
+    } as const;
   }
 }
 
-export async function sendIconMessage(message: Message, matchIcon: Icon) {
-  return await (message.channel as TextChannel).send({
+export function createIconFileMessagePayload(matchIcon: Icon) {
+  return {
     flags: MessageFlags.SuppressNotifications,
     files: [{ attachment: matchIcon.imagePath }],
-  });
+  } as const;
 }
 
 export const getLogContext = (

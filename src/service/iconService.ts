@@ -1,14 +1,16 @@
-import { Message } from 'discord.js';
+import { Message, TextChannel } from 'discord.js';
 import logger, { channel_log_message } from '../lib/logger';
 import IconSearchEngine from '../repository/search/IconSearchEngine';
 import { parseIconSearchKeyword } from '../utils/index';
 import {
-  sendIconMessageEmbed,
   isAnonMessage,
-  sendIconMessage,
   deleteMessage,
   getLogContext,
+  createIconEmbedMessagePayload,
+  LogContext,
+  createIconFileMessagePayload,
 } from '../utils/discord/index';
+import { Icon } from '../models';
 
 export const replaceIcon = async (message: Message) => {
   const { content: messageText } = message;
@@ -35,41 +37,63 @@ export const replaceIcon = async (message: Message) => {
     )
   );
 
-  sendIconMessageEmbed(message, searchKeyword, matchIcon, isAnon)
+  await sendAndDeleteIconMessage(
+    message,
+    searchKeyword,
+    matchIcon,
+    isAnon,
+    messageLogContext
+  );
+};
+
+export const sendAndDeleteIconMessage = async (
+  message: Message,
+  matchKeyword: string,
+  matchIcon: Icon,
+  asAnonUser: boolean,
+  logContext: LogContext
+) => {
+  const iconEmbedMessagePayload = createIconEmbedMessagePayload(
+    message,
+    matchKeyword,
+    matchIcon,
+    asAnonUser
+  );
+
+  (message.channel as TextChannel)
+    .send(iconEmbedMessagePayload)
     .then(message => {
       if (!message) {
         return;
       }
 
-      const sendMessageContext = getLogContext(message);
       logger.debug(
-        channel_log_message('Icon Posted Successfully', sendMessageContext!)
+        channel_log_message('Icon Posted Successfully', logContext!)
       );
     })
     .catch(e => {
       logger.error(
         channel_log_message(
           `Icon Embeded Post Failed. Try to send plain messsage. ${e}`,
-          messageLogContext
+          logContext
         )
       );
-      return sendIconMessage(message, matchIcon);
+      const iconFileMessagePayload = createIconFileMessagePayload(matchIcon);
+      return (message.channel as TextChannel).send(iconFileMessagePayload);
     })
     .catch(e => {
-      logger.error(
-        channel_log_message(`Icon Post Failed: ${e}`, messageLogContext)
-      );
+      logger.error(channel_log_message(`Icon Post Failed: ${e}`, logContext));
     });
 
   deleteMessage(message)
     .then(() => {
       logger.debug(
-        channel_log_message('Message Deleted Successfully', messageLogContext)
+        channel_log_message('Message Deleted Successfully', logContext)
       );
     })
     .catch(e => {
       logger.error(
-        channel_log_message(`Message Deletion Failed. ${e}`, messageLogContext)
+        channel_log_message(`Message Deletion Failed. ${e}`, logContext)
       );
     });
 };
