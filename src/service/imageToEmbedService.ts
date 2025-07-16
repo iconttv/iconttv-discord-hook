@@ -46,7 +46,8 @@ const getIconImageBuffer = async (url: string) => {
       metadata.width <= 201 &&
       metadata.height <= 201
     ) {
-      return imageSharp;
+      // gif animated 일때 ratio 계산 이상한 경우 있음 
+      return sharp(buffer, { animated: true });
     }
     return null;
   } catch (error) {
