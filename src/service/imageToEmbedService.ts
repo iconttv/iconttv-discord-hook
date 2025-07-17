@@ -46,7 +46,7 @@ const getIconImageBuffer = async (url: string) => {
       metadata.width <= 201 &&
       metadata.height <= 201
     ) {
-      // gif animated 일때 ratio 계산 이상한 경우 있음 
+      // gif animated 일때 ratio 계산 이상한 경우 있음
       return sharp(buffer, { animated: true });
     }
     return null;
@@ -75,7 +75,8 @@ export const replaceImageToEmbed = async (message: Message) => {
     hasStickers ||
     hasEmbeds ||
     imageAttachments.length !== 1 ||
-    !isAttachmentImageOnly
+    !isAttachmentImageOnly ||
+    imageAttachments[0].spoiler
   ) {
     return;
   }
