@@ -9,7 +9,7 @@ import {
 } from './gemini';
 import { SummarizeMessagesProps, QuestionMessageProps } from './types';
 
-const useOpenai = () => Math.random() < 0.5;
+const useOpenai = () => Math.random() < 0.7;
 
 export const summarizeMessages = (props: SummarizeMessagesProps) => {
   const summarizer = useOpenai()

@@ -96,8 +96,6 @@ export const summarizeMessages = async ({
       responseSchema: SummarizeOutputSchemaGemini,
       temperature: 0.5 + Math.random() * 0.2,
       topP: 0.1,
-      frequencyPenalty: 0.5,
-      presencePenalty: -0.3 + Math.random() * 0.2,
       safetySettings: [...unsafeSafetySettings],
       systemInstruction: {
         role: 'system',
