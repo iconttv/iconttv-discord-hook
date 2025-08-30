@@ -143,7 +143,8 @@ export function createUserProfileEmbed(
 
   const avaterEmbed = new EmbedBuilder(options)
     .setColor('DarkBlue')
-    .setAuthor(author);
+    .setAuthor(author)
+    .setTimestamp(message.createdTimestamp);
   return avaterEmbed;
 }
 
