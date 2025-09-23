@@ -85,7 +85,7 @@ const getLastHourMessages = async (
     ];
 
     const messages = (await mongoose.connection
-      .collection('messages')
+      .collection('discordMessages')
       .aggregate(pipelineDocuments)
       .toArray()) as MessageFromDatabase[];
     return messages.reverse();
@@ -133,7 +133,7 @@ const getLastNMessages = async (
     ];
 
     const messages = (await mongoose.connection
-      .collection('messages')
+      .collection('discordMessages')
       .aggregate(pipelineDocuments)
       .toArray()) as MessageFromDatabase[];
 
