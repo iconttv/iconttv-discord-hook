@@ -10,6 +10,7 @@ declare global {
       MONGODB_PASSWORD: string;
       MONGODB_DATABASE: string;
 
+      LLM_OPENAI_PROB: string;
       OPENAI_API_BASEURL: string;
       OPENAI_API_KEY: string;
       OPENAI_API_MODEL: string;

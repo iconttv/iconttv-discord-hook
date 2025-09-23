@@ -14,11 +14,5 @@ export interface MessageFromDatabase {
   senderName?: string | null;
   message?: string | null;
   createdAt?: Date | null;
-  vectors:
-    | {
-        chunkId: number;
-        chunkType: 'message' | 'attachment_image' | 'attachment_file';
-        content_text: string;
-      }[]
-    | null;
+  EMBEDDING_INPUT?: string | null;
 }

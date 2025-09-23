@@ -12,6 +12,7 @@ interface Config {
   MONGODB_PASSWORD: string;
   MONGODB_DATABASE: string;
 
+  LLM_OPENAI_PROB: number;
   OPENAI_API_BASEURL: string | undefined;
   OPENAI_API_KEY: string | undefined;
   OPENAI_API_MODEL: string;
@@ -54,6 +55,10 @@ export const config: Config = {
   MONGODB_PASSWORD: process.env.MONGODB_PASSWORD!,
   MONGODB_DATABASE: process.env.MONGODB_DATABASE!,
 
+  LLM_OPENAI_PROB:
+    Number.parseFloat(process.env.LLM_OPENAI_PROB) === undefined
+      ? 0.7
+      : Number.parseFloat(process.env.LLM_OPENAI_PROB),
   OPENAI_API_BASEURL: process.env.OPENAI_API_BASEURL,
   OPENAI_API_KEY: process.env.OPENAI_API_KEY,
   OPENAI_API_MODEL: process.env.OPENAI_API_MODEL,
