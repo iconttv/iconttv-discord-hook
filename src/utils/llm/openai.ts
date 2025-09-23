@@ -16,6 +16,10 @@ import {
 const openai = new OpenAI({
   baseURL: config.OPENAI_API_BASEURL,
   apiKey: config.OPENAI_API_KEY,
+  defaultHeaders: {
+    'HTTP-Referer': 'https://github.com/iconttv', // Optional. Site URL for rankings on openrouter.ai.
+    'X-Title': 'iconttv-discord', // Optional. Site title for rankings on openrouter.ai.
+  },
 });
 
 const models = config.OPENAI_API_MODEL.split(',')
