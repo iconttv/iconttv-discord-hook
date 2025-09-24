@@ -139,15 +139,16 @@ export const questionMessages = async ({
   messages,
   question,
   logRequest,
+  skipSystemPrompt,
 }: QuestionMessageProps): Promise<string | undefined> => {
-  const promptSystem = await fetch(
-    `${config.GITHUB_BASEURL}/src/utils/llm/prompt-question.txt`
-  )
-    .then(res => res.text())
-    .catch(e => {
-      logger.error(e);
-      throw e;
-    });
+  const promptSystem = skipSystemPrompt
+    ? ''
+    : await fetch(`${config.GITHUB_BASEURL}/src/utils/llm/prompt-question.txt`)
+        .then(res => res.text())
+        .catch(e => {
+          logger.error(e);
+          throw e;
+        });
 
   const messagePrompt = convertMessagesToPrompt(messages);
 

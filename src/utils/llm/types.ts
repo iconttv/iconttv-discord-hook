@@ -9,12 +9,14 @@ export interface SummarizeMessagesProps {
   channelId: string;
   logRequest: LogAiRequest | undefined;
   context?: LogContext;
+  skipSystemPrompt?: boolean;
 }
 export interface QuestionMessageProps {
   messages: MessageFromDatabase[];
   question: string;
   logRequest: LogAiRequest | undefined;
   context?: LogContext;
+  skipSystemPrompt?: boolean;
 }
 
 /**

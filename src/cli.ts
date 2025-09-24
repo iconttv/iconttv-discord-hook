@@ -49,6 +49,7 @@ program
       },
       messages,
       question,
+      skipSystemPrompt: true,
     });
 
     logger.info(response);
