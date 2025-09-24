@@ -84,10 +84,11 @@ const getLastHourMessages = async (
       },
     ];
 
-    const messages = (await mongoose.connection
+    const cursor = await mongoose.connection
       .collection('discordMessages')
-      .aggregate(pipelineDocuments)
-      .toArray()) as MessageFromDatabase[];
+      .aggregate(pipelineDocuments);
+    const messages = (await cursor.toArray()) as MessageFromDatabase[];
+
     return messages.reverse();
   } catch (e) {
     logger.error(e);
@@ -132,10 +133,10 @@ const getLastNMessages = async (
       },
     ];
 
-    const messages = (await mongoose.connection
+    const cursor = await mongoose.connection
       .collection('discordMessages')
-      .aggregate(pipelineDocuments)
-      .toArray()) as MessageFromDatabase[];
+      .aggregate(pipelineDocuments);
+    const messages = (await cursor.toArray()) as MessageFromDatabase[];
 
     return messages.reverse();
   } catch (e) {

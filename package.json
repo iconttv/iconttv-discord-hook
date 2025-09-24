@@ -6,6 +6,7 @@
     "node": "20.x"
   },
   "scripts": {
+    "cli": "cross-env NODE_ENV=prod tsx ./src/cli.ts",
     "dev": "cross-env NODE_ENV=dev nodemon --exec tsx ./src/index.ts",
     "build": "tsc",
     "start": "cross-env NODE_ENV=prod node ./dist/index.js",
@@ -33,6 +34,7 @@
     "@elastic/elasticsearch": "9",
     "@google/genai": "^1.4.0",
     "axios": "^1.7.4",
+    "commander": "^14.0.1",
     "discord.js": "^14.18.0",
     "dotenv": "^16.3.1",
     "es-toolkit": "^1.32.0",
