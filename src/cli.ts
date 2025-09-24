@@ -18,12 +18,12 @@ program
   .option(
     '--hour <number>',
     'fetch messages after last N hours',
-    parseInt,
+    Number,
     undefined
   )
-  .option('--count <number>', 'fetch last N messages', parseInt, 300)
+  .option('--count <number>', 'fetch last N messages', Number, 300)
   .action(async function (question, options) {
-    logger.info(`${question} ${JSON.stringify(options)}`);
+    logger.info(`${JSON.stringify(options)} ${question}`);
 
     logger.info('create mongoose connection');
     await createMongooseConnection();
