@@ -4,7 +4,6 @@ import {
   HarmBlockThreshold,
   SafetySetting,
   GenerateContentParameters,
-  ContentListUnion,
 } from '@google/genai';
 
 import { config } from '../../config';
@@ -56,6 +55,47 @@ const unsafeSafetySettings: SafetySetting[] = [
   },
 ];
 
+const getParamsSummarization = (
+  modelName: string,
+  systemPrompts: string[]
+): GenerateContentParameters => {
+  const params: GenerateContentParameters = {
+    // ContentListUnion
+    contents: [],
+    model: modelName,
+    // GenerateContentConfig
+    config: {
+      responseMimeType: 'application/json',
+      responseSchema: SummarizeOutputSchemaGemini,
+      temperature: 0.5 + Math.random() * 0.2,
+      topP: 0.1,
+      safetySettings: [...unsafeSafetySettings],
+      systemInstruction: systemPrompts.map(systemPrompt => ({
+        text: systemPrompt,
+      })),
+    },
+  };
+  return params;
+};
+
+const getParamsQueation = (
+  modelName: string,
+  systemPrompts: string[]
+): GenerateContentParameters => {
+  const params: GenerateContentParameters = {
+    contents: [],
+    model: modelName,
+    config: {
+      temperature: 0.5 + Math.random() * 0.2,
+      safetySettings: unsafeSafetySettings,
+      systemInstruction: systemPrompts.map(systemPrompt => ({
+        text: systemPrompt,
+      })),
+    },
+  };
+  return params;
+};
+
 export const summarizeMessages = async ({
   messages,
   guildId,
@@ -86,53 +126,31 @@ export const summarizeMessages = async ({
 
   const modelName = getModel();
 
-  const params: GenerateContentParameters = {
-    // ContentListUnion
-    contents: [],
-    model: modelName,
-    // GenerateContentConfig
-    config: {
-      responseMimeType: 'application/json',
-      responseSchema: SummarizeOutputSchemaGemini,
-      temperature: 0.5 + Math.random() * 0.2,
-      topP: 0.1,
-      safetySettings: [...unsafeSafetySettings],
-      systemInstruction: {
-        role: 'system',
-        parts: [
-          {
-            text: promptSystem
-              .replace('{{ channelName }}', context?.channelName || '')
-              .replace('{{ guildName }}', context?.guildName || '')
-              .replace('{{ datetime }}', new Date().toLocaleString())
-              .replace('{{ persona }}', promptPersona),
-          },
-        ],
-      },
-    },
-  };
+  const channelMetainfo = promptSystem
+    .replace('{{ channelName }}', context?.channelName || '')
+    .replace('{{ guildName }}', context?.guildName || '')
+    .replace('{{ datetime }}', new Date().toLocaleString())
+    .replace('{{ persona }}', promptPersona);
 
   const messageChunks = makeChunk(messages, 1000);
   const messagePrompts = messageChunks.map(convertMessagesToPrompt);
 
   let summarizationText: string | undefined;
   for (const messagePrompt of messagePrompts) {
-    const generateContents: ContentListUnion = [];
+    const systemPrompts: string[] = [channelMetainfo];
 
     if (summarizationText !== undefined && summarizationText.length > 0) {
-      generateContents.push({
-        role: 'user',
-        parts: [{ text: summarizationText }],
-      });
+      systemPrompts.push(summarizationText);
     }
-    generateContents.push({
-      role: 'user',
-      parts: [{ text: messagePrompt }],
-    });
+    systemPrompts.push(messagePrompt);
 
     const geminiParams: GenerateContentParameters = {
-      ...params,
-      contents: generateContents,
+      ...getParamsSummarization(modelName, systemPrompts),
+      contents: [
+        {
+          text: 'Summarize given chats.',
+        },
+      ],
     };
 
     try {
@@ -190,24 +208,19 @@ export const questionMessages = async ({
 
   const modelName = getModel();
 
-  const params: GenerateContentParameters = {
-    contents: [],
-    model: modelName,
-    config: {
-      temperature: 0.5 + Math.random() * 0.2,
-      safetySettings: unsafeSafetySettings,
-      systemInstruction: promptSystem.replace(
-        '{{ datetime }}',
-        new Date().toLocaleString()
-      ),
-    },
-  };
+  const channelMetainfo = promptSystem.replace(
+    '{{ datetime }}',
+    new Date().toLocaleString()
+  );
+
+  const systemPrompts: string[] = [channelMetainfo, messagePrompt];
 
   const geminiParams: GenerateContentParameters = {
-    ...params,
+    ...getParamsQueation(modelName, systemPrompts),
     contents: [
-      { role: 'user', parts: [{ text: messagePrompt }] },
-      { role: 'user', parts: [{ text: `[Question] ${question}` }] },
+      {
+        text: question,
+      },
     ],
   };
 
@@ -215,9 +228,12 @@ export const questionMessages = async ({
     const response = await genAI.models.generateContent(geminiParams);
 
     if (logRequest !== undefined) {
-      await logRequest('google', modelName, { ...params }, response).catch(e =>
-        logger.error(e)
-      );
+      await logRequest(
+        'google',
+        modelName,
+        { channelMetainfo },
+        response
+      ).catch(e => logger.error(e));
     }
     const text = response.text ?? '';
 
@@ -225,9 +241,12 @@ export const questionMessages = async ({
     return summarization + `\n(${modelName})`;
   } catch (e) {
     if (logRequest !== undefined) {
-      await logRequest('google', modelName, { ...params }, e as object).catch(
-        e => logger.error(e)
-      );
+      await logRequest(
+        'google',
+        modelName,
+        { channelMetainfo },
+        e as object
+      ).catch(e => logger.error(e));
     }
     throw e;
   }

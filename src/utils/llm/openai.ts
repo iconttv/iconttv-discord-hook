@@ -89,13 +89,17 @@ export const summarizeMessages = async ({
 
     if (summarizationText !== undefined && summarizationText.length > 0) {
       chatCompletionMessage.push({
-        role: 'user',
+        role: 'system',
         content: summarizationText,
       });
     }
     chatCompletionMessage.push({
-      role: 'user',
+      role: 'system',
       content: messagePrompt,
+    });
+    chatCompletionMessage.push({
+      role: 'user',
+      content: 'Summarize given chats.',
     });
 
     const openaiParams = {
@@ -167,8 +171,8 @@ export const questionMessages = async ({
         new Date().toLocaleString()
       ),
     },
-    { role: 'user', content: messagePrompt },
-    { role: 'user', content: `[Question] ${question}` },
+    { role: 'system', content: messagePrompt },
+    { role: 'user', content: question },
   ];
 
   const openaiParams = {
