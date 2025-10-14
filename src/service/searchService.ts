@@ -4,8 +4,8 @@ import { getMessageLink } from '../utils/message';
 
 // you should import fetch from 'node-fetch',
 // else `fetch failed TypeError: fetch failed` occurs
-import fetch from 'node-fetch';
 import logger from '../lib/logger';
+import OpenAI from 'openai';
 
 let _client: Client;
 
@@ -34,37 +34,32 @@ const getClient = () => {
   return _client;
 };
 
-const getEmbedding = async (
-  text: string,
-  task: 'retrieval.query' | 'retrieval.passage' = 'retrieval.query'
-) => {
-  if (
-    !config.EMBEDDING_CUSTOM_API_HOST ||
-    config.EMBEDDING_CUSTOM_API_HOST.length === 0
-  ) {
+const getEmbedding = async (text: string) => {
+  if (!config.EMBEDDING_OPENAI_BASEURL || !config.EMBEDDING_OPENAI_MODEL) {
     throw new Error('embedding custom host is not set.');
   }
 
-  const response = await fetch(config.EMBEDDING_CUSTOM_API_HOST, {
-    method: 'POST',
-    body: JSON.stringify({
-      task,
-      contents: [{ type: 'text', value: text }],
-    }),
-    headers: {
-      'Content-Type': 'application/json',
-      ...(config.EMBEDDING_CUSTOM_API_AUTH_HEADER
-        ? { Authorization: config.EMBEDDING_CUSTOM_API_AUTH_HEADER }
-        : {}),
-    },
+  const client = new OpenAI({
+    baseURL: config.EMBEDDING_OPENAI_BASEURL,
+    apiKey: config.EMBEDDING_OPENAI_API_KEY ?? '',
   });
-  if (!response.ok) {
-    const data = await response.text();
-    throw new Error(data);
+
+  const response = await client.embeddings.create({
+    input: `# TEXT\n${text}`,
+    model: config.EMBEDDING_OPENAI_MODEL,
+  });
+  const embedding = response.data[0]?.embedding;
+  if (!embedding) {
+    throw new Error(`response is None. ${response}`);
   }
-  const data = await response.json();
-  const { embedding } = data.results[0];
-  return embedding as number[];
+  return embedding;
+};
+
+const cleanEmbeddingInput = (text: string): string => {
+  return text
+    .split('\n')
+    .filter(line => line.trim().length > 0 && !line.startsWith('#'))
+    .join('\n');
 };
 
 export const searchMessage = async (
@@ -80,7 +75,7 @@ export const searchMessage = async (
       },
     },
     {
-      exists: { field: 'message' },
+      exists: { field: 'embeddingInput' },
     },
     {
       exists: { field: 'guildId' },
@@ -120,7 +115,13 @@ export const searchMessage = async (
   const result = await client.search({
     index: 'iconttv-discord-message_*',
     size: 10,
-    _source: ['@timestamp', 'guildId', 'channelId', 'messageId', 'message'],
+    _source: [
+      '@timestamp',
+      'guildId',
+      'channelId',
+      'messageId',
+      'embeddingInput',
+    ],
     query: {
       function_score: {
         query: {
@@ -129,7 +130,7 @@ export const searchMessage = async (
               ...matchConditions,
               {
                 query_string: {
-                  default_field: 'message',
+                  default_field: 'embeddingInput',
                   query: queryString,
                 },
               },
@@ -161,15 +162,15 @@ export const searchMessage = async (
     ],
   });
 
-  logger.debug(result.hits.hits);
-
   const searchResult = result.hits.hits.map(hit => {
+    logger.debug(`score: ${hit._score}`);
     const source = hit._source as {
       '@timestamp': string;
       guildId: string;
       channelId: string;
       messageId: string;
       message: string;
+      embeddingInput: string;
       link: string;
     };
     source['@timestamp'] = new Date(source['@timestamp']).toLocaleString();
@@ -178,6 +179,7 @@ export const searchMessage = async (
       source.channelId,
       source.messageId
     );
+    source.message = cleanEmbeddingInput(source.embeddingInput);
 
     return source;
   });
@@ -198,7 +200,10 @@ export const searchMessageEmbedding = async (
       },
     },
     {
-      exists: { field: 'content_text' },
+      exists: { field: 'embedding' },
+    },
+    {
+      exists: { field: 'embeddingInput' },
     },
     {
       exists: { field: 'guildId' },
@@ -219,18 +224,18 @@ export const searchMessageEmbedding = async (
     });
   }
   const queryEmbedding = await getEmbedding(searchWords);
+  logger.debug(`embedding created ${searchWords} ${queryEmbedding.length}`);
 
   const result = await client.search({
-    index: 'iconttv-discord-message-embedding_*',
+    index: 'iconttv-discord-message_*',
     size: 8,
-    min_score: 1.3,
+    min_score: 0.44,
     _source: [
       '@timestamp',
       'guildId',
       'channelId',
       'messageId',
-      'chunkType',
-      'content_text',
+      'embeddingInput',
       'embedding',
     ],
     query: {
@@ -242,25 +247,20 @@ export const searchMessageEmbedding = async (
         },
         script: {
           source: `
-            double cosineSim = cosineSimilarity(params.query_vector, 'embedding') + 1.0;
+            double cosineSim = cosineSimilarity(params.query_vector, 'embedding') * 1.5 + 1.0;
 
             long timeMillis = doc['@timestamp'].value.toInstant().toEpochMilli();
             long nowMillis = params.now;
             double daysDiff = (nowMillis - timeMillis) / (1000.0 * 60.0 * 60.0 * 24.0);
 
-            String chunkType = doc['chunkType'].value;
-            double typeWeight = 0.0;
-            if (chunkType != null && (chunkType == 'attachment_image' || chunkType == 'attachment_file')) {
-              typeWeight = 0.02;
-            }
-
-            double datePenaltyFactor = -1.5;
+            double datePenaltyFactor = -1.0;
             double datePenalty = 0.0;
             if (daysDiff > 30) {
               datePenalty = (daysDiff - 30) / 365.0;
             }
 
-            return cosineSim + typeWeight + (datePenalty * datePenaltyFactor);
+            double rawScore = cosineSim + (datePenalty * datePenaltyFactor);
+            return Math.max(0.0, rawScore);
           `,
           params: {
             query_vector: queryEmbedding,
@@ -271,11 +271,6 @@ export const searchMessageEmbedding = async (
     },
   });
 
-  const chunkTypeStringMap = {
-    message: '',
-    attachment_image: '🖼️ ',
-    attachment_file: '📁 ',
-  };
   const searchResult = result.hits.hits.map(hit => {
     logger.debug(`score: ${hit._score}`);
     const source = hit._source as {
@@ -283,9 +278,8 @@ export const searchMessageEmbedding = async (
       guildId: string;
       channelId: string;
       messageId: string;
-      chunkType: 'message' | 'attachment_image' | 'attachment_file';
-      content_text: string;
       message: string;
+      embeddingInput: string;
       link: string;
     };
     source['@timestamp'] = new Date(source['@timestamp']).toLocaleString();
@@ -294,9 +288,7 @@ export const searchMessageEmbedding = async (
       source.channelId,
       source.messageId
     );
-    source.message = `${chunkTypeStringMap[source.chunkType]} ${
-      source.content_text
-    }`;
+    source.message = cleanEmbeddingInput(source.embeddingInput);
 
     return source;
   });

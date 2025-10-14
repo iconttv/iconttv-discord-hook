@@ -24,8 +24,9 @@ interface Config {
   ELASTIC_HOST: string | undefined;
   ELASTIC_API: string | undefined;
 
-  EMBEDDING_CUSTOM_API_HOST: string | undefined;
-  EMBEDDING_CUSTOM_API_AUTH_HEADER: string | undefined;
+  EMBEDDING_OPENAI_BASEURL: string | undefined;
+  EMBEDDING_OPENAI_API_KEY: string | undefined;
+  EMBEDDING_OPENAI_MODEL: string | undefined;
 
   ENV: 'prod' | 'dev';
   GITHUB_BASEURL: string;
@@ -74,9 +75,9 @@ export const config: Config = {
   ELASTIC_HOST: process.env.ELASTIC_HOST,
   ELASTIC_API: process.env.ELASTIC_API,
 
-  EMBEDDING_CUSTOM_API_HOST: process.env.EMBEDDING_CUSTOM_API_HOST,
-  EMBEDDING_CUSTOM_API_AUTH_HEADER:
-    process.env.EMBEDDING_CUSTOM_API_AUTH_HEADER,
+  EMBEDDING_OPENAI_BASEURL: process.env.EMBEDDING_OPENAI_BASEURL,
+  EMBEDDING_OPENAI_API_KEY: process.env.EMBEDDING_OPENAI_API_KEY,
+  EMBEDDING_OPENAI_MODEL: process.env.EMBEDDING_OPENAI_MODEL,
 
   CACHE_CLEAR_CHECK_TIME_MS: 10 * 60 * 1000,
 };
