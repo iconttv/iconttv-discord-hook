@@ -9,7 +9,7 @@ PUT _index_template/iconttv-discord-message_template
   "template": {
     "settings": {
       "number_of_shards": 3,
-      "number_of_replicas": 1,
+      "number_of_replicas": 0,
       "analysis": {
         "analyzer": {
           "korean_analyzer": {
@@ -22,14 +22,17 @@ PUT _index_template/iconttv-discord-message_template
     },
     "mappings": {
       "properties": {
+        "messageId": {
+          "type": "keyword"
+        },
         "guildId": {
-          "type": "text"
+          "type": "keyword"
         },
         "channelId": {
-          "type": "text"
+          "type": "keyword"
         },
-        "messageId": {
-          "type": "text"
+        "senderId": {
+          "type": "keyword"
         },
         "deletedAt": {
           "type":"date",
