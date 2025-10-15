@@ -34,7 +34,7 @@ const getClient = () => {
   return _client;
 };
 
-const getEmbedding = async (text: string) => {
+const getSearchQueryEmbedding = async (text: string) => {
   if (!config.EMBEDDING_OPENAI_BASEURL || !config.EMBEDDING_OPENAI_MODEL) {
     throw new Error('embedding custom host is not set.');
   }
@@ -45,7 +45,8 @@ const getEmbedding = async (text: string) => {
   });
 
   const response = await client.embeddings.create({
-    input: text,
+    // https://huggingface.co/google/embeddinggemma-300m#prompt-instructions
+    input: `task: search result | query: ${text}`,
     model: config.EMBEDDING_OPENAI_MODEL,
   });
   const embedding = response.data[0]?.embedding;
@@ -223,7 +224,7 @@ export const searchMessageEmbedding = async (
       },
     });
   }
-  const queryEmbedding = await getEmbedding(searchWords);
+  const queryEmbedding = await getSearchQueryEmbedding(searchWords);
   logger.debug(`embedding created ${searchWords} ${queryEmbedding.length}`);
 
   const result = await client.search({
