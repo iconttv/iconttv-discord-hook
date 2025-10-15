@@ -45,7 +45,7 @@ const getEmbedding = async (text: string) => {
   });
 
   const response = await client.embeddings.create({
-    input: `# TEXT\n${text}`,
+    input: text,
     model: config.EMBEDDING_OPENAI_MODEL,
   });
   const embedding = response.data[0]?.embedding;
