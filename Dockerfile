@@ -23,6 +23,9 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/yarn.lock ./yarn.lock
 
+RUN mkdir /app/database \
+ && chmod 777 /app/database
+
 ENV NODE_ENV=prod
 ENV MAX_OLD_SPACE_SIZE=4096
 

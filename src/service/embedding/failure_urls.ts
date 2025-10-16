@@ -1,25 +1,18 @@
 import SqliteDatabase from 'better-sqlite3';
 import path from 'path';
 
-interface FailureUrlStoreOptions {
-  dbPath?: string;
-}
-
 class FailureUrlStore {
   private db: SqliteDatabase.Database;
   private selectStmt: SqliteDatabase.Statement;
   private insertStmt: SqliteDatabase.Statement;
   // private buffer: Map<string, number>; // url -> insertedAt(ms)
   // private flushTimer?: NodeJS.Timeout | undefined;
-  private opts: Required<FailureUrlStoreOptions>;
   private closed = false;
 
-  constructor(options: FailureUrlStoreOptions = {}) {
-    this.opts = {
-      dbPath: options.dbPath ?? path.resolve(__dirname, 'failure_urls.db'),
-    };
+  constructor() {
+    const dbPath = path.resolve(__dirname, 'database/failure_urls.db');
 
-    this.db = new SqliteDatabase(this.opts.dbPath);
+    this.db = new SqliteDatabase(dbPath);
     // this.buffer = new Map();
 
     // DB 초기화
