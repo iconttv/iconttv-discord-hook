@@ -18,12 +18,13 @@ LABEL version="1.0"
 
 WORKDIR /app
 
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/yarn.lock ./yarn.lock
+COPY --from=builder /app/dist /app/dist
+COPY --from=builder /app/node_modules /app/node_modules
+COPY --from=builder /app/package.json /app/package.json
+COPY --from=builder /app/yarn.lock /app/yarn.lock
 
-RUN mkdir /app/database \
+RUN cd /app \
+ && mkdir /app/database \
  && chmod 777 /app/database
 
 ENV NODE_ENV=prod

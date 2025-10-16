@@ -1,5 +1,4 @@
 import SqliteDatabase from 'better-sqlite3';
-import path from 'path';
 
 class FailureUrlStore {
   private db: SqliteDatabase.Database;
@@ -10,7 +9,7 @@ class FailureUrlStore {
   private closed = false;
 
   constructor() {
-    const dbPath = path.resolve(__dirname, 'database/failure_urls.db');
+    const dbPath = './database/failure_urls.db';
 
     this.db = new SqliteDatabase(dbPath);
     // this.buffer = new Map();
