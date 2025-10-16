@@ -1,4 +1,6 @@
 import SqliteDatabase from 'better-sqlite3';
+import { mkdirSync } from 'fs';
+import path from 'path';
 
 class FailureUrlStore {
   private db: SqliteDatabase.Database;
@@ -9,6 +11,8 @@ class FailureUrlStore {
   private closed = false;
 
   constructor() {
+    const databasePath = path.resolve('./database');
+    mkdirSync(databasePath, { recursive: true });
     const dbPath = './database/failure_urls.db';
 
     this.db = new SqliteDatabase(dbPath);
