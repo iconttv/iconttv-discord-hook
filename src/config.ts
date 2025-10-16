@@ -28,6 +28,12 @@ interface Config {
   EMBEDDING_OPENAI_API_KEY: string | undefined;
   EMBEDDING_OPENAI_MODEL: string | undefined;
 
+  VISION_OPENAI_BASEURL: string | undefined;
+  VISION_OPENAI_API_KEY: string | undefined;
+  VISION_OPENAI_MODEL: string | undefined;
+
+  JINA_READER_API_KEY: string | undefined;
+
   ENV: 'prod' | 'dev';
   GITHUB_BASEURL: string;
 
@@ -78,6 +84,12 @@ export const config: Config = {
   EMBEDDING_OPENAI_BASEURL: process.env.EMBEDDING_OPENAI_BASEURL,
   EMBEDDING_OPENAI_API_KEY: process.env.EMBEDDING_OPENAI_API_KEY,
   EMBEDDING_OPENAI_MODEL: process.env.EMBEDDING_OPENAI_MODEL,
+
+  VISION_OPENAI_BASEURL: process.env.VISION_OPENAI_BASEURL,
+  VISION_OPENAI_API_KEY: process.env.VISION_OPENAI_API_KEY,
+  VISION_OPENAI_MODEL: process.env.VISION_OPENAI_MODEL,
+
+  JINA_READER_API_KEY: process.env.JINA_READER_API_KEY,
 
   CACHE_CLEAR_CHECK_TIME_MS: 10 * 60 * 1000,
 };

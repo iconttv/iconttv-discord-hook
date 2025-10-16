@@ -10,6 +10,7 @@ import MessageModel from '../../database/model/MessageModel';
 import logger from '../../lib/logger';
 import { getLogContext } from '../../utils/discord';
 import { retry } from 'es-toolkit';
+import { processMessage } from '../embedding/discord_processor';
 
 export const saveMessage = async (message: Message) => {
   try {
@@ -22,7 +23,7 @@ export const saveMessage = async (message: Message) => {
     logger.debug(
       `saveMessage-2 Before Create Message Model "${context.senderName} - ${context.senderMessage}"`
     );
-    const messageModel = new MessageModel({
+    const messageDocument = {
       guildId: context.guildId,
       channelId: context.channelId,
       messageId: context.messageId,
@@ -37,7 +38,27 @@ export const saveMessage = async (message: Message) => {
       senderName: context.senderName,
       raw: JSON.stringify(message),
       createdAt: context.createdAt,
-    });
+    } as const;
+    const messageModel = new MessageModel(messageDocument);
+
+    try {
+      const messageEmbedding = await processMessage(messageDocument);
+      if (!messageEmbedding) {
+        // set EMBEDDING_STATUS as null
+      } else if (!messageEmbedding.EMBEDDING_STATUS) {
+        messageModel.EMBEDDING_STATUS = false;
+      } else {
+        messageModel.EMBEDDING_MODEL = messageEmbedding.EMBEDDING_MODEL;
+        messageModel.EMBEDDING_DIM = messageEmbedding.EMBEDDING_DIM;
+        messageModel.EMBEDDING_INPUT = messageEmbedding.EMBEDDING_INPUT;
+        messageModel.EMBEDDING = messageEmbedding.EMBEDDING;
+        messageModel.EMBEDDING_STATUS = messageEmbedding.EMBEDDING_STATUS;
+      }
+    } catch (e) {
+      // set EMBEDDING_STATUS as null
+      logger.error(e);
+    }
+
     messageModel.isNew = true;
 
     logger.debug(

@@ -68,6 +68,10 @@ messageSchema.index(
   { unique: true }
 );
 
-const MessageModel = mongoose.model('Message', messageSchema, 'discordMessages');
+const MessageModel = mongoose.model(
+  'Message',
+  messageSchema,
+  'discordMessages'
+);
 
 export default MessageModel;

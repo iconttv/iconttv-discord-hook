@@ -7,3 +7,5 @@ dist
 logs/*
 !logs/.placeholder
 yarn-*.log
+
+failure_urls.db*
