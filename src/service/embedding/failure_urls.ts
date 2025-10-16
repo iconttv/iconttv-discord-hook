@@ -1,4 +1,5 @@
 import SqliteDatabase from 'better-sqlite3';
+import path from 'path';
 
 interface FailureUrlStoreOptions {
   dbPath?: string;
@@ -15,7 +16,7 @@ class FailureUrlStore {
 
   constructor(options: FailureUrlStoreOptions = {}) {
     this.opts = {
-      dbPath: options.dbPath ?? 'failure_urls.db',
+      dbPath: options.dbPath ?? path.resolve(__dirname, 'failure_urls.db'),
     };
 
     this.db = new SqliteDatabase(this.opts.dbPath);
