@@ -12,26 +12,43 @@ interface Config {
   MONGODB_PASSWORD: string;
   MONGODB_DATABASE: string;
 
-  LLM_OPENAI_PROB: number;
-  OPENAI_API_BASEURL: string | undefined;
-  OPENAI_API_KEY: string | undefined;
-  OPENAI_API_MODEL: string;
-  IMAGE_OPENAI_API_KEY: string | undefined;
+  /**
+   * for llm and image generation
+   */
+  OPENROUTER_API_KEY: string;
+  OPENROUTER_LLM_MODELS: string;
+  OPENROUTER_IMAGE_MODELS: string;
 
-  GEMINI_API_KEY: string | undefined;
+  // LLM_OPENAI_PROB: number;
+  // OPENAI_API_BASEURL: string | undefined;
+  // OPENAI_API_KEY: string | undefined;
+  // OPENAI_API_MODEL: string;
+  // IMAGE_OPENAI_API_KEY: string | undefined;
 
-  NOVELAI_API_KEY: string | undefined;
+  // GEMINI_API_KEY: string | undefined;
+
+  // NOVELAI_API_KEY: string | undefined;
+
   ELASTIC_HOST: string | undefined;
   ELASTIC_API: string | undefined;
 
+  /**
+   * for embedding vector
+   */
   EMBEDDING_OPENAI_BASEURL: string | undefined;
   EMBEDDING_OPENAI_API_KEY: string | undefined;
   EMBEDDING_OPENAI_MODEL: string | undefined;
 
+  /**
+   * for ocr and image description
+   */
   VISION_OPENAI_BASEURL: string | undefined;
   VISION_OPENAI_API_KEY: string | undefined;
   VISION_OPENAI_MODEL: string | undefined;
 
+  /**
+   * for external link description
+   */
   JINA_READER_API_KEY: string | undefined;
 
   ENV: 'prod' | 'dev';
@@ -62,18 +79,22 @@ export const config: Config = {
   MONGODB_PASSWORD: process.env.MONGODB_PASSWORD!,
   MONGODB_DATABASE: process.env.MONGODB_DATABASE!,
 
-  LLM_OPENAI_PROB:
-    Number.parseFloat(process.env.LLM_OPENAI_PROB) === undefined
-      ? 0.7
-      : Number.parseFloat(process.env.LLM_OPENAI_PROB),
-  OPENAI_API_BASEURL: process.env.OPENAI_API_BASEURL,
-  OPENAI_API_KEY: process.env.OPENAI_API_KEY,
-  OPENAI_API_MODEL: process.env.OPENAI_API_MODEL,
-  IMAGE_OPENAI_API_KEY: process.env.IMAGE_OPENAI_API_KEY,
+  OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY!,
+  OPENROUTER_LLM_MODELS: process.env.OPENROUTER_LLM_MODELS!,
+  OPENROUTER_IMAGE_MODELS: process.env.OPENROUTER_IMAGE_MODELS!,
 
-  GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+  // LLM_OPENAI_PROB:
+  //   Number.parseFloat(process.env.LLM_OPENAI_PROB) === undefined
+  //     ? 0.7
+  //     : Number.parseFloat(process.env.LLM_OPENAI_PROB),
+  // OPENAI_API_BASEURL: process.env.OPENAI_API_BASEURL,
+  // OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+  // OPENAI_API_MODEL: process.env.OPENAI_API_MODEL,
+  // IMAGE_OPENAI_API_KEY: process.env.IMAGE_OPENAI_API_KEY,
 
-  NOVELAI_API_KEY: process.env.NOVELAI_API_KEY,
+  // GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+
+  // NOVELAI_API_KEY: process.env.NOVELAI_API_KEY,
   ENV: process.env.NODE_ENV === 'prod' ? 'prod' : 'dev',
   GITHUB_BASEURL: `https://raw.githubusercontent.com/iconttv/iconttv-discord-hook/${
     process.env.NODE_ENV === 'prod' ? 'main' : 'develop'

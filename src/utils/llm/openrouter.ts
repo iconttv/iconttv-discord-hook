@@ -14,15 +14,15 @@ import {
 } from './types';
 
 const openai = new OpenAI({
-  baseURL: config.OPENAI_API_BASEURL,
-  apiKey: config.OPENAI_API_KEY,
+  baseURL: 'https://openrouter.ai/api/v1',
+  apiKey: config.OPENROUTER_API_KEY,
   defaultHeaders: {
     'HTTP-Referer': 'https://github.com/iconttv', // Optional. Site URL for rankings on openrouter.ai.
     'X-Title': 'iconttv-discord', // Optional. Site title for rankings on openrouter.ai.
   },
 });
 
-const models = config.OPENAI_API_MODEL.split(',')
+const models = config.OPENROUTER_LLM_MODELS.split(',')
   .map(model => model.trim())
   .filter(model => model.length > 0);
 
@@ -30,6 +30,37 @@ const getModel = () => {
   const idx = Math.floor(Math.random() * models.length);
   return models[idx];
 };
+
+const google_extra_body = {
+  provider: {
+    // use google-vertex to specify safety_settings
+    ignore: ['Google AI Studio'],
+  },
+  google: {
+    safety_settings: [
+      {
+        category: 'HARM_CATEGORY_HARASSMENT',
+        threshold: 'BLOCK_NONE',
+      },
+      {
+        category: 'HARM_CATEGORY_HATE_SPEECH',
+        threshold: 'BLOCK_NONE',
+      },
+      {
+        category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+        threshold: 'BLOCK_NONE',
+      },
+      {
+        category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+        threshold: 'BLOCK_NONE',
+      },
+      {
+        category: 'HARM_CATEGORY_CIVIC_INTEGRITY',
+        threshold: 'BLOCK_NONE',
+      },
+    ],
+  },
+} as const;
 
 export const summarizeMessages = async ({
   messages,
@@ -107,6 +138,12 @@ export const summarizeMessages = async ({
       model,
       ...requestOptions,
     };
+
+    if (model.startsWith('google/')) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (openaiParams as any).extra_body = google_extra_body;
+    }
+
     const chatCompletion = await openai.chat.completions
       .create(openaiParams)
       .then(async res => {
@@ -180,6 +217,12 @@ export const questionMessages = async ({
     model,
     ...requestOptions,
   };
+
+  if (model.startsWith('google/')) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (openaiParams as any).extra_body = google_extra_body;
+  }
+
   const chatCompletion = await openai.chat.completions
     .create(openaiParams)
     .then(async res => {

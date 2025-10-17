@@ -1,5 +1,3 @@
-import { generateImage as openAiGenerateImage } from './openai';
-import { generateImage as novelAiGenerateImage } from './novelai';
-import { generateImage as geminiAiGenerateImage } from './gemini';
+import { generateImage as openRouterGenerateImage } from './openrouter';
 
-export { openAiGenerateImage, novelAiGenerateImage, geminiAiGenerateImage };
+export { openRouterGenerateImage };
