@@ -25,7 +25,8 @@ export const generateImage = async (
     messages: [
       {
         role: 'user',
-        content: 'Generate a image with following description:',
+        content:
+          'Generate a image or images with a given description. If you refuse then give a brief reason. Description: ',
       },
       {
         role: 'user',
@@ -92,7 +93,7 @@ export const generateImage = async (
   if (!Array.isArray(choices) || choices.length === 0) {
     throw 'no response';
   }
-  const content = choices[0]?.content;
+  const content = choices[0]?.message?.content;
   const images = choices[0]?.message?.images;
   if (!Array.isArray(images) || images.length === 0) {
     throw content ?? 'no image response';
