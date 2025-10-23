@@ -20,14 +20,25 @@ export const data = new SlashCommandBuilder()
       .setName('embedding')
       .setDescription('use embedding vector')
       .setRequired(false)
+  )
+  .addBooleanOption(option =>
+    option
+      .setName('keep')
+      .setDescription(
+        '기본 설정으로 메시지를 수 초 후에 자동으로 삭제합니다. keep=True 이라면 삭제하지 않습니다.'
+      )
+      .setRequired(false)
   );
 
 export const execute = async (interaction: CommandInteraction) => {
   const keyword = interaction.options.get('keyword')?.value?.toString() ?? '';
   const inChannel = interaction.options.get('channel')?.value ?? false;
   const useEmbedding = interaction.options.get('embedding')?.value ?? false;
+  const keepMessage = interaction.options.get('keep')?.value ?? false;
 
-  logger.debug(`keyword: ${keyword}, channel: ${inChannel}`);
+  logger.debug(
+    `keyword: ${keyword}, channel: ${inChannel}, useEmgedding: ${useEmbedding}, keepMessage: ${keepMessage}`
+  );
 
   const searchWord = keyword.trim();
 
@@ -94,5 +105,11 @@ export const execute = async (interaction: CommandInteraction) => {
       )
       .join('\n');
     await interaction.editReply(beautifulMessage);
+  }
+
+  if (!keepMessage) {
+    setTimeout(() => {
+      interaction.deleteReply();
+    }, 3 * 60 * 1000);
   }
 };
