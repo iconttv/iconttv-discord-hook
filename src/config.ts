@@ -51,6 +51,14 @@ interface Config {
    */
   JINA_READER_API_KEY: string | undefined;
 
+  /**
+   * optional
+   */
+  KAFKA_ENABLE: string | undefined;
+  KAFKA_CLIENT_ID: string | undefined;
+  KAFKA_REST_PROXY: string | undefined;
+  KAFKA_TOPIC: string | undefined;
+
   ENV: 'prod' | 'dev';
   GITHUB_BASEURL: string;
 
@@ -111,6 +119,11 @@ export const config: Config = {
   VISION_OPENAI_MODEL: process.env.VISION_OPENAI_MODEL,
 
   JINA_READER_API_KEY: process.env.JINA_READER_API_KEY,
+
+  KAFKA_ENABLE: process.env.KAFKA_ENABLE,
+  KAFKA_CLIENT_ID: process.env.KAFKA_CLIENT_ID,
+  KAFKA_REST_PROXY: process.env.KAFKA_REST_PROXY,
+  KAFKA_TOPIC: process.env.KAFKA_TOPIC,
 
   CACHE_CLEAR_CHECK_TIME_MS: 10 * 60 * 1000,
 };

@@ -11,6 +11,7 @@ import logger from '../../lib/logger';
 import { getLogContext } from '../../utils/discord';
 import { retry } from 'es-toolkit';
 import { processMessage } from '../embedding/discord_processor';
+import { produceMessageToKafka } from '../kafkaService';
 
 export const saveMessage = async (message: Message) => {
   try {
@@ -40,6 +41,8 @@ export const saveMessage = async (message: Message) => {
       createdAt: context.createdAt,
     } as const;
     const messageModel = new MessageModel(messageDocument);
+
+    const kafkaPromise = produceMessageToKafka(context);
 
     try {
       const messageEmbedding = await processMessage(messageDocument);
@@ -71,6 +74,8 @@ export const saveMessage = async (message: Message) => {
     logger.debug(
       `saveMessage-4 Message Saved! "${context.senderName} - ${context.senderMessage}"`
     );
+
+    await kafkaPromise;
   } catch (e) {
     logger.error(e);
   }
