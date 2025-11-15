@@ -69,6 +69,10 @@ export const getKafkaProducer = async () => {
 
 export const produceMessageToKafka = async (context: LogContext) => {
   try {
+    if (!context.senderMessage || context.senderMessage.trim().length === 0) {
+      return;
+    }
+
     const kafkaProducer = await getKafkaProducer();
     if (kafkaProducer) {
       await kafkaProducer.send({
