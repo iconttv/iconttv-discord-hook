@@ -69,7 +69,9 @@ export const execute = async (interaction: CommandInteraction) => {
   const imageInputUrls: string[] = [];
   if (imageEdit) {
     try {
-      imageInputUrls.push(await aiClient.imageToBase64(imageEdit.proxyURL));
+      imageInputUrls.push(
+        await aiClient.imageToBase64(imageEdit.proxyURL, 1024)
+      );
     } catch {
       await interaction.reply(`수정할 이미지를 처리할 수 없습니다`);
       return;
@@ -77,7 +79,9 @@ export const execute = async (interaction: CommandInteraction) => {
   }
   if (imageRef1) {
     try {
-      imageInputUrls.push(await aiClient.imageToBase64(imageRef1.proxyURL));
+      imageInputUrls.push(
+        await aiClient.imageToBase64(imageRef1.proxyURL, 1024)
+      );
     } catch {
       await interaction.reply(`레퍼런스 이미지1를 처리할 수 없습니다`);
       return;
@@ -85,7 +89,9 @@ export const execute = async (interaction: CommandInteraction) => {
   }
   if (imageRef2) {
     try {
-      imageInputUrls.push(await aiClient.imageToBase64(imageRef2.proxyURL));
+      imageInputUrls.push(
+        await aiClient.imageToBase64(imageRef2.proxyURL, 1024)
+      );
     } catch {
       await interaction.reply(`레퍼런스 이미지2를 처리할 수 없습니다`);
       return;
@@ -93,7 +99,9 @@ export const execute = async (interaction: CommandInteraction) => {
   }
   if (imageRef3) {
     try {
-      imageInputUrls.push(await aiClient.imageToBase64(imageRef3.proxyURL));
+      imageInputUrls.push(
+        await aiClient.imageToBase64(imageRef3.proxyURL, 1024)
+      );
     } catch {
       await interaction.reply(`레퍼런스 이미지3를 처리할 수 없습니다`);
       return;
