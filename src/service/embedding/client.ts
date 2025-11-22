@@ -14,7 +14,7 @@ const EMPTY_TOKEN = '!!empty!!';
 
 const ocrChatCompletionMessageBase: OpenAI.ChatCompletionMessageParam[] = [
   {
-    role: 'user',
+    role: 'developer',
     content: [
       'You are a helpful assistant. Your job is describe an image to text as preprocessor.',
       '1. Provide a concise and precise description of the entire image content in Korean, excluding any embellishments or unnecessary phrases. Do not starts with words like `This image is ...`.',
@@ -29,7 +29,7 @@ const ocrChatCompletionMessageBase: OpenAI.ChatCompletionMessageParam[] = [
 const summarizeChatCompletionMessageBase: OpenAI.ChatCompletionMessageParam[] =
   [
     {
-      role: 'user',
+      role: 'developer',
       content: [
         'You are a helpful assistant. Your job is to summarize text as preprocessor.',
         '1. Provide a concise and precise description of the given content in Korean, excluding any embellishments or unnecessary phrases. Do not starts with words like `This content is ...`.',
@@ -80,33 +80,34 @@ class AiClient {
     return htmlMarkdown;
   }
 
-  async imageToText(urlOrBase64: string): Promise<string> {
+  async imageToBase64(urlOrBase64: string, width = 300): Promise<string> {
     if (isUrl(urlOrBase64) && !(await isLiveUrl(urlOrBase64))) {
       throw new Error(`URL is dead ${urlOrBase64}`);
     }
 
-    async function preprocessImage(input: string) {
-      let contentType: string;
-      let imageBase64: ArrayBuffer;
-      if (isUrl(input)) {
-        [contentType, imageBase64] = await readImage(input);
-      } else {
-        [contentType, imageBase64] = readBase64Image(input);
-      }
-
-      const buf = Buffer.from(new Uint8Array(imageBase64));
-
-      const imageSharp = sharp(buf, { animated: true });
-      const imageBuffer = await imageSharp
-        .resize(300, null, { withoutEnlargement: true })
-        .toBuffer();
-      return `data:${contentType};base64,${imageBuffer.toString('base64')}`;
+    let contentType: string;
+    let imageBase64: ArrayBuffer;
+    if (isUrl(urlOrBase64)) {
+      [contentType, imageBase64] = await readImage(urlOrBase64);
+    } else {
+      [contentType, imageBase64] = readBase64Image(urlOrBase64);
     }
 
+    const buf = Buffer.from(new Uint8Array(imageBase64));
+
+    const imageSharp = sharp(buf, { animated: true });
+    const imageBuffer = await imageSharp
+      .resize(width, null, { withoutEnlargement: true })
+      .toBuffer();
+
+    return `data:${contentType};base64,${imageBuffer.toString('base64')}`;
+  }
+
+  async imageToText(urlOrBase64: string): Promise<string> {
     let inputImage: string;
     try {
       logger.debug(`preprocessImage start ${urlOrBase64}`);
-      inputImage = await preprocessImage(urlOrBase64);
+      inputImage = await this.imageToBase64(urlOrBase64);
       logger.debug(`preprocessImage end ${urlOrBase64}`);
     } catch (error) {
       logger.error(`preprocessImage error ${urlOrBase64}\n${error}`);
@@ -120,10 +121,6 @@ class AiClient {
         {
           role: 'user',
           content: [
-            {
-              type: 'text',
-              text: 'What is this image about? Do captioning and ocr.',
-            },
             {
               type: 'image_url',
               image_url: {

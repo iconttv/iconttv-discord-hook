@@ -2,7 +2,7 @@ import { Attachment, Component, Embed, EmbedType } from 'discord.js';
 import { databaseSqlite } from './failure_urls';
 import { aiClient } from './client';
 import logger from '../../lib/logger';
-import { replaceDiscordImage } from './toolkit';
+import { replaceDiscordEmoji } from './toolkit';
 import { config } from '../../config';
 import MessageModel from '../../database/model/MessageModel';
 
@@ -203,7 +203,7 @@ export async function processMessage(msgDoc: ProcessMessageDocument): Promise<
     // Process TEXT_MESSAGE
     if (msgDoc.message) {
       try {
-        updateData.TEXT_MESSAGE = replaceDiscordImage(msgDoc.message);
+        updateData.TEXT_MESSAGE = replaceDiscordEmoji(msgDoc.message);
         hasUpdates = true;
       } catch (error) {
         logger.error(`Error processing message text for ${messageId}:`, error);

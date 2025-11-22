@@ -80,3 +80,6 @@
 
 1.0.7
 - 메시지 저장 전에 임베딩 벡터 생성
+
+1.0.8
+- allow image input for image generation

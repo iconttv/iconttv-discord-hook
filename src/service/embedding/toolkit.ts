@@ -24,7 +24,7 @@ export async function isLiveUrl(url: string) {
   }
 }
 
-export function replaceDiscordImage(text: string): string {
+export function replaceDiscordEmoji(text: string): string {
   // 1) ID 제거: <:name:1234> 또는 <a:name:1234> -> <:name:> 또는 <a:name:>
   const removedIds = text.replace(/<(a:|:)([A-Za-z0-9_]+):\d+>/g, '<$1$2:>');
 

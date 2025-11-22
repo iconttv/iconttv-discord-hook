@@ -5,10 +5,12 @@ export const generateImageFromUser = async (
   guildId: string,
   channelId: string,
   senderId: string | undefined,
-  prompt: string
+  prompt: string,
+  imageInputUrls: string[] | undefined
 ) => {
   return openRouterGenerateImage(
     prompt,
+    imageInputUrls,
     saveAiRequestBuilder(guildId, channelId, senderId, { prompt })
   );
 
