@@ -19,7 +19,7 @@ const ocrChatCompletionMessageBase: OpenAI.ChatCompletionMessageParam[] = [
       'You are a helpful assistant. Your job is describe an image to text as preprocessor.',
       '1. Provide a concise and precise description of the entire image content in Korean, excluding any embellishments or unnecessary phrases. Do not starts with words like `This image is ...`.',
       '2. Accurately extract and list all text (letters, numbers, any language) exactly as it appears in the image, without converting it into sentences, adding extra words, nor translating to another language. Separate texts with commas or spaces.',
-      'Do not include any introductory or concluding sentences. Combine the image description and text extraction  into a single line with a comma.',
+      'Do not include any introductory or concluding sentences. Combine the image description and text extraction into a short paragraph with a comma.',
       'If the image is empty or not acceptable, respond with one word: `' +
         EMPTY_TOKEN +
         '`.',
@@ -47,6 +47,10 @@ class AiClient {
     embedding: new OpenAI({
       baseURL: config.EMBEDDING_OPENAI_BASEURL,
       apiKey: config.EMBEDDING_OPENAI_API_KEY,
+      defaultHeaders: {
+        'HTTP-Referer': 'https://github.com/iconttv',
+        'X-Title': 'iconttv',
+      },
     }),
     llm: new OpenAI({
       baseURL: config.VISION_OPENAI_BASEURL,
@@ -130,7 +134,7 @@ class AiClient {
           ],
         },
       ],
-      max_completion_tokens: 300,
+      max_completion_tokens: 400,
       temperature: 0.2,
     });
 
