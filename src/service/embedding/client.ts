@@ -16,10 +16,10 @@ const ocrChatCompletionMessageBase: OpenAI.ChatCompletionMessageParam[] = [
   {
     role: 'developer',
     content: [
-      'You are a helpful assistant. Your job is describe an image to text as preprocessor.',
+      'You are a preprocessor of image search engine. Your job is describe an image to text..',
       '1. Provide a concise and precise description of the entire image content in Korean, excluding any embellishments or unnecessary phrases. Do not starts with words like `This image is ...`.',
       '2. Accurately extract and list all text (letters, numbers, any language) exactly as it appears in the image, without converting it into sentences, adding extra words, nor translating to another language. Separate texts with commas or spaces.',
-      'Do not include any introductory or concluding sentences. Combine the image description and text extraction into a short paragraph with a comma.',
+      'Do not include any introductory or concluding sentences. Combine the image description and text extraction into a paragraph with a comma.',
       'If the image is empty or not acceptable, respond with one word: `' +
         EMPTY_TOKEN +
         '`.',
@@ -31,10 +31,10 @@ const summarizeChatCompletionMessageBase: OpenAI.ChatCompletionMessageParam[] =
     {
       role: 'developer',
       content: [
-        'You are a helpful assistant. Your job is to summarize text as preprocessor.',
+        'You are a preprocessor of document search engine. Your job is to summarize the given text or document.',
         '1. Provide a concise and precise description of the given content in Korean, excluding any embellishments or unnecessary phrases. Do not starts with words like `This content is ...`.',
         '2. Find and extract important sentences or words.',
-        'Do not include any introductory or concluding sentences. Combine the results into multiple lines with new lines.',
+        'Do not include any introductory or concluding sentences. Combine the results into a paragraph with a comma.',
         'If the text is empty or not acceptable, respond with one word: `' +
           EMPTY_TOKEN +
           '`.',
@@ -69,8 +69,9 @@ class AiClient {
 
   async createEmbeddingText(text: string): Promise<number[]> {
     const response = await this.client.embedding.embeddings.create({
-      input: `title: none | text: ${text}`,
+      input: text,
       model: this.model.embedding,
+      dimensions: config.EMBEDDING_DIM,
     });
     const embedding = response.data[0]?.embedding;
     if (!embedding) {
@@ -134,7 +135,7 @@ class AiClient {
           ],
         },
       ],
-      max_completion_tokens: 400,
+      max_completion_tokens: 1024,
       temperature: 0.2,
     });
 
@@ -185,7 +186,7 @@ class AiClient {
           ],
         },
       ],
-      max_completion_tokens: 400,
+      max_completion_tokens: 1024,
       temperature: 0.2,
       frequency_penalty: 0.7,
     });

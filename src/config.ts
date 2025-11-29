@@ -38,6 +38,7 @@ interface Config {
   EMBEDDING_OPENAI_BASEURL: string | undefined;
   EMBEDDING_OPENAI_API_KEY: string | undefined;
   EMBEDDING_OPENAI_MODEL: string | undefined;
+  EMBEDDING_DIM: number | undefined;
 
   /**
    * for ocr and image description
@@ -113,6 +114,9 @@ export const config: Config = {
   EMBEDDING_OPENAI_BASEURL: process.env.EMBEDDING_OPENAI_BASEURL,
   EMBEDDING_OPENAI_API_KEY: process.env.EMBEDDING_OPENAI_API_KEY,
   EMBEDDING_OPENAI_MODEL: process.env.EMBEDDING_OPENAI_MODEL,
+  EMBEDDING_DIM: process.env.EMBEDDING_DIM
+    ? Number(process.env.EMBEDDING_DIM)
+    : undefined,
 
   VISION_OPENAI_BASEURL: process.env.VISION_OPENAI_BASEURL,
   VISION_OPENAI_API_KEY: process.env.VISION_OPENAI_API_KEY,

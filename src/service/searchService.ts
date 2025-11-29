@@ -5,11 +5,11 @@ import { getMessageLink } from '../utils/message';
 // you should import fetch from 'node-fetch',
 // else `fetch failed TypeError: fetch failed` occurs
 import logger from '../lib/logger';
-import OpenAI from 'openai';
+import { aiClient } from './embedding/client';
 
-let _client: Client;
+let _elasticClient: Client;
 
-const getClient = () => {
+const getElasticClient = () => {
   if (
     !config.ELASTIC_HOST ||
     config.ELASTIC_HOST.length === 0 ||
@@ -20,8 +20,8 @@ const getClient = () => {
   }
 
   const [id, api_key] = config.ELASTIC_API.split(':');
-  if (!_client) {
-    _client = new Client({
+  if (!_elasticClient) {
+    _elasticClient = new Client({
       node: config.ELASTIC_HOST,
       auth: {
         apiKey: {
@@ -31,30 +31,16 @@ const getClient = () => {
       },
     });
   }
-  return _client;
+  return _elasticClient;
 };
 
-const getSearchQueryEmbedding = async (text: string) => {
-  if (!config.EMBEDDING_OPENAI_BASEURL || !config.EMBEDDING_OPENAI_MODEL) {
-    throw new Error('embedding custom host is not set.');
-  }
-
-  const client = new OpenAI({
-    baseURL: config.EMBEDDING_OPENAI_BASEURL,
-    apiKey: config.EMBEDDING_OPENAI_API_KEY ?? '',
-  });
-
-  const response = await client.embeddings.create({
-    // https://huggingface.co/google/embeddinggemma-300m#prompt-instructions
-    input: `task: search result | query: ${text}`,
-    model: config.EMBEDDING_OPENAI_MODEL,
-  });
-  const embedding = response.data[0]?.embedding;
-  if (!embedding) {
-    throw new Error(`response is None. ${response}`);
-  }
-  return embedding;
+const getEmbeddintQueryInstruct = (query: string) => {
+  return (
+    'Instruct: Retrieve relevant messages that best matches the query' +
+    `\n${query}`
+  );
 };
+
 
 const cleanEmbeddingInput = (text: string): string => {
   return text
@@ -68,7 +54,7 @@ export const searchMessage = async (
   keyword: string,
   channelId: string | null
 ) => {
-  const client = getClient();
+  const client = getElasticClient();
   const matchConditions = [
     {
       match: {
@@ -193,7 +179,7 @@ export const searchMessageEmbedding = async (
   searchWords: string,
   channelId: string | null
 ) => {
-  const client = getClient();
+  const client = getElasticClient();
   const matchConditions = [
     {
       match: {
@@ -224,7 +210,9 @@ export const searchMessageEmbedding = async (
       },
     });
   }
-  const queryEmbedding = await getSearchQueryEmbedding(searchWords);
+  const queryEmbedding = await aiClient.createEmbeddingText(
+    getEmbeddintQueryInstruct(searchWords)
+  );
   logger.debug(`embedding created ${searchWords} ${queryEmbedding.length}`);
 
   const result = await client.search({
