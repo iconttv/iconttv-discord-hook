@@ -85,7 +85,7 @@ class AiClient {
     return htmlMarkdown;
   }
 
-  async imageToBase64(urlOrBase64: string, width = 300): Promise<string> {
+  async imageToBase64(urlOrBase64: string, width = 768): Promise<string> {
     if (isUrl(urlOrBase64) && !(await isLiveUrl(urlOrBase64))) {
       throw new Error(`URL is dead ${urlOrBase64}`);
     }
