@@ -151,11 +151,14 @@ interface ProcessMessageDocument {
   createdAt: Date;
 }
 
-interface ProcessMessageUpdateData {
+interface MessageForEmbedding {
   TEXT_MESSAGE?: string;
   TEXT_ATTACHMENTS?: Map<string, string>;
   TEXT_COMPONENTS?: Map<string, string>;
   TEXT_EMBEDS?: Map<string, string>;
+}
+
+interface ProcessMessageUpdateData extends MessageForEmbedding {
   EMBEDDING_INPUT?: string;
   EMBEDDING_STATUS?: boolean;
   EMBEDDING?: number[];
@@ -284,48 +287,30 @@ export async function processMessage(msgDoc: ProcessMessageDocument): Promise<
 
     // If we have text updates, create combined text and embedding
     if (hasUpdates) {
-      const combinedTexts: string[] = [];
+      try {
+        const embeddingResult = await calculateEmbedding({
+          TEXT_MESSAGE: updateData.TEXT_MESSAGE,
+          TEXT_ATTACHMENTS: updateData.TEXT_ATTACHMENTS,
+          TEXT_COMPONENTS: updateData.TEXT_COMPONENTS,
+          TEXT_EMBEDS: updateData.TEXT_EMBEDS,
+        });
 
-      if (updateData.TEXT_MESSAGE) {
-        combinedTexts.push(`# TEXT\n${updateData.TEXT_MESSAGE}`);
-      }
-
-      if (updateData.TEXT_ATTACHMENTS) {
-        for (const text of updateData.TEXT_ATTACHMENTS.values()) {
-          combinedTexts.push(`# ATTACHMENT\n${text}`);
+        if (embeddingResult) {
+          updateData.TEXT_MESSAGE = embeddingResult.TEXT_MESSAGE;
+          updateData.EMBEDDING_INPUT = embeddingResult.EMBEDDING_INPUT;
+          updateData.EMBEDDING_STATUS = embeddingResult.EMBEDDING_STATUS;
+          updateData.EMBEDDING = embeddingResult.EMBEDDING;
+          updateData.EMBEDDING_MODEL = embeddingResult.EMBEDDING_MODEL;
+          updateData.EMBEDDING_DIM = embeddingResult.EMBEDDING_DIM;
+        } else {
+          updateData.EMBEDDING_STATUS = false;
         }
-      }
-      if (updateData.TEXT_COMPONENTS) {
-        for (const text of updateData.TEXT_COMPONENTS.values()) {
-          combinedTexts.push(`# COMPONENT\n${text}`);
-        }
-      }
+      } catch (error) {
+        logger.error(`Error creating embedding for ${messageId}:`, error);
 
-      if (updateData.TEXT_EMBEDS) {
-        for (const text of updateData.TEXT_EMBEDS.values()) {
-          combinedTexts.push(`# EMBED\n${text}`);
-        }
-      }
-
-      if (combinedTexts.length > 0) {
-        const combinedText = combinedTexts.join('\n\n\n');
-        updateData.EMBEDDING_INPUT = combinedText;
-
-        try {
-          const embedding = await aiClient.createEmbeddingText(combinedText);
-          updateData.EMBEDDING_STATUS = true;
-          updateData.EMBEDDING = embedding;
-          updateData.EMBEDDING_MODEL = config.EMBEDDING_OPENAI_MODEL;
-          updateData.EMBEDDING_DIM = embedding.length;
-        } catch (error) {
-          logger.error(
-            `Error creating embedding for ${messageId} ${combinedText}:`,
-            error
-          );
-          // Continue without embedding
-          // ignore embedding server fail
-          // updateData.EMBEDDING_STATUS = false;
-        }
+        // Continue without embedding
+        // ignore embedding server fail
+        updateData.EMBEDDING_STATUS = false;
       }
 
       // Update the document
@@ -356,4 +341,54 @@ export async function processMessage(msgDoc: ProcessMessageDocument): Promise<
       EMBEDDING_STATUS: false,
     };
   }
+}
+
+export async function calculateEmbedding(
+  messageText: MessageForEmbedding
+): Promise<ProcessMessageUpdateData | null> {
+  const combinedTexts: string[] = [];
+
+  const pureMessage = messageText.TEXT_MESSAGE
+    ? replaceDiscordEmoji(messageText.TEXT_MESSAGE)
+    : undefined;
+  if (pureMessage) {
+    combinedTexts.push(`# TEXT\n${pureMessage}`);
+  }
+
+  if (messageText.TEXT_ATTACHMENTS) {
+    for (const text of messageText.TEXT_ATTACHMENTS.values()) {
+      combinedTexts.push(`# ATTACHMENT\n${text}`);
+    }
+  }
+  if (messageText.TEXT_COMPONENTS) {
+    for (const text of messageText.TEXT_COMPONENTS.values()) {
+      combinedTexts.push(`# COMPONENT\n${text}`);
+    }
+  }
+
+  if (messageText.TEXT_EMBEDS) {
+    for (const text of messageText.TEXT_EMBEDS.values()) {
+      combinedTexts.push(`# EMBED\n${text}`);
+    }
+  }
+
+  if (combinedTexts.length === 0) {
+    return null;
+  }
+
+  const embeddingResult: ProcessMessageUpdateData = {
+    ...messageText,
+    TEXT_MESSAGE: pureMessage,
+  };
+
+  const combinedText = combinedTexts.join('\n\n\n');
+  embeddingResult.EMBEDDING_INPUT = combinedText;
+
+  const embedding = await aiClient.createEmbeddingText(combinedText);
+  embeddingResult.EMBEDDING_STATUS = true;
+  embeddingResult.EMBEDDING = embedding;
+  embeddingResult.EMBEDDING_MODEL = config.EMBEDDING_OPENAI_MODEL;
+  embeddingResult.EMBEDDING_DIM = embedding.length;
+
+  return embeddingResult;
 }
