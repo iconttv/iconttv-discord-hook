@@ -71,7 +71,6 @@ class AiClient {
     const response = await this.client.embedding.embeddings.create({
       input: text,
       model: this.model.embedding,
-      dimensions: config.EMBEDDING_DIM,
     });
     const embedding = response.data[0]?.embedding;
     if (!embedding) {
