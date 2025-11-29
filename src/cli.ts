@@ -7,6 +7,8 @@ import { createMongooseConnection } from './database';
 import { exit } from 'process';
 import MessageModel from './database/model/MessageModel';
 import { calculateEmbedding } from './service/embedding/discord_processor';
+import { aiClient } from './service/embedding/client';
+import { config } from './config';
 
 const program = new Command();
 
@@ -108,17 +110,10 @@ program
       promises.push(
         (async () => {
           try {
-            const embeddingResult = await calculateEmbedding({
-              TEXT_MESSAGE:
-                message.TEXT_MESSAGE ?? message.message ?? undefined,
-              TEXT_ATTACHMENTS: message.TEXT_ATTACHMENTS,
-              TEXT_COMPONENTS: message.TEXT_COMPONENTS,
-              TEXT_EMBEDS: message.TEXT_EMBEDS,
-            });
-
-            if (!embeddingResult) {
-              skipped++;
-            } else {
+            if (message.EMBEDDING_INPUT) {
+              const embedding = await aiClient.createEmbeddingText(
+                message.EMBEDDING_INPUT
+              );
               processed++;
               await MessageModel.updateOne(
                 {
@@ -128,15 +123,44 @@ program
                 },
                 {
                   $set: {
-                    TEXT_MESSAGE: embeddingResult.TEXT_MESSAGE,
-                    EMBEDDING_STATUS: embeddingResult.EMBEDDING_STATUS,
-                    EMBEDDING_MODEL: embeddingResult.EMBEDDING_MODEL,
-                    EMBEDDING_DIM: embeddingResult.EMBEDDING_DIM,
-                    EMBEDDING_INPUT: embeddingResult.EMBEDDING_INPUT,
-                    EMBEDDING: embeddingResult.EMBEDDING,
+                    EMBEDDING_STATUS: true,
+                    EMBEDDING_MODEL: config.EMBEDDING_OPENAI_MODEL,
+                    EMBEDDING_DIM: embedding.length,
+                    EMBEDDING: embedding,
                   },
                 }
               );
+            } else {
+              const embeddingResult = await calculateEmbedding({
+                TEXT_MESSAGE:
+                  message.TEXT_MESSAGE ?? message.message ?? undefined,
+                TEXT_ATTACHMENTS: message.TEXT_ATTACHMENTS,
+                TEXT_COMPONENTS: message.TEXT_COMPONENTS,
+                TEXT_EMBEDS: message.TEXT_EMBEDS,
+              });
+
+              if (!embeddingResult) {
+                skipped++;
+              } else {
+                processed++;
+                await MessageModel.updateOne(
+                  {
+                    guildId: message.guildId,
+                    channelId: message.channelId,
+                    messageId: message.messageId,
+                  },
+                  {
+                    $set: {
+                      TEXT_MESSAGE: embeddingResult.TEXT_MESSAGE,
+                      EMBEDDING_STATUS: embeddingResult.EMBEDDING_STATUS,
+                      EMBEDDING_MODEL: embeddingResult.EMBEDDING_MODEL,
+                      EMBEDDING_DIM: embeddingResult.EMBEDDING_DIM,
+                      EMBEDDING_INPUT: embeddingResult.EMBEDDING_INPUT,
+                      EMBEDDING: embeddingResult.EMBEDDING,
+                    },
+                  }
+                );
+              }
             }
           } catch (error) {
             logger.error(`Embedding error ${error}. ${message.messageId}`);

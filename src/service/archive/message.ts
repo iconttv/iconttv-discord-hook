@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-extra-non-null-assertion */
 import {
   FetchMessagesOptions,
   Guild,
@@ -48,14 +49,16 @@ export const saveMessage = async (message: Message) => {
       const messageEmbedding = await processMessage(messageDocument);
       if (!messageEmbedding) {
         // set EMBEDDING_STATUS as null
-      } else if (!messageEmbedding.EMBEDDING_STATUS) {
-        messageModel.EMBEDDING_STATUS = false;
       } else {
-        messageModel.EMBEDDING_MODEL = messageEmbedding.EMBEDDING_MODEL;
-        messageModel.EMBEDDING_DIM = messageEmbedding.EMBEDDING_DIM;
-        messageModel.EMBEDDING_INPUT = messageEmbedding.EMBEDDING_INPUT;
-        messageModel.EMBEDDING = messageEmbedding.EMBEDDING;
-        messageModel.EMBEDDING_STATUS = messageEmbedding.EMBEDDING_STATUS;
+        messageModel.TEXT_MESSAGE = messageEmbedding.TEXT_MESSAGE;
+        messageModel.TEXT_ATTACHMENTS = messageEmbedding.TEXT_ATTACHMENTS!!;
+        messageModel.TEXT_COMPONENTS = messageEmbedding.TEXT_COMPONENTS!!;
+        messageModel.TEXT_EMBEDS = messageEmbedding.TEXT_EMBEDS!!;
+        messageModel.EMBEDDING_MODEL = messageEmbedding.EMBEDDING_MODEL!!;
+        messageModel.EMBEDDING_DIM = messageEmbedding.EMBEDDING_DIM!!;
+        messageModel.EMBEDDING_INPUT = messageEmbedding.EMBEDDING_INPUT!!;
+        messageModel.EMBEDDING = messageEmbedding.EMBEDDING!!;
+        messageModel.EMBEDDING_STATUS = messageEmbedding.EMBEDDING_STATUS!!;
       }
     } catch (e) {
       // set EMBEDDING_STATUS as null

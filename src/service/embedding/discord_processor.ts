@@ -4,7 +4,6 @@ import { aiClient } from './client';
 import logger from '../../lib/logger';
 import { replaceDiscordEmoji } from './toolkit';
 import { config } from '../../config';
-import MessageModel from '../../database/model/MessageModel';
 
 interface ProcessedText {
   id: string;
@@ -166,19 +165,9 @@ interface ProcessMessageUpdateData extends MessageForEmbedding {
   EMBEDDING_DIM?: number;
 }
 
-export async function processMessage(msgDoc: ProcessMessageDocument): Promise<
-  | {
-      EMBEDDING_STATUS: true;
-      EMBEDDING_INPUT: string;
-      EMBEDDING: number[];
-      EMBEDDING_MODEL: string;
-      EMBEDDING_DIM: number;
-    }
-  | {
-      EMBEDDING_STATUS: false;
-    }
-  | null
-> {
+export async function processMessage(
+  msgDoc: ProcessMessageDocument
+): Promise<ProcessMessageUpdateData | null> {
   const guildId = msgDoc.guildId;
   const channelId = msgDoc.channelId;
   const messageId = msgDoc.messageId;
@@ -199,8 +188,9 @@ export async function processMessage(msgDoc: ProcessMessageDocument): Promise<
     return null;
   }
 
+  const updateData: ProcessMessageUpdateData = {};
+
   try {
-    const updateData: ProcessMessageUpdateData = {};
     let hasUpdates = false;
 
     // Process TEXT_MESSAGE
@@ -312,35 +302,12 @@ export async function processMessage(msgDoc: ProcessMessageDocument): Promise<
         // ignore embedding server fail
         updateData.EMBEDDING_STATUS = false;
       }
-
-      // Update the document
-      await MessageModel.updateOne(
-        { guildId, channelId, messageId },
-        { $set: updateData }
-      );
-      logger.info(
-        `Updated message ${messageId} with ${
-          Object.keys(updateData).length
-        } fields`
-      );
-      return {
-        EMBEDDING_INPUT: updateData.EMBEDDING_INPUT!,
-        EMBEDDING_STATUS: true,
-        EMBEDDING: updateData.EMBEDDING!,
-        EMBEDDING_MODEL: updateData.EMBEDDING_MODEL!,
-        EMBEDDING_DIM: updateData.EMBEDDING_DIM!,
-      };
     }
-
-    return {
-      EMBEDDING_STATUS: false,
-    };
   } catch (error) {
     logger.error(`Error processing message ${messageId}:`, error);
-    return {
-      EMBEDDING_STATUS: false,
-    };
   }
+
+  return updateData;
 }
 
 export async function calculateEmbedding(
