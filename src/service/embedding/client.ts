@@ -10,8 +10,6 @@ import sharp from 'sharp';
 import { config } from '../../config';
 import logger from '../../lib/logger';
 
-const EMPTY_TOKEN = '!!empty!!';
-
 const ocrChatCompletionMessageBase: OpenAI.ChatCompletionMessageParam[] = [
   {
     role: 'developer',
@@ -20,9 +18,6 @@ const ocrChatCompletionMessageBase: OpenAI.ChatCompletionMessageParam[] = [
       '1. Provide a concise and precise description of the entire image content in Korean, excluding any embellishments or unnecessary phrases. Do not starts with words like `This image is ...`.',
       '2. Accurately extract and list all text (letters, numbers, any language) exactly as it appears in the image, without converting it into sentences, adding extra words, nor translating to another language. Separate texts with commas or spaces.',
       'Do not include any introductory or concluding sentences. Combine the image description and text extraction into a paragraph with a comma.',
-      'If the image is empty or not acceptable, respond with one word: `' +
-        EMPTY_TOKEN +
-        '`.',
     ].join('\n'),
   },
 ];
@@ -35,9 +30,6 @@ const summarizeChatCompletionMessageBase: OpenAI.ChatCompletionMessageParam[] =
         '1. Provide a concise and precise description of the given content in Korean, excluding any embellishments or unnecessary phrases. Do not starts with words like `This content is ...`.',
         '2. Find and extract important sentences or words.',
         'Do not include any introductory or concluding sentences. Combine the results into a paragraph with a comma.',
-        'If the text is empty or not acceptable, respond with one word: `' +
-          EMPTY_TOKEN +
-          '`.',
       ].join('\n'),
     },
   ];
@@ -138,10 +130,8 @@ class AiClient {
       temperature: 0.2,
     });
 
-    const caption = response.choices[0]?.message.content
-      ?.replace(EMPTY_TOKEN, '')
-      .trim();
-    if (!caption || caption.length === 0 || caption === EMPTY_TOKEN) {
+    const caption = response.choices[0]?.message.content?.trim();
+    if (!caption || caption.length === 0) {
       throw new Error(
         `caption error ${urlOrBase64}\n${inputImage.slice(
           0,
@@ -190,14 +180,8 @@ class AiClient {
       frequency_penalty: 0.7,
     });
 
-    const summarization = response.choices[0]?.message.content
-      ?.replace(EMPTY_TOKEN, '')
-      .trim();
-    if (
-      !summarization ||
-      summarization.length === 0 ||
-      summarization === EMPTY_TOKEN
-    ) {
+    const summarization = response.choices[0]?.message.content?.trim();
+    if (!summarization || summarization.length === 0) {
       throw new Error(
         `caption error ${content.slice(0, 100)}...\n${JSON.stringify(response)}`
       );
