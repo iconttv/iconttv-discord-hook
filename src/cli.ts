@@ -67,7 +67,11 @@ program
   .command('embedding')
   .description('calculate embedding fields manually')
   .option('--all', 'recalculate all messages if TEXT_ fields are exists')
-  .action(async function (options: { all?: boolean }) {
+  .option(
+    '--migrate',
+    're-calculate embedding if EMBEDDING_MODEL is not equal to env.EMBEDDING_MODEL'
+  )
+  .action(async function (options: { all?: boolean; migrate?: boolean }) {
     await createMongooseConnection();
 
     const concurrency = 10;
@@ -76,7 +80,7 @@ program
     let failure = 0;
 
     logger.info(`${JSON.stringify(options)}`);
-    const { all } = options;
+    const { all, migrate } = options;
 
     const mongoFindFilter = {
       isDeleted: { $ne: true },
@@ -85,6 +89,9 @@ program
     } as any;
     if (!all) {
       mongoFindFilter.EMBEDDING_STATUS = { $eq: null };
+    }
+    if (migrate) {
+      mongoFindFilter.EMBEDDING_MODEL = { $ne: config.EMBEDDING_OPENAI_MODEL };
     }
 
     const cursor = await MessageModel.find(mongoFindFilter, {
