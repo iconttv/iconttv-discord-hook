@@ -110,15 +110,47 @@ program
       .sort({ createdAt: -1 })
       .cursor();
 
-    const promises: Promise<void>[] = [];
-    for await (const message of cursor) {
-      promises.push(
-        (async () => {
-          try {
-            if (message.EMBEDDING_INPUT) {
-              const embedding = await aiClient.createEmbeddingText(
-                message.EMBEDDING_INPUT
-              );
+    cursor.eachAsync(
+      async message => {
+        if ((processed + failure + skipped) % 20 === 0) {
+          logger.debug(
+            `Processed batch: ${processed} processed, ${failure} failed, ${skipped} skipped so far`
+          );
+        }
+
+        try {
+          if (message.EMBEDDING_INPUT) {
+            const embedding = await aiClient.createEmbeddingText(
+              message.EMBEDDING_INPUT
+            );
+            processed++;
+            await MessageModel.updateOne(
+              {
+                guildId: message.guildId,
+                channelId: message.channelId,
+                messageId: message.messageId,
+              },
+              {
+                $set: {
+                  EMBEDDING_STATUS: true,
+                  EMBEDDING_MODEL: config.EMBEDDING_OPENAI_MODEL,
+                  EMBEDDING_DIM: embedding.length,
+                  EMBEDDING: embedding,
+                },
+              }
+            );
+          } else {
+            const embeddingResult = await calculateEmbedding({
+              TEXT_MESSAGE:
+                message.TEXT_MESSAGE ?? message.message ?? undefined,
+              TEXT_ATTACHMENTS: message.TEXT_ATTACHMENTS,
+              TEXT_COMPONENTS: message.TEXT_COMPONENTS,
+              TEXT_EMBEDS: message.TEXT_EMBEDS,
+            });
+
+            if (!embeddingResult) {
+              skipped++;
+            } else {
               processed++;
               await MessageModel.updateOne(
                 {
@@ -128,72 +160,38 @@ program
                 },
                 {
                   $set: {
-                    EMBEDDING_STATUS: true,
-                    EMBEDDING_MODEL: config.EMBEDDING_OPENAI_MODEL,
-                    EMBEDDING_DIM: embedding.length,
-                    EMBEDDING: embedding,
+                    TEXT_MESSAGE: embeddingResult.TEXT_MESSAGE,
+                    EMBEDDING_STATUS: embeddingResult.EMBEDDING_STATUS,
+                    EMBEDDING_MODEL: embeddingResult.EMBEDDING_MODEL,
+                    EMBEDDING_DIM: embeddingResult.EMBEDDING_DIM,
+                    EMBEDDING_INPUT: embeddingResult.EMBEDDING_INPUT,
+                    EMBEDDING: embeddingResult.EMBEDDING,
                   },
                 }
               );
-            } else {
-              const embeddingResult = await calculateEmbedding({
-                TEXT_MESSAGE:
-                  message.TEXT_MESSAGE ?? message.message ?? undefined,
-                TEXT_ATTACHMENTS: message.TEXT_ATTACHMENTS,
-                TEXT_COMPONENTS: message.TEXT_COMPONENTS,
-                TEXT_EMBEDS: message.TEXT_EMBEDS,
-              });
-
-              if (!embeddingResult) {
-                skipped++;
-              } else {
-                processed++;
-                await MessageModel.updateOne(
-                  {
-                    guildId: message.guildId,
-                    channelId: message.channelId,
-                    messageId: message.messageId,
-                  },
-                  {
-                    $set: {
-                      TEXT_MESSAGE: embeddingResult.TEXT_MESSAGE,
-                      EMBEDDING_STATUS: embeddingResult.EMBEDDING_STATUS,
-                      EMBEDDING_MODEL: embeddingResult.EMBEDDING_MODEL,
-                      EMBEDDING_DIM: embeddingResult.EMBEDDING_DIM,
-                      EMBEDDING_INPUT: embeddingResult.EMBEDDING_INPUT,
-                      EMBEDDING: embeddingResult.EMBEDDING,
-                    },
-                  }
-                );
-              }
             }
-          } catch (error) {
-            logger.error(`Embedding error ${error}. ${message.messageId}`);
-            failure++;
-            await MessageModel.updateOne(
-              {
-                guildId: message.guildId,
-                channelId: message.channelId,
-                messageId: message.messageId,
-              },
-              {
-                $set: {
-                  EMBEDDING_STATUS: false,
-                },
-              }
-            );
           }
-        })()
-      );
-
-      if (promises.length >= concurrency) {
-        await Promise.all(promises);
-        promises.length = 0;
-        logger.debug(
-          `Processed batch: ${processed} processed, ${failure} failed, ${skipped} skipped so far`
-        );
+        } catch (error) {
+          logger.error(`Embedding error ${error}. ${message.messageId}`);
+          failure++;
+          await MessageModel.updateOne(
+            {
+              guildId: message.guildId,
+              channelId: message.channelId,
+              messageId: message.messageId,
+            },
+            {
+              $set: {
+                EMBEDDING_STATUS: false,
+              },
+            }
+          );
+        }
+      },
+      {
+        parallel: concurrency,
       }
-    }
+    );
   });
 
 program.parse();
