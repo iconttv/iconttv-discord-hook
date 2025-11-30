@@ -114,7 +114,7 @@ program
       async message => {
         if ((processed + failure + skipped) % 20 === 0) {
           logger.debug(
-            `Processed batch: ${processed} processed, ${failure} failed, ${skipped} skipped so far`
+            `Processed batch: ${processed} processed, ${failure} failed, ${skipped} skipped so far. ${message.guildId} ${message.channelId} ${message.messageId}`
           );
         }
 
@@ -191,6 +191,10 @@ program
       {
         parallel: concurrency,
       }
+    );
+
+    logger.debug(
+      `Processed batch: ${processed} processed, ${failure} failed, ${skipped} skipped`
     );
   });
 
