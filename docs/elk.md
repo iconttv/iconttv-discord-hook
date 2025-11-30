@@ -54,7 +54,7 @@ PUT _index_template/iconttv-discord-message_template
         },
         "embedding": {
           "type": "dense_vector",
-          "dims": 768
+          "dims": 1024
         }
       }
     }
