@@ -34,7 +34,8 @@ export const execute = async (interaction: CommandInteraction) => {
   const guildSetting = await getGuildSetting(interaction);
   if (
     !interaction.memberPermissions?.has(PermissionFlagsBits.ModerateMembers) &&
-    !guildSetting?.enableCommandQuestionForEveryone
+    !guildSetting?.enableCommandQuestionForEveryone &&
+    !guildSetting?.additionalSuperuserIds?.includes(interaction.user.id)
   ) {
     await interaction.reply(`해당 기능을 실행할 권한이 부족합니다.`);
     return;

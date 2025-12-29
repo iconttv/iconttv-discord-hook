@@ -4,6 +4,7 @@ export const discordSettingSchema = new mongoose.Schema({
   guildId: { type: String, required: true },
   enableFeatureIconImageResize: { type: Boolean, default: false },
   enableCommandQuestionForEveryone: { type: Boolean, default: false },
+  additionalSuperuserIds: { type: [String], default: [] },
   updatedAt: { type: Date, default: Date.now },
   updatedBy: { type: String },
 });
