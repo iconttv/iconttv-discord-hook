@@ -7,10 +7,11 @@ cd "$PROJECT_DIR"
 
 mkdir -p logs/archive
 
-docker compose rm --stop --force --volumes
+docker compose build
+
+docker compose rm --stop --force
 
 docker compose up \
-  --build \
   --force-recreate \
   --no-deps \
   -d
