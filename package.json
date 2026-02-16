@@ -50,13 +50,12 @@
     "winston-daily-rotate-file": "^4.7.1"
   },
   "resolutions": {
-    "discord.js/**/glob": "11.1.0",
-    "discord.js/**/undici": "6.23.0",
-    "discord.js/**/lodash": "4.17.23",
-    "discord.js/**/brace-expansion": "2.0.2",
-    "@typescript-eslint/**/brace-expansion": "2.0.2",
-    "eslint/**/js-yaml": "4.1.1",
-    "eslint/**/brace-expansion": "1.1.12"
+    "brace-expansion@^1.1.7": "1.1.12",
+    "brace-expansion@^2.0.1": "2.0.2",
+    "glob@^11.0.0": "11.1.0",
+    "js-yaml@^4.1.0": "4.1.1",
+    "lodash@^4.17.21": "4.17.23",
+    "undici@6.21.3": "6.23.0"
   },
-  "packageManager": "yarn@1.22.22+sha1.ac34549e6aa8e7ead463a7407e1c7390f61a6610"
+  "packageManager": "yarn@4.12.0"
 }
