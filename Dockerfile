@@ -2,7 +2,7 @@ FROM node:24 AS builder
 
 WORKDIR /app
 
-RUN corepack enable && corepack prepare yarn@4.10.3 --activate
+RUN corepack enable && corepack prepare yarn@4.12.0 --activate
 
 COPY package.json ./
 COPY yarn.lock ./
@@ -21,7 +21,7 @@ LABEL version="1.0"
 
 WORKDIR /app
 
-RUN corepack enable && corepack prepare yarn@4.10.3 --activate
+RUN corepack enable && corepack prepare yarn@4.12.0 --activate
 
 COPY --from=builder /app/dist /app/dist
 COPY --from=builder /app/node_modules /app/node_modules
