@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "license": "MIT",
   "engines": {
-    "node": "20.x"
+    "node": "24.x"
   },
   "scripts": {
     "cli": "cross-env NODE_ENV=prod tsx ./src/cli.ts",
@@ -20,23 +20,22 @@
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
-    "@types/node": "^20.9.4",
-    "@types/node-fetch": "^2.6.12",
+    "@types/node": "^24.0.0",
     "@types/safe-json-stringify": "^1.1.5",
-    "@typescript-eslint/eslint-plugin": "^8.31.0",
-    "@typescript-eslint/parser": "^8.31.0",
+    "@typescript-eslint/eslint-plugin": "^8.55.0",
+    "@typescript-eslint/parser": "^8.55.0",
     "cross-env": "^7.0.3",
-    "eslint": "^8.54.0",
+    "eslint": "^8.57.1",
     "nodemon": "^3.0.1",
     "tsx": "^4.19.2",
     "typescript": "^5.8.3"
   },
   "dependencies": {
-    "@elastic/elasticsearch": "9",
-    "axios": "^1.7.4",
+    "@elastic/elasticsearch": "^9.3.1",
+    "axios": "^1.13.5",
     "better-sqlite3": "^12.4.1",
     "commander": "^14.0.1",
-    "discord.js": "^14.18.0",
+    "discord.js": "14.18.0",
     "dotenv": "^16.3.1",
     "es-toolkit": "^1.32.0",
     "jszip": "^3.10.1",
@@ -49,6 +48,16 @@
     "sharp": "^0.34.3",
     "winston": "^3.11.0",
     "winston-daily-rotate-file": "^4.7.1"
+  },
+  "resolutions": {
+    "@discordjs/builders": "1.10.1",
+    "discord.js/**/glob": "11.1.0",
+    "discord.js/**/undici": "6.23.0",
+    "discord.js/**/lodash": "4.17.23",
+    "discord.js/**/brace-expansion": "2.0.2",
+    "@typescript-eslint/**/brace-expansion": "2.0.2",
+    "eslint/**/js-yaml": "4.1.1",
+    "eslint/**/brace-expansion": "1.1.12"
   },
   "packageManager": "yarn@1.22.22+sha1.ac34549e6aa8e7ead463a7407e1c7390f61a6610"
 }

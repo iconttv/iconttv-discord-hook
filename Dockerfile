@@ -1,4 +1,4 @@
-FROM node:20 AS builder
+FROM node:24 AS builder
 
 WORKDIR /app
 
@@ -11,7 +11,7 @@ COPY tsconfig.build.json ./
 COPY src ./src
 RUN yarn build
 
-FROM node:20-slim
+FROM node:24-slim
 
 LABEL title="iconttv-discord-hook"
 LABEL version="1.0"
