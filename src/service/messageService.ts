@@ -67,6 +67,7 @@ export const summarizeLastMessages = async (
 };
 
 export const questionLastMessages = async (
+  trigger: Message | Interaction | CommandInteraction,
   guildId: string,
   channelId: string,
   senderId: string | undefined,
@@ -76,12 +77,15 @@ export const questionLastMessages = async (
   const messages = await getLastMessages(guildId, channelId, undefined, count);
 
   const answer = await questionMessages({
+    guildId,
+    channelId,
     messages,
     question,
     logRequest: saveAiRequestBuilder(guildId, channelId, senderId, {
       question,
       count,
     }),
+    context: getLogContext(trigger),
   });
   return unreplaceLaughs(answer);
 };

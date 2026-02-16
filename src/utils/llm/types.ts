@@ -11,6 +11,8 @@ export interface SummarizeMessagesProps {
   skipSystemPrompt?: boolean;
 }
 export interface QuestionMessageProps {
+  guildId: string;
+  channelId: string;
   messages: MessageFromDatabase[];
   question: string;
   logRequest: LogAiRequest | undefined;
@@ -65,4 +67,31 @@ export interface SummarizationOutput {
     startMessageId: string;
   }[];
   comment: string;
+}
+
+export const questionOutputSchemaOpenai: ResponseFormatJSONSchema.JSONSchema = {
+  name: 'answer',
+  strict: true,
+  schema: {
+    type: 'object',
+    properties: {
+      answer: {
+        type: 'string',
+        nullable: false,
+      },
+      startMessageIds: {
+        type: 'array',
+        items: {
+          type: 'string',
+          nullable: false,
+        },
+      },
+    },
+    additionalProperties: false,
+    required: ['answer', 'startMessageIds'],
+  },
+};
+export interface QuestionOutput {
+  answer: string;
+  startMessageIds: string[];
 }

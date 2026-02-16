@@ -2,7 +2,7 @@ import { MessageType } from 'discord.js';
 import { MessageFromDatabase } from '../type/index';
 import { replaceLaughs } from './index';
 import logger from '../lib/logger';
-import { SummarizationOutput } from './llm/types';
+import { QuestionOutput, SummarizationOutput } from './llm/types';
 import mongoose from 'mongoose';
 
 export const convertMessagesToPrompt = (messages: MessageFromDatabase[]) => {
@@ -187,7 +187,7 @@ export const constructSummarizationResult = (
   channelId: string,
   summarization?: string
 ): string => {
-  if (!summarization) return '요약된 내용이 없습니다.';
+  if (!summarization) return '요약된 내용이 없습니다';
 
   const summarizationJson: SummarizationOutput = JSON.parse(
     unwrapJsonBlocks(summarization)
@@ -206,4 +206,20 @@ export const constructSummarizationResult = (
   return `${topics.length === 0 ? '요약된 내용이 없습니다.' : topics}\n\n${
     summarizationJson.comment
   }`;
+};
+
+export const constructQuestionResult = (
+  guildId: string,
+  channelId: string,
+  answer?: string
+): string => {
+  if (!answer) return '답변 내용이 없습니다';
+  const answerJson: QuestionOutput = JSON.parse(unwrapJsonBlocks(answer));
+  const messageLinks = (answerJson.startMessageIds ?? [])
+    .reduce((prev, curr) => {
+      return prev + ' ' + getMessageLink(guildId, channelId, curr);
+    }, '')
+    .trim();
+
+  return `${answerJson.answer}\n\n${messageLinks}`;
 };

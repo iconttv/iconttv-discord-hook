@@ -84,6 +84,7 @@ export const execute = async (interaction: CommandInteraction) => {
   let answer;
   try {
     answer = await questionLastMessages(
+      interaction,
       guildId,
       channelId,
       interaction.member?.user.id,

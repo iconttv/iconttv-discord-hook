@@ -3,12 +3,14 @@ import { config } from '../../config';
 import logger from '../../lib/logger';
 import { makeChunk } from '../index';
 import {
+  constructQuestionResult,
   constructSummarizationResult,
   convertMessagesToPrompt,
 } from '../message';
 
 import {
   QuestionMessageProps,
+  questionOutputSchemaOpenai,
   SummarizeMessagesProps,
   SummarizeOutputSchemaOpenai,
 } from './types';
@@ -177,10 +179,13 @@ export const summarizeMessages = async ({
 };
 
 export const questionMessages = async ({
+  guildId,
+  channelId,
   messages,
   question,
   logRequest,
   skipSystemPrompt,
+  context,
 }: QuestionMessageProps): Promise<string | undefined> => {
   const promptSystem = skipSystemPrompt
     ? ''
@@ -199,14 +204,18 @@ export const questionMessages = async ({
       frequency_penalty: 0.5 + Math.random() * 0.1,
       presence_penalty: -0.3 + Math.random() * 0.2,
       temperature: 0.5 + Math.random() * 0.2,
+      response_format: {
+        type: 'json_schema',
+        json_schema: questionOutputSchemaOpenai,
+      },
     };
   const chatCompletionMessage: OpenAI.ChatCompletionMessageParam[] = [
     {
       role: 'system',
-      content: promptSystem.replace(
-        '{{ datetime }}',
-        new Date().toLocaleString()
-      ),
+      content: promptSystem
+        .replace('{{ channelName }}', context?.channelName || '')
+        .replace('{{ guildName }}', context?.guildName || '')
+        .replace('{{ datetime }}', new Date().toLocaleString()),
     },
     { role: 'system', content: messagePrompt },
     { role: 'user', content: question },
@@ -244,5 +253,11 @@ export const questionMessages = async ({
 
   if (!chatCompletion.choices[0].message.content) return;
 
-  return chatCompletion.choices[0].message.content.trim() + `\n(${model})`;
+  const answer = constructQuestionResult(
+    guildId,
+    channelId,
+    chatCompletion.choices[0].message.content.trim()
+  );
+
+  return answer + `\n(${model})`;
 };

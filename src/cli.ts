@@ -51,6 +51,8 @@ program
     }
 
     const response = await questionMessages({
+      guildId,
+      channelId,
       logRequest: async (...logRequestArgs) => {
         logger.debug(logRequestArgs);
       },
