@@ -1,4 +1,4 @@
-import { CommandInteraction, SlashCommandBuilder } from 'discord.js';
+import { ChatInputCommandInteraction, SlashCommandBuilder } from 'discord.js';
 import logger from '../../lib/logger';
 import { generateImageFromUser } from '../imageService';
 import { replyMessagePerError } from '../../utils/error';
@@ -39,7 +39,7 @@ export const data = new SlashCommandBuilder()
       .setRequired(false)
   );
 
-export const execute = async (interaction: CommandInteraction) => {
+export const execute = async (interaction: ChatInputCommandInteraction) => {
   const rawPrompt = interaction.options.get('p')?.value;
 
   const imageEdit = interaction.options.get('iedit')?.attachment;

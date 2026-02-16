@@ -1,5 +1,5 @@
 import {
-  CommandInteraction,
+  ChatInputCommandInteraction,
   PermissionFlagsBits,
   SlashCommandBuilder,
 } from 'discord.js';
@@ -30,7 +30,7 @@ export const data = new SlashCommandBuilder()
       .setRequired(false)
   );
 
-export const execute = async (interaction: CommandInteraction) => {
+export const execute = async (interaction: ChatInputCommandInteraction) => {
   const guildSetting = await getGuildSetting(interaction);
   if (
     !interaction.memberPermissions?.has(PermissionFlagsBits.ModerateMembers) &&
