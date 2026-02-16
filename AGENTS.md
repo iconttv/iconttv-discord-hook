@@ -44,7 +44,7 @@ LSP symbol APIs were unavailable during generation in this environment. Use scop
 
 ## CONVENTIONS
 - Runtime env naming is `prod`/`dev` (not `production`/`development`); config picks `.env` for prod, `.env.dev` otherwise.
-- Toolchain is pinned to Node 20.x + Yarn classic (`yarn@1.22.22`).
+- Toolchain is pinned to Node 24.x + Yarn classic (`yarn@1.22.22`).
 - TypeScript build is CommonJS, strict mode, emits declarations and strips comments.
 - `cmd-prod` still runs TS source via `tsx` (`src/deploy-commands.ts`) instead of `dist/*`.
 - CI workflow only automates PR creation from `develop` to `main`; there is no build/test quality gate in Actions.
