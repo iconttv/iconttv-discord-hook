@@ -1,13 +1,15 @@
 import {
+  ChatInputCommandInteraction,
   SlashCommandBuilder,
-  Interaction,
   RESTPostAPIApplicationCommandsJSONBody,
 } from 'discord.js';
 import { readdirSync } from 'fs';
 import path from 'path';
 import logger from '../../lib/logger';
 
-type SlashCommandHandler = (interaction: Interaction) => Promise<void>;
+type SlashCommandHandler = (
+  interaction: ChatInputCommandInteraction
+) => Promise<void>;
 
 interface SlashCommand {
   data: SlashCommandBuilder;

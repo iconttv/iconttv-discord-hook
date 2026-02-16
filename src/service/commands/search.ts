@@ -1,4 +1,4 @@
-import { CommandInteraction, SlashCommandBuilder } from 'discord.js';
+import { ChatInputCommandInteraction, SlashCommandBuilder } from 'discord.js';
 import logger from '../../lib/logger';
 import { searchMessage, searchMessageEmbedding } from '../searchService';
 import { trimText, truncateText } from '../../utils';
@@ -30,7 +30,7 @@ export const data = new SlashCommandBuilder()
       .setRequired(false)
   );
 
-export const execute = async (interaction: CommandInteraction) => {
+export const execute = async (interaction: ChatInputCommandInteraction) => {
   const keyword = interaction.options.get('keyword')?.value?.toString() ?? '';
   const inChannel = interaction.options.get('channel')?.value ?? false;
   const useEmbedding = interaction.options.get('embedding')?.value ?? false;

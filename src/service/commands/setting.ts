@@ -1,6 +1,6 @@
 import {
   ActionRowBuilder,
-  CommandInteraction,
+  ChatInputCommandInteraction,
   InteractionContextType,
   ModalActionRowComponentBuilder,
   ModalBuilder,
@@ -17,7 +17,7 @@ export const data = new SlashCommandBuilder()
   .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
   .setContexts(InteractionContextType.Guild);
 
-export const execute = async (interaction: CommandInteraction) => {
+export const execute = async (interaction: ChatInputCommandInteraction) => {
   if (!interaction.memberPermissions?.has(PermissionFlagsBits.ModerateMembers))
     return;
 

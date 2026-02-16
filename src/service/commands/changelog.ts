@@ -1,4 +1,4 @@
-import { CommandInteraction, SlashCommandBuilder } from 'discord.js';
+import { ChatInputCommandInteraction, SlashCommandBuilder } from 'discord.js';
 import logger from '../../lib/logger';
 import { config } from '../../config';
 
@@ -6,7 +6,7 @@ export const data = new SlashCommandBuilder()
   .setName('itvchangelog')
   .setDescription('가장 최근 변경 사항을 보여줍니다.');
 
-export const execute = async (interaction: CommandInteraction) => {
+export const execute = async (interaction: ChatInputCommandInteraction) => {
   const latestChangeLog = await fetch(
     `${config.GITHUB_BASEURL}/docs/lastChangelog.md`
   )

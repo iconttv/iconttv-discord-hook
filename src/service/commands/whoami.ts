@@ -1,11 +1,11 @@
-import { CommandInteraction, SlashCommandBuilder } from 'discord.js';
+import { ChatInputCommandInteraction, SlashCommandBuilder } from 'discord.js';
 import { getLogContext } from '../../utils/discord';
 
 export const data = new SlashCommandBuilder()
   .setName('whoami')
   .setDescription('whoami');
 
-export const execute = async (interaction: CommandInteraction) => {
+export const execute = async (interaction: ChatInputCommandInteraction) => {
   const context = getLogContext(interaction);
   if (!context) {
     await interaction.reply('채널 정보를 확인할 수 없습니다.');

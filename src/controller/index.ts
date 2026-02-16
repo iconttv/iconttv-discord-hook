@@ -52,7 +52,7 @@ export const registerEvents = (client: Client) => {
   });
 
   client.on(Events.InteractionCreate, async (interaction: Interaction) => {
-    if (interaction.isCommand()) {
+    if (interaction.isChatInputCommand()) {
       try {
         onCommandInteractionCreate(interaction);
       } catch (e) {

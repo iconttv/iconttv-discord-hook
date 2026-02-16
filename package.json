@@ -35,7 +35,7 @@
     "axios": "^1.13.5",
     "better-sqlite3": "^12.4.1",
     "commander": "^14.0.1",
-    "discord.js": "14.18.0",
+    "discord.js": "14.25.1",
     "dotenv": "^16.3.1",
     "es-toolkit": "^1.32.0",
     "jszip": "^3.10.1",
@@ -50,7 +50,6 @@
     "winston-daily-rotate-file": "^4.7.1"
   },
   "resolutions": {
-    "@discordjs/builders": "1.10.1",
     "discord.js/**/glob": "11.1.0",
     "discord.js/**/undici": "6.23.0",
     "discord.js/**/lodash": "4.17.23",

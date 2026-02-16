@@ -8,8 +8,7 @@ import {
   MessageFlags,
   GuildBasedChannel,
   CommandInteraction,
-  ActionRow,
-  MessageActionRowComponent,
+  TopLevelComponent,
   Embed,
   APIEmbed,
   EmbedData,
@@ -29,7 +28,7 @@ export interface LogContext {
   messageId: string;
   messageType: number;
   attachments: unknown[];
-  components: ActionRow<MessageActionRowComponent>[];
+  components: TopLevelComponent[];
   embeds: Embed[];
   guildMember?: GuildMember;
   guildName: string;
