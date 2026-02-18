@@ -37,12 +37,12 @@ export const execute = async (interaction: ChatInputCommandInteraction) => {
   const keepMessage = interaction.options.get('keep')?.value ?? false;
 
   logger.debug(
-    `keyword: ${keyword}, channel: ${inChannel}, useEmgedding: ${useEmbedding}, keepMessage: ${keepMessage}`
+    `keyword: ${keyword}, channel: ${inChannel}, useEmbedding: ${useEmbedding}, keepMessage: ${keepMessage}`
   );
 
   const searchWord = keyword.trim();
 
-  if (!searchWord || searchWord.length === 0) {
+  if (!searchWord) {
     await interaction.reply(`검색어가 입력되지 않았습니다.`);
     return;
   }

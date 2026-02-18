@@ -39,7 +39,8 @@ export const execute = async (interaction: ChatInputCommandInteraction) => {
     }`
   );
 
-  let hours, count;
+  let hours: number | undefined;
+  let count: number | undefined;
   if (isNaN(rawHours) && isNaN(rawCount)) {
     count = 300;
   } else if (isNaN(rawHours)) {
@@ -65,49 +66,39 @@ export const execute = async (interaction: ChatInputCommandInteraction) => {
   // interaction should be <= 3 sec
   // otherwise should defer reply
   const start = Date.now();
+  const getExecutionTimeSecMessage = () =>
+    `(${((Date.now() - start) / 1000).toFixed(2)}초 소요됨) `;
   await interaction.deferReply();
 
-  let summarization, executionTimeSecMessage;
+  let summarization: string | undefined;
   try {
     summarization = await summarizeLastMessages(interaction, hours, count);
   } catch (e) {
     logger.error(e);
-    executionTimeSecMessage = `(${((Date.now() - start) / 1000).toFixed(
-      2
-    )}초 소요됨) `;
     await replyMessagePerError(
       e,
-      `요약을 생성할 수 없습니다. ${executionTimeSecMessage}`,
+      `요약을 생성할 수 없습니다. ${getExecutionTimeSecMessage()}`,
       interaction.editReply.bind(interaction)
     );
     return;
   }
 
   if (!summarization) {
-    executionTimeSecMessage = `(${((Date.now() - start) / 1000).toFixed(
-      2
-    )}초 소요됨) `;
     await interaction.editReply(
-      `요약을 생성할 수 없습니다. ${executionTimeSecMessage}[001]`
+      `요약을 생성할 수 없습니다. ${getExecutionTimeSecMessage()}[001]`
     );
     return;
   }
 
   const messageRangeText = hours ? `${hours}시간 내의` : `${count}개의`;
   try {
-    executionTimeSecMessage = `(${((Date.now() - start) / 1000).toFixed(
-      2
-    )}초 소요됨) `;
     await interaction.editReply(
-      `최근 ${messageRangeText} 채팅 요약:\n\n${summarization} ${executionTimeSecMessage}`
+      `최근 ${messageRangeText} 채팅 요약:\n\n${summarization} ${getExecutionTimeSecMessage()}`
     );
   } catch (e) {
     logger.error(e);
-    executionTimeSecMessage = `(${((Date.now() - start) / 1000).toFixed(
-      2
-    )}초 소요됨) `;
     await interaction.editReply(
-      `요약을 생성할 수 없습니다. ${executionTimeSecMessage}[002]`
+      `요약을 생성할 수 없습니다. ${getExecutionTimeSecMessage()}[002]`
     );
   }
 };

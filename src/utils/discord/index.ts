@@ -131,20 +131,15 @@ export function createUserProfileEmbed(
       : message.user.defaultAvatarURL;
   } else {
     const guildMember = getGuildMember(message.guildId, getSenderId(message));
-    // author.name =
-    //   guildMember?.nickname ??
-    //   guildMember?.user.globalName ??
-    //   guildMember?.user.displayName ??
-    //   `ㅇㅇ (${telecomIp})`;
     author.name = getSenderName(guildMember);
     author.iconURL = getAvatarUrl(guildMember);
   }
 
-  const avaterEmbed = new EmbedBuilder(options)
+  const avatarEmbed = new EmbedBuilder(options)
     .setColor('DarkBlue')
     .setAuthor(author)
     .setTimestamp(message.createdTimestamp);
-  return avaterEmbed;
+  return avatarEmbed;
 }
 
 export async function deleteMessage(message: Message) {
@@ -223,8 +218,6 @@ export function createIconFileMessagePayload(matchIcon: Icon) {
 export const getLogContext = (
   message: Message | Interaction | CommandInteraction
 ): LogContext | undefined => {
-  // const guildMember = getGuildMemberFromMessage(message);
-  // const channel = getChannelFromMessage(message);
   const isMessage = message instanceof Message;
 
   const guildMember = getGuildMember(message.guildId, getSenderId(message));
