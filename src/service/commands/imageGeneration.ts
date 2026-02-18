@@ -64,48 +64,62 @@ export const execute = async (interaction: ChatInputCommandInteraction) => {
   }
 
   const start = Date.now();
+  const getExecutionTimeSecMessage = () =>
+    `(${((Date.now() - start) / 1000).toFixed(2)}초 소요됨) `;
   await interaction.deferReply();
 
   const imageInputUrls: string[] = [];
-  if (imageEdit) {
+
+  const pushAttachmentImageToInput = async (
+    attachment: { proxyURL: string } | null | undefined,
+    failMessage: string
+  ) => {
+    if (!attachment) {
+      return true;
+    }
+
     try {
       imageInputUrls.push(
-        await aiClient.imageToBase64(imageEdit.proxyURL, 1024)
+        await aiClient.imageToBase64(attachment.proxyURL, 1024)
       );
+      return true;
     } catch {
-      await interaction.reply(`수정할 이미지를 처리할 수 없습니다`);
-      return;
+      await interaction.reply(failMessage);
+      return false;
     }
+  };
+
+  if (
+    !(await pushAttachmentImageToInput(
+      imageEdit,
+      `수정할 이미지를 처리할 수 없습니다`
+    ))
+  ) {
+    return;
   }
-  if (imageRef1) {
-    try {
-      imageInputUrls.push(
-        await aiClient.imageToBase64(imageRef1.proxyURL, 1024)
-      );
-    } catch {
-      await interaction.reply(`레퍼런스 이미지1를 처리할 수 없습니다`);
-      return;
-    }
+  if (
+    !(await pushAttachmentImageToInput(
+      imageRef1,
+      `레퍼런스 이미지1를 처리할 수 없습니다`
+    ))
+  ) {
+    return;
   }
-  if (imageRef2) {
-    try {
-      imageInputUrls.push(
-        await aiClient.imageToBase64(imageRef2.proxyURL, 1024)
-      );
-    } catch {
-      await interaction.reply(`레퍼런스 이미지2를 처리할 수 없습니다`);
-      return;
-    }
+  if (
+    !(await pushAttachmentImageToInput(
+      imageRef2,
+      `레퍼런스 이미지2를 처리할 수 없습니다`
+    ))
+  ) {
+    return;
   }
-  if (imageRef3) {
-    try {
-      imageInputUrls.push(
-        await aiClient.imageToBase64(imageRef3.proxyURL, 1024)
-      );
-    } catch {
-      await interaction.reply(`레퍼런스 이미지3를 처리할 수 없습니다`);
-      return;
-    }
+  if (
+    !(await pushAttachmentImageToInput(
+      imageRef3,
+      `레퍼런스 이미지3를 처리할 수 없습니다`
+    ))
+  ) {
+    return;
   }
 
   let model: string, imageUrls: string[], executionTimeSecMessage: string;
@@ -119,9 +133,7 @@ export const execute = async (interaction: ChatInputCommandInteraction) => {
     );
   } catch (e) {
     logger.error(e);
-    executionTimeSecMessage = `(${((Date.now() - start) / 1000).toFixed(
-      2
-    )}초 소요됨) `;
+    executionTimeSecMessage = getExecutionTimeSecMessage();
     await replyMessagePerError(
       e,
       `이미지를 생성할 수 없습니다. ${executionTimeSecMessage}`,
@@ -131,9 +143,7 @@ export const execute = async (interaction: ChatInputCommandInteraction) => {
   }
 
   if (!imageUrls) {
-    executionTimeSecMessage = `(${((Date.now() - start) / 1000).toFixed(
-      2
-    )}초 소요됨) `;
+    executionTimeSecMessage = getExecutionTimeSecMessage();
     await interaction.editReply(
       `이미지를 생성할 수 없습니다. ${executionTimeSecMessage}[001]`
     );
@@ -141,9 +151,7 @@ export const execute = async (interaction: ChatInputCommandInteraction) => {
   }
 
   try {
-    executionTimeSecMessage = `(${((Date.now() - start) / 1000).toFixed(
-      2
-    )}초 소요됨) `;
+    executionTimeSecMessage = getExecutionTimeSecMessage();
 
     const userProfileEmbed = createUserProfileEmbed(interaction);
 
@@ -162,9 +170,7 @@ export const execute = async (interaction: ChatInputCommandInteraction) => {
     });
   } catch (e) {
     logger.error(e);
-    executionTimeSecMessage = `(${((Date.now() - start) / 1000).toFixed(
-      2
-    )}초 소요됨) `;
+    executionTimeSecMessage = getExecutionTimeSecMessage();
     await interaction.editReply(
       `생성한 이미지를 전송할 수 없습니다. ${executionTimeSecMessage}[002]`
     );

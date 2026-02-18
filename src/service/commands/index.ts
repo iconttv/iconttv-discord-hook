@@ -42,8 +42,6 @@ export const readCommands = (() => {
     );
 
     for (const file of commandFiles) {
-      // const filePath = path.join(foldersPath, file);
-      // const filePathUrl = pathToFileURL(filePath).href;
       logger.debug(`Dynamic import ${file}`);
       const commandConfig = (await import(`./${file}`)) as SlashCommand;
 

@@ -34,11 +34,30 @@ const getElasticClient = () => {
   return _elasticClient;
 };
 
-const getEmbeddintQueryInstruct = (query: string) => {
+const getEmbeddingQueryInstruct = (query: string) => {
   return (
     'Instruct: Retrieve relevant messages that best matches the query' +
     `\n${query}`
   );
+};
+
+interface SearchResultSource {
+  '@timestamp': string;
+  guildId: string;
+  channelId: string;
+  messageId: string;
+  message: string;
+  embeddingInput: string;
+  link: string;
+}
+
+const normalizeSearchResultSource = (
+  source: SearchResultSource
+): SearchResultSource => {
+  source['@timestamp'] = new Date(source['@timestamp']).toLocaleString();
+  source.link = getMessageLink(source.guildId, source.channelId, source.messageId);
+  source.message = cleanEmbeddingInput(source.embeddingInput);
+  return source;
 };
 
 
@@ -151,24 +170,7 @@ export const searchMessage = async (
 
   const searchResult = result.hits.hits.map(hit => {
     logger.debug(`score: ${hit._score}`);
-    const source = hit._source as {
-      '@timestamp': string;
-      guildId: string;
-      channelId: string;
-      messageId: string;
-      message: string;
-      embeddingInput: string;
-      link: string;
-    };
-    source['@timestamp'] = new Date(source['@timestamp']).toLocaleString();
-    source.link = getMessageLink(
-      source.guildId,
-      source.channelId,
-      source.messageId
-    );
-    source.message = cleanEmbeddingInput(source.embeddingInput);
-
-    return source;
+    return normalizeSearchResultSource(hit._source as SearchResultSource);
   });
 
   return searchResult;
@@ -211,7 +213,7 @@ export const searchMessageEmbedding = async (
     });
   }
   const queryEmbedding = await aiClient.createEmbeddingText(
-    getEmbeddintQueryInstruct(searchWords)
+    getEmbeddingQueryInstruct(searchWords)
   );
   logger.debug(`embedding created ${searchWords} ${queryEmbedding.length}`);
 
@@ -262,24 +264,7 @@ export const searchMessageEmbedding = async (
 
   const searchResult = result.hits.hits.map(hit => {
     logger.debug(`score: ${hit._score}`);
-    const source = hit._source as {
-      '@timestamp': string;
-      guildId: string;
-      channelId: string;
-      messageId: string;
-      message: string;
-      embeddingInput: string;
-      link: string;
-    };
-    source['@timestamp'] = new Date(source['@timestamp']).toLocaleString();
-    source.link = getMessageLink(
-      source.guildId,
-      source.channelId,
-      source.messageId
-    );
-    source.message = cleanEmbeddingInput(source.embeddingInput);
-
-    return source;
+    return normalizeSearchResultSource(hit._source as SearchResultSource);
   });
 
   return searchResult;
