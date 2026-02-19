@@ -45,4 +45,4 @@ src/
 - Do not add new runtime commands only in shell scripts; wire canonical entrypoints in `package.json`.
 
 ## NOTES
-- Local deep docs: `src/service/AGENTS.md`, `src/service/commands/AGENTS.md`, `src/utils/AGENTS.md`, `src/utils/discord/AGENTS.md`.
+- Local deep docs: `src/controller/AGENTS.md`, `src/service/AGENTS.md`, `src/service/archive/AGENTS.md`, `src/service/embedding/AGENTS.md`, `src/service/commands/AGENTS.md`, `src/repository/AGENTS.md`, `src/database/AGENTS.md`, `src/database/model/AGENTS.md`, `src/utils/AGENTS.md`, `src/utils/discord/AGENTS.md`, `src/utils/llm/AGENTS.md`.

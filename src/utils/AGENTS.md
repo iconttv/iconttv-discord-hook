@@ -40,3 +40,4 @@ src/utils/
 
 ## NOTES
 - Deep Discord-specific contracts are documented in `src/utils/discord/AGENTS.md`.
+- LLM integration contracts are documented in `src/utils/llm/AGENTS.md`.
