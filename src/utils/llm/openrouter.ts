@@ -72,7 +72,7 @@ export const summarizeMessages = async ({
   context,
 }: SummarizeMessagesProps): Promise<string | undefined> => {
   const promptSystemPromise = fetch(
-    `${config.GITHUB_BASEURL}/src/utils/llm/prompt-summarization.txt`
+    `${config.GITHUB_BASEURL}/static/prompt-summarization.txt`
   )
     .then(res => res.text())
     .catch(e => {
@@ -80,7 +80,7 @@ export const summarizeMessages = async ({
       throw e;
     });
   const promptPersonaPromise = fetch(
-    `${config.GITHUB_BASEURL}/src/utils/llm/prompt-persona.txt`
+    `${config.GITHUB_BASEURL}/static/prompt-persona.txt`
   )
     .then(res => res.text())
     .catch(e => {
@@ -127,7 +127,7 @@ export const summarizeMessages = async ({
       });
     }
     chatCompletionMessage.push({
-      role: 'system',
+      role: 'user',
       content: messagePrompt,
     });
     chatCompletionMessage.push({
@@ -189,7 +189,7 @@ export const questionMessages = async ({
 }: QuestionMessageProps): Promise<string | undefined> => {
   const promptSystem = skipSystemPrompt
     ? ''
-    : await fetch(`${config.GITHUB_BASEURL}/src/utils/llm/prompt-question.txt`)
+    : await fetch(`${config.GITHUB_BASEURL}/static/prompt-question.txt`)
         .then(res => res.text())
         .catch(e => {
           logger.error(e);
@@ -217,7 +217,7 @@ export const questionMessages = async ({
         .replace('{{ guildName }}', context?.guildName || '')
         .replace('{{ datetime }}', new Date().toLocaleString()),
     },
-    { role: 'system', content: messagePrompt },
+    { role: 'user', content: messagePrompt },
     { role: 'user', content: question },
   ];
 

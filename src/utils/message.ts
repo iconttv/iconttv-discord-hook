@@ -5,6 +5,24 @@ import logger from '../lib/logger';
 import { QuestionOutput, SummarizationOutput } from './llm/types';
 import mongoose from 'mongoose';
 
+const convertReactions = (reactions: MessageFromDatabase['reactions']) => {
+  if (!reactions || !Array.isArray(reactions) || reactions.length === 0) {
+    return null
+  }
+
+  const result = []
+  for (const reaction of reactions) { 
+    result.push({
+      // "reaction": "<:b_jinup:1109368225441005588>",
+      // "identifier": "b_jinup:1109368225441005588"
+      'emoji': reaction.emoji.reaction,
+      'count': reaction.count,
+      'users': reaction.senders.map(sender => sender.senderName)
+    })
+  }
+  return result
+}
+
 export const convertMessagesToPrompt = (messages: MessageFromDatabase[]) => {
   const validMessages = messages.filter(
     message =>
@@ -14,34 +32,21 @@ export const convertMessagesToPrompt = (messages: MessageFromDatabase[]) => {
         typeof message.message === 'string')
   );
 
-  let formattedString = '';
-  let currentSender: string | null = null;
+  return validMessages
+    .map(msg => {
+      const messageContent = replaceLaughs(
+        msg.EMBEDDING_INPUT ?? `# TEXT\n${msg.message}`
+      )
 
-  validMessages.forEach(msg => {
-    const sender = msg.senderName;
-
-    // 사용자가 변경된 경우 새로운 <user>와 <body> 태그 시작
-    if (sender !== currentSender) {
-      if (currentSender !== null) {
-        formattedString += `</body>`; // 이전 사용자의 <body> 닫기
-      }
-      formattedString += `<user>${sender}</user><body time="${msg.createdAt}">`; // 새로운 사용자 시작
-      currentSender = sender as string; // 현재 작성자 업데이트
-    }
-
-    const messageContent = replaceLaughs(
-      msg.EMBEDDING_INPUT ?? `# TEXT\n${msg.message}`
-    );
-
-    formattedString += `<message id="${msg.messageId}">${messageContent}</message>`;
-  });
-
-  // 마지막 사용자의 <body> 태그 닫기
-  if (currentSender !== null) {
-    formattedString += `</body>`;
-  }
-
-  return formattedString;
+      return JSON.stringify({
+        senderName: msg.senderName,
+        createdAt: msg.createdAt ? msg.createdAt.toISOString() : null,
+        messageId: msg.messageId,
+        content: messageContent,
+        reactions: convertReactions(msg.reactions),
+      });
+    })
+    .join('\n');
 };
 
 const getLastHourMessages = async (
@@ -79,6 +84,7 @@ const getLastHourMessages = async (
           senderName: 1,
           createdAt: 1,
           message: 1,
+          reactions: 1,
           EMBEDDING_INPUT: 1,
         },
       },
@@ -128,6 +134,7 @@ const getLastNMessages = async (
           senderName: 1,
           createdAt: 1,
           message: 1,
+          reactions: 1,
           EMBEDDING_INPUT: 1,
         },
       },

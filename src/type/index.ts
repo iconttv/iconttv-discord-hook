@@ -1,3 +1,5 @@
+import { MessageReactionEntry } from "../database/model/MessageModel";
+
 export type LogAiRequest = (
   provider: string,
   modelName: string,
@@ -14,5 +16,6 @@ export interface MessageFromDatabase {
   senderName?: string | null;
   message?: string | null;
   createdAt?: Date | null;
+  reactions?: MessageReactionEntry[] | null;
   EMBEDDING_INPUT?: string | null;
 }

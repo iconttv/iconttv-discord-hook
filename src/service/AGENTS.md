@@ -41,4 +41,4 @@ src/service/
 - Do not leak raw provider errors directly to users; map user-facing text through error handlers.
 
 ## NOTES
-- Child module docs exist for command-specific conventions: `src/service/commands/AGENTS.md`.
+- Child module docs exist for command/archive/embedding conventions: `src/service/commands/AGENTS.md`, `src/service/archive/AGENTS.md`, `src/service/embedding/AGENTS.md`.
