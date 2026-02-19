@@ -13,7 +13,9 @@ const convertReactions = (reactions: MessageFromDatabase['reactions']) => {
   const result = []
   for (const reaction of reactions) { 
     result.push({
-      'emoji': reaction.emoji.identifier,
+      // "reaction": "<:b_jinup:1109368225441005588>",
+      // "identifier": "b_jinup:1109368225441005588"
+      'emoji': reaction.emoji.reaction,
       'count': reaction.count,
       'users': reaction.senders.map(sender => sender.senderName)
     })
