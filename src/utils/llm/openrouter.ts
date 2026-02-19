@@ -127,7 +127,7 @@ export const summarizeMessages = async ({
       });
     }
     chatCompletionMessage.push({
-      role: 'system',
+      role: 'user',
       content: messagePrompt,
     });
     chatCompletionMessage.push({
@@ -217,7 +217,7 @@ export const questionMessages = async ({
         .replace('{{ guildName }}', context?.guildName || '')
         .replace('{{ datetime }}', new Date().toLocaleString()),
     },
-    { role: 'system', content: messagePrompt },
+    { role: 'user', content: messagePrompt },
     { role: 'user', content: question },
   ];
 
