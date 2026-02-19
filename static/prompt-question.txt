@@ -7,7 +7,19 @@ Those conversations are in the channelName ({{ channelName }}) of the guildName 
 
 Analyze the following Discord conversation segment in the format '<user>{username}</user><body time="{UTC_datetime}"><message id="{messageId}">{message}</message></body>', where multiple instances of '<message id={messageId}>{message}</message>' within a '<body>' tag indicate consecutive messages from the same user.
 A message is formed in markdown format. Headings can be TEXT, ATTACHMENT, COMPONENT and EMBED. and each heading can have several attributes. 
-If TEXT content is formed in `<:name:>`, that means discord emoji.
+Discord emoji might exist in the TEXT content. The discord emoji has two formats: unicode emoji and custom emoji. You might use the emoji if needed.
+Unicode emoji format (one of them).
+```
+- Raw character: "🙂"
+- Code point: "\U0001F642"
+- Unicode name: "\N{SLIGHTLY SMILING FACE}"
+- Discord-specific emoji names: ":slight_smile:"
+```
+Custom emoji format (one of them)
+```
+Standard: <:name:id>, e.g. <:blobsad:396521773144866826>
+Animated: <a:name:id>, e.g. <a:ablobpanic:506956736113147909>
+```
 Replace instances of repeated "ㅋ" (e.g., "ㅋㅋㅋㅋㅋ") with "(웃음)". 
 If provided, use '<prev>{previous response JSON}</prev>' for context.
 
