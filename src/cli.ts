@@ -3,6 +3,7 @@ import { Command } from 'commander';
 import logger from './lib/logger';
 import { getLastMessages } from './utils/message';
 import { questionMessages } from './utils/llm';
+import { getMessageIdentityFilter } from './utils/discord';
 import { createMongooseConnection } from './database';
 import { exit } from 'process';
 import MessageModel from './database/model/MessageModel';
@@ -120,6 +121,16 @@ program
           );
         }
 
+        const messageFilter = getMessageIdentityFilter({
+          guildId: message.guildId,
+          channelId: message.channelId,
+          messageId: message.messageId,
+        });
+        if (!messageFilter) {
+          skipped++;
+          return;
+        }
+
         try {
           if (message.EMBEDDING_INPUT) {
             const embedding = await aiClient.createEmbeddingText(
@@ -127,11 +138,7 @@ program
             );
             processed++;
             await MessageModel.updateOne(
-              {
-                guildId: message.guildId,
-                channelId: message.channelId,
-                messageId: message.messageId,
-              },
+              messageFilter,
               {
                 $set: {
                   EMBEDDING_STATUS: true,
@@ -155,11 +162,7 @@ program
             } else {
               processed++;
               await MessageModel.updateOne(
-                {
-                  guildId: message.guildId,
-                  channelId: message.channelId,
-                  messageId: message.messageId,
-                },
+                messageFilter,
                 {
                   $set: {
                     TEXT_MESSAGE: embeddingResult.TEXT_MESSAGE,
@@ -177,11 +180,7 @@ program
           logger.error(`Embedding error ${error}. ${message.messageId}`);
           failure++;
           await MessageModel.updateOne(
-            {
-              guildId: message.guildId,
-              channelId: message.channelId,
-              messageId: message.messageId,
-            },
+            messageFilter,
             {
               $set: {
                 EMBEDDING_STATUS: false,

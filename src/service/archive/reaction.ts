@@ -1,5 +1,4 @@
 import {
-  GuildMember,
   Message,
   MessageReaction,
   PartialMessage,
@@ -12,7 +11,12 @@ import MessageModel, {
   type MessageReactions,
   type ReactionSender,
 } from '../../database/model/MessageModel';
-import { getSenderName } from '../../utils/discord';
+import {
+  type MessageIdentityFilter,
+  getMessageIdentityFilterFromMessage,
+  getSenderName,
+  resolveGuildMember,
+} from '../../utils/discord';
 import logger from '../../lib/logger';
 
 type ReactionEntity = MessageReaction | PartialMessageReaction;
@@ -32,34 +36,6 @@ type MessageReactionChangeEvent =
       reaction: ReactionEntity;
     };
 
-type MessageReactionFilter = {
-  guildId: string;
-  channelId: string;
-  messageId: string;
-};
-
-const resolveGuildMember = async (
-  message: Message | PartialMessage,
-  userId: string
-): Promise<GuildMember | undefined> => {
-  const guild = message.guild;
-  if (!guild) {
-    return undefined;
-  }
-
-  const cachedGuildMember = guild.members.cache.get(userId);
-  if (cachedGuildMember) {
-    return cachedGuildMember;
-  }
-
-  try {
-    const fetchedGuildMember = await guild.members.fetch(userId);
-    return fetchedGuildMember;
-  } catch {
-    return undefined;
-  }
-};
-
 const toSender = async (
   message: Message | PartialMessage,
   user: User | PartialUser
@@ -68,20 +44,6 @@ const toSender = async (
   return {
     senderId: user.id,
     senderName: getSenderName(guildMember),
-  };
-};
-
-const getFilterFromMessage = (
-  message: Message | PartialMessage
-): MessageReactionFilter | null => {
-  if (!message.guildId || !message.channelId || !message.id) {
-    return null;
-  }
-
-  return {
-    guildId: message.guildId,
-    channelId: message.channelId,
-    messageId: message.id,
   };
 };
 
@@ -233,7 +195,7 @@ const normalizeStoredReactions = (value: unknown): MessageReactions => {
 };
 
 const getStoredReactions = async (
-  filter: MessageReactionFilter
+  filter: MessageIdentityFilter
 ): Promise<MessageReactions> => {
   const message = await MessageModel.findOne(filter, { reactions: 1 }).lean<{
     reactions?: unknown;
@@ -272,7 +234,7 @@ export const onMessageReactionChange = async (
   logger.debug(`onMessageReactionChange-1 ${event.type}`)
 
   if (event.type === 'removeAll') {
-    const filter = getFilterFromMessage(event.message);
+    const filter = getMessageIdentityFilterFromMessage(event.message);
     if (!filter) {
       return;
     }
@@ -294,7 +256,7 @@ export const onMessageReactionChange = async (
     await reaction.fetch();
   }
 
-  const filter = getFilterFromMessage(reaction.message);
+  const filter = getMessageIdentityFilterFromMessage(reaction.message);
   if (!filter) {
     return;
   }
