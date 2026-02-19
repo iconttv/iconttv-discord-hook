@@ -6,8 +6,8 @@ import { QuestionOutput, SummarizationOutput } from './llm/types';
 import mongoose from 'mongoose';
 
 const convertReactions = (reactions: MessageFromDatabase['reactions']) => {
-  if (!reactions || !Array.isArray(reactions)) {
-    return ''
+  if (!reactions || !Array.isArray(reactions) || reactions.length === 0) {
+    return null
   }
 
   const result = []
