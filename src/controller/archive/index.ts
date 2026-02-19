@@ -8,6 +8,7 @@ import {
   savePreviousMessages,
 } from '../../service/archive/message';
 import { webhook } from '../../utils/webhook';
+import { onMessageReactionChange } from '../../service/archive/reaction';
 
 export const registerEventsArchive = (client: Client) => {
   client.once(Events.ClientReady, event => {
@@ -36,5 +37,55 @@ export const registerEventsArchive = (client: Client) => {
 
   client.on(Events.MessageBulkDelete, async messages => {
     await bulkDeleteMessage(messages);
+  });
+  
+  client.on(Events.MessageReactionAdd, async (reaction, user) => {
+    try {
+      await onMessageReactionChange({
+        type: 'add',
+        reaction,
+        user,
+      });
+    } catch (e) {
+      webhook.sendMessage('MessageReactionAddError', e, 'error');
+      logger.error(e);
+    }
+  });
+
+  client.on(Events.MessageReactionRemove, async (reaction, user) => {
+    try {
+      await onMessageReactionChange({
+        type: 'remove',
+        reaction,
+        user,
+      });
+    } catch (e) {
+      webhook.sendMessage('MessageReactionRemoveError', e, 'error');
+      logger.error(e);
+    }
+  });
+
+  client.on(Events.MessageReactionRemoveAll, async message => {
+    try {
+      await onMessageReactionChange({
+        type: 'removeAll',
+        message,
+      });
+    } catch (e) {
+      webhook.sendMessage('MessageReactionRemoveAllError', e, 'error');
+      logger.error(e);
+    }
+  });
+
+  client.on(Events.MessageReactionRemoveEmoji, async reaction => {
+    try {
+      await onMessageReactionChange({
+        type: 'removeEmoji',
+        reaction,
+      });
+    } catch (e) {
+      webhook.sendMessage('MessageReactionRemoveEmojiError', e, 'error');
+      logger.error(e);
+    }
   });
 };

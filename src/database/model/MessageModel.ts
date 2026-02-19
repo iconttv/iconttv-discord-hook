@@ -1,5 +1,78 @@
 import mongoose from 'mongoose';
 
+export interface ReactionSender {
+  senderId: string;
+  senderName: string;
+}
+
+export interface MessageReactionEmoji {
+  animated: boolean | null;
+  name: string;
+  id: string | null;
+  reaction: string;
+  identifier: string;
+}
+
+export interface MessageReactionEntry {
+  emoji: MessageReactionEmoji;
+  senders: ReactionSender[];
+  count: number;
+}
+
+export type MessageReactions = MessageReactionEntry[];
+
+const reactionSenderSchema = new mongoose.Schema(
+  {
+    senderId: { type: String, required: true },
+    senderName: { type: String, required: true },
+  },
+  { _id: false }
+);
+
+const messageReactionEmojiSchema = new mongoose.Schema(
+  {
+    animated: {
+      type: Boolean,
+      default: null,
+    },
+    name: {
+      type: String,
+      required: true,
+    },
+    id: {
+      type: String,
+      default: null,
+    },
+    reaction: {
+      type: String,
+      required: true,
+    },
+    identifier: {
+      type: String,
+      required: true,
+    },
+  },
+  { _id: false }
+);
+
+const messageReactionEntrySchema = new mongoose.Schema(
+  {
+    emoji: {
+      type: messageReactionEmojiSchema,
+      required: true,
+    },
+    senders: {
+      type: [reactionSenderSchema],
+      default: [],
+    },
+    count: {
+      type: Number,
+      default: 0,
+    },
+  },
+  { _id: false }
+);
+
 export const messageSchema = new mongoose.Schema({
   guildId: { type: String, required: true },
   channelId: { type: String, required: true },
@@ -10,6 +83,10 @@ export const messageSchema = new mongoose.Schema({
   attachments: [mongoose.Schema.Types.Mixed],
   components: [mongoose.Schema.Types.Mixed],
   embeds: [mongoose.Schema.Types.Mixed],
+  reactions: {
+    type: [messageReactionEntrySchema],
+    default: [],
+  },
   isDeleted: { type: Boolean, default: false },
   guildName: String,
   channelName: String,

@@ -50,7 +50,6 @@ export const registerEvents = (client: Client) => {
       logger.error(e);
     }
   });
-
   client.on(Events.InteractionCreate, async (interaction: Interaction) => {
     if (interaction.isChatInputCommand()) {
       try {

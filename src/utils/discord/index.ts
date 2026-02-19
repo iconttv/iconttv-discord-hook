@@ -48,7 +48,7 @@ export function isAnonMessage(text: string) {
   );
 }
 
-function getSenderName(guildMember: GuildMember | undefined) {
+export function getSenderName(guildMember: GuildMember | undefined) {
   if (!guildMember) return `ㅇㅇ (${getRandomTelecomIP()}.)`;
   return (
     guildMember.nickname ??
@@ -95,7 +95,7 @@ function getGuild(guildId: string | null) {
  * @param memberId isMessage ? message.author.id : message.member?.user.id ?? message.user.id
  * @returns
  */
-function getGuildMember(guildId: string | null, memberId: string | null) {
+export function getGuildMember(guildId: string | null, memberId: string | null) {
   const guild = getGuild(guildId);
   const member = guild?.members.cache.find(
     (gm: GuildMember) => gm.id === memberId
