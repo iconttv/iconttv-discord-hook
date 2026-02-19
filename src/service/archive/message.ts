@@ -9,7 +9,11 @@ import {
 } from 'discord.js';
 import MessageModel from '../../database/model/MessageModel';
 import logger from '../../lib/logger';
-import { getLogContext } from '../../utils/discord';
+import {
+  getLogContext,
+  getMessageIdentityFilter,
+  getMessageIdentityFilterFromMessage,
+} from '../../utils/discord';
 import { retry } from 'es-toolkit';
 import { processMessage } from '../embedding/discord_processor';
 import { produceMessageToKafka } from '../kafkaService';
@@ -98,12 +102,11 @@ export const updateMessage = async (
     logger.debug(
       `updateMessage-2 Before Mesasge Update "${context.senderName} - ${context.senderMessage}"`
     );
+    const filter = getMessageIdentityFilter(context);
+    if (!filter) return;
+
     await MessageModel.findOneAndUpdate(
-      {
-        guildId: context.guildId,
-        channelId: context.channelId,
-        messageId: context.messageId,
-      },
+      filter,
       {
         messageType: context.messageType,
         message: context.senderMessage,
@@ -135,17 +138,14 @@ export const deleteMessage = async (
     logger.debug(
       `deleteMessage-1 Before Create Message Delete Context "${message.content}"`
     );
-    if (!message.guildId || !message.channelId || !message.id) return;
+    const filter = getMessageIdentityFilterFromMessage(message);
+    if (!filter) return;
 
     logger.debug(
       `deleteMessage-2 Before Mesasge Delete "${message.author} - ${message.content}"`
     );
     await MessageModel.findOneAndUpdate(
-      {
-        guildId: message.guildId,
-        channelId: message.channelId,
-        messageId: message.id,
-      },
+      filter,
       {
         isDeleted: true,
         deletedAt: Date.now(),
@@ -174,19 +174,41 @@ export const bulkDeleteMessage = async (
       `bulkDeleteMessage-1 Before Create Message Bulk Delete Context "${messageContents}"`
     );
 
-    const bulkOps = messages.map(message => ({
+    const bulkOps: {
       updateOne: {
         filter: {
-          guildId: message.guildId,
-          channelId: message.channelId,
-          messageId: message.id,
-        },
+          guildId: string;
+          channelId: string;
+          messageId: string;
+        };
         update: {
-          isDeleted: true,
-          deletedAt: Date.now(),
+          isDeleted: true;
+          deletedAt: number;
+        };
+      };
+    }[] = [];
+
+    messages.forEach(message => {
+      const filter = getMessageIdentityFilterFromMessage(message);
+      if (!filter) {
+        return;
+      }
+
+      bulkOps.push({
+        updateOne: {
+          filter,
+          update: {
+            isDeleted: true,
+            deletedAt: Date.now(),
+          },
         },
-      },
-    }));
+      });
+    });
+
+    if (bulkOps.length === 0) {
+      return;
+    }
+
     logger.debug(`bulkDeleteMessage-2 Before Mesasge Bulk Delete "${bulkOps}"`);
     await MessageModel.bulkWrite(bulkOps);
     logger.debug(

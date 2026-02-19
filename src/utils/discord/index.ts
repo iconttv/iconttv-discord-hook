@@ -13,6 +13,7 @@ import {
   APIEmbed,
   EmbedData,
   Interaction,
+  PartialMessage,
 } from 'discord.js';
 import path from 'path';
 
@@ -41,6 +42,18 @@ export interface LogContext {
   createdAt: Date;
 }
 
+export interface MessageIdentityFilter {
+  guildId: string;
+  channelId: string;
+  messageId: string;
+}
+
+type MessageIdentityInput = {
+  guildId: string | null | undefined;
+  channelId: string | null | undefined;
+  messageId: string | null | undefined;
+};
+
 export function isAnonMessage(text: string) {
   const restArgs = text.split(' ').slice(1);
   return (
@@ -48,7 +61,7 @@ export function isAnonMessage(text: string) {
   );
 }
 
-function getSenderName(guildMember: GuildMember | undefined) {
+export function getSenderName(guildMember: GuildMember | undefined) {
   if (!guildMember) return `ㅇㅇ (${getRandomTelecomIP()}.)`;
   return (
     guildMember.nickname ??
@@ -84,6 +97,30 @@ export function getSenderId(
     : message.member?.user.id ?? message.user.id;
 }
 
+export function getMessageIdentityFilter(
+  source: MessageIdentityInput
+): MessageIdentityFilter | null {
+  if (!source.guildId || !source.channelId || !source.messageId) {
+    return null;
+  }
+
+  return {
+    guildId: source.guildId,
+    channelId: source.channelId,
+    messageId: source.messageId,
+  };
+}
+
+export function getMessageIdentityFilterFromMessage(
+  message: Message | PartialMessage
+): MessageIdentityFilter | null {
+  return getMessageIdentityFilter({
+    guildId: message.guildId,
+    channelId: message.channelId,
+    messageId: message.id,
+  });
+}
+
 function getGuild(guildId: string | null) {
   const guild = client.guilds.cache.find((g: Guild) => g.id === guildId);
   return guild;
@@ -95,12 +132,33 @@ function getGuild(guildId: string | null) {
  * @param memberId isMessage ? message.author.id : message.member?.user.id ?? message.user.id
  * @returns
  */
-function getGuildMember(guildId: string | null, memberId: string | null) {
+export function getGuildMember(guildId: string | null, memberId: string | null) {
   const guild = getGuild(guildId);
   const member = guild?.members.cache.find(
     (gm: GuildMember) => gm.id === memberId
   );
   return member;
+}
+
+export async function resolveGuildMember(
+  message: Message | PartialMessage,
+  memberId: string
+): Promise<GuildMember | undefined> {
+  const cachedGuildMember = getGuildMember(message.guildId, memberId);
+  if (cachedGuildMember) {
+    return cachedGuildMember;
+  }
+
+  const guild = message.guild;
+  if (!guild) {
+    return undefined;
+  }
+
+  try {
+    return await guild.members.fetch(memberId);
+  } catch {
+    return undefined;
+  }
 }
 
 function getChannel(guildId: string | null, channelId: string | null) {

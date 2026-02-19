@@ -94,3 +94,4 @@ yarn lint:format
 - `tsconfig.build.json` excludes `test` and `**/*spec.ts` from build output.
 - `scripts/docker-up.sh` removes compose containers and volumes before recreate.
 - For subsystem details, start at `src/AGENTS.md` and drill down to child AGENTS files.
+- DO NOT RUN `yarn dev`, `yarn start`, `yarn archive-dev`, `yarn archive-start`, `yarn cmd-dev`, `yarn cmd-prod` IN ANY CIRCUMSTANCE
