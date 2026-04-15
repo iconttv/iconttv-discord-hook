@@ -91,7 +91,7 @@ export const messageSchema = new mongoose.Schema({
   guildName: String,
   channelName: String,
   senderName: String,
-  createdAt: { type: Date, default: Date.now },
+  createdAt: { type: Date, default: null },
   raw: mongoose.Schema.Types.Mixed,
   deletedAt: { type: Date, default: null },
   editedAt: { type: Date, default: null },
@@ -116,6 +116,7 @@ export const messageSchema = new mongoose.Schema({
   EMBEDDING_INPUT: { type: String, default: null },
   EMBEDDING: { type: [Number], default: null },
   EMBEDDING_STATUS: { type: Boolean, default: null },
+  _CREATED_AT: { type: Date, default: Date.now },
 });
 messageSchema.index(
   {

@@ -10,7 +10,7 @@ import MessageModel from './database/model/MessageModel';
 import { calculateEmbedding } from './service/embedding/discord_processor';
 import { aiClient } from './service/embedding/client';
 import { config } from './config';
-import { SnowflakeUtil } from 'discord.js';
+import { Events, SnowflakeUtil } from 'discord.js';
 
 const program = new Command();
 
@@ -206,21 +206,32 @@ program
   .requiredOption('-g, --guildId <string>', 'Guild ID')
   .requiredOption('-d, --date <string>', 'last date in yyyymmdd format')
   .action(async function (options: { guildId: string; date: string }) {
+    await createMongooseConnection();
+    
+    logger.info(JSON.stringify(options))
     const epoch = new Date(`${options.date}T00:00:00.000Z`);
     const beforeMessageId = SnowflakeUtil.generate({
       timestamp: epoch,
     }).toString();
+    logger.info(beforeMessageId)
 
     const client = (await import('./lib/discord')).default;
     const archiver = await import('./service/archive/message');
 
-    await client.login(config.DISCORD_BOT_TOKEN);
+    client.once(Events.ClientReady, async event => {
+      logger.info(`Logged in as ${event.user.tag}`);
 
-    const guild =
-      client.guilds.cache.get(options.guildId) ??
-      (await client.guilds.fetch(options.guildId));
+      const guild =
+        client.guilds.cache.get(options.guildId) ??
+        (await client.guilds.fetch(options.guildId));
 
-    await archiver.savePreviousMessages(guild, beforeMessageId);
+      logger.info(guild.name)
+      await archiver.savePreviousMessages(guild, beforeMessageId);
+      logger.info('done')
+      exit(0)
+    });
+
+    client.login(config.DISCORD_BOT_TOKEN);
   });
 
 program.parse();
