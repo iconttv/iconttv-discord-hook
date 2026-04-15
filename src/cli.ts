@@ -210,11 +210,12 @@ program
     const beforeMessageId = SnowflakeUtil.generate({
       timestamp: epoch,
     }).toString();
+    logger.info(`${options} ${beforeMessageId}`)
 
     const client = (await import('./lib/discord')).default;
     const archiver = await import('./service/archive/message');
 
-    await client.login(config.DISCORD_BOT_TOKEN);
+    client.login(config.DISCORD_BOT_TOKEN);
 
     const guild =
       client.guilds.cache.get(options.guildId) ??
