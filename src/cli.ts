@@ -10,6 +10,7 @@ import MessageModel from './database/model/MessageModel';
 import { calculateEmbedding } from './service/embedding/discord_processor';
 import { aiClient } from './service/embedding/client';
 import { config } from './config';
+import { SnowflakeUtil } from 'discord.js';
 
 const program = new Command();
 
@@ -197,6 +198,29 @@ program
     logger.debug(
       `Processed batch: ${processed} processed, ${failure} failed, ${skipped} skipped`
     );
+  });
+
+program
+  .command('backfill')
+  .description('backfill guild messages')
+  .requiredOption('-g, --guildId <string>', 'Guild ID')
+  .requiredOption('-d, --date <string>', 'last date in yyyymmdd format')
+  .action(async function (options: { guildId: string; date: string }) {
+    const epoch = new Date(`${options.date}T00:00:00.000Z`);
+    const beforeMessageId = SnowflakeUtil.generate({
+      timestamp: epoch,
+    }).toString();
+
+    const client = (await import('./lib/discord')).default;
+    const archiver = await import('./service/archive/message');
+
+    await client.login(config.DISCORD_BOT_TOKEN);
+
+    const guild =
+      client.guilds.cache.get(options.guildId) ??
+      (await client.guilds.fetch(options.guildId));
+
+    await archiver.savePreviousMessages(guild, beforeMessageId);
   });
 
 program.parse();
