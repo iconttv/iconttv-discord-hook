@@ -242,7 +242,7 @@ const saveMessagesBulk = async (messages: Message<boolean>[]) => {
         senderName: context.senderName,
         raw: JSON.stringify(message),
         createdAt: context.createdAt,
-        _CREATED_AT: Date.now(),
+        _CREATED_AT: new Date(),
       };
 
       try {
