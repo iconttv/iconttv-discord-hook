@@ -219,7 +219,7 @@ export const bulkDeleteMessage = async (
 };
 
 const saveMessagesBulk = async (messages: Message<boolean>[]) => {
-  const messageModels = await pMap(
+  const documents = await pMap(
     messages,
     async message => {
       const context = getLogContext(message);
@@ -227,7 +227,7 @@ const saveMessagesBulk = async (messages: Message<boolean>[]) => {
         return null;
       }
 
-      const messageDocument = {
+      const doc: Record<string, unknown> = {
         guildId: context.guildId,
         channelId: context.channelId,
         messageId: context.messageId,
@@ -242,34 +242,35 @@ const saveMessagesBulk = async (messages: Message<boolean>[]) => {
         senderName: context.senderName,
         raw: JSON.stringify(message),
         createdAt: context.createdAt,
-      } as const;
-      const messageModel = new MessageModel(messageDocument);
-      messageModel.isNew = true;
+      };
 
       try {
-        const messageEmbedding = await processMessage(messageDocument);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const messageEmbedding = await processMessage(doc as any);
         if (messageEmbedding) {
-          messageModel.TEXT_MESSAGE = messageEmbedding.TEXT_MESSAGE;
-          messageModel.TEXT_ATTACHMENTS = messageEmbedding.TEXT_ATTACHMENTS!!;
-          messageModel.TEXT_COMPONENTS = messageEmbedding.TEXT_COMPONENTS!!;
-          messageModel.TEXT_EMBEDS = messageEmbedding.TEXT_EMBEDS!!;
-          messageModel.EMBEDDING_MODEL = messageEmbedding.EMBEDDING_MODEL!!;
-          messageModel.EMBEDDING_DIM = messageEmbedding.EMBEDDING_DIM!!;
-          messageModel.EMBEDDING_INPUT = messageEmbedding.EMBEDDING_INPUT!!;
-          messageModel.EMBEDDING = messageEmbedding.EMBEDDING!!;
-          messageModel.EMBEDDING_STATUS = messageEmbedding.EMBEDDING_STATUS!!;
+          doc.TEXT_MESSAGE = messageEmbedding.TEXT_MESSAGE;
+          doc.TEXT_ATTACHMENTS = messageEmbedding.TEXT_ATTACHMENTS;
+          doc.TEXT_COMPONENTS = messageEmbedding.TEXT_COMPONENTS;
+          doc.TEXT_EMBEDS = messageEmbedding.TEXT_EMBEDS;
+          doc.EMBEDDING_MODEL = messageEmbedding.EMBEDDING_MODEL;
+          doc.EMBEDDING_DIM = messageEmbedding.EMBEDDING_DIM;
+          doc.EMBEDDING_INPUT = messageEmbedding.EMBEDDING_INPUT;
+          doc.EMBEDDING = messageEmbedding.EMBEDDING;
+          doc.EMBEDDING_STATUS = messageEmbedding.EMBEDDING_STATUS;
+        } else {
+          doc.EMBEDDING_STATUS = null;
         }
       } catch (e) {
-        // messageDocument.EMBEDDING_STATUS = null;
+        doc.EMBEDDING_STATUS = null;
         logger.error(e);
       }
 
-      return messageModel;
+      return doc;
     },
     { concurrency: 5 }
   );
 
-  const validDocuments = messageModels.filter(
+  const validDocuments = documents.filter(
     (doc): doc is NonNullable<typeof doc> => doc !== null
   );
 
@@ -277,10 +278,22 @@ const saveMessagesBulk = async (messages: Message<boolean>[]) => {
     return null;
   }
 
-  const result = await MessageModel.collection.insertMany(validDocuments, {
-    ordered: false, // ignore duplicated
-  });
-  return result;
+  return await MessageModel.bulkWrite(
+    validDocuments.map(doc => ({
+      updateOne: {
+        filter: {
+          guildId: doc.guildId,
+          channelId: doc.channelId,
+          messageId: doc.messageId,
+        },
+        update: {
+          $set: doc,
+        },
+        upsert: true,
+      },
+    })),
+    { ordered: false }
+  );
 };
 
 export const savePreviousMessages = async (
