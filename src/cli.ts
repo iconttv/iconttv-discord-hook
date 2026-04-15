@@ -206,6 +206,8 @@ program
   .requiredOption('-g, --guildId <string>', 'Guild ID')
   .requiredOption('-d, --date <string>', 'last date in yyyymmdd format')
   .action(async function (options: { guildId: string; date: string }) {
+    await createMongooseConnection();
+    
     logger.info(JSON.stringify(options))
     const epoch = new Date(`${options.date}T00:00:00.000Z`);
     const beforeMessageId = SnowflakeUtil.generate({
