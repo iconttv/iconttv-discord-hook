@@ -17,6 +17,7 @@ import {
 import { retry } from 'es-toolkit';
 import { processMessage } from '../embedding/discord_processor';
 import { produceMessageToKafka } from '../kafkaService';
+import pMap from 'p-map';
 
 export const saveMessage = async (message: Message) => {
   try {
@@ -51,9 +52,7 @@ export const saveMessage = async (message: Message) => {
 
     try {
       const messageEmbedding = await processMessage(messageDocument);
-      if (!messageEmbedding) {
-        // set EMBEDDING_STATUS as null
-      } else {
+      if (messageEmbedding) {
         messageModel.TEXT_MESSAGE = messageEmbedding.TEXT_MESSAGE;
         messageModel.TEXT_ATTACHMENTS = messageEmbedding.TEXT_ATTACHMENTS!!;
         messageModel.TEXT_COMPONENTS = messageEmbedding.TEXT_COMPONENTS!!;
@@ -220,41 +219,74 @@ export const bulkDeleteMessage = async (
 };
 
 const saveMessagesBulk = async (messages: Message<boolean>[]) => {
-  const messageModels = [];
-  for (const message of messages) {
-    const context = getLogContext(message);
-    if (!context || !context.guildMember || !context.channelId) continue;
+  const messageModels = await pMap(
+    messages,
+    async message => {
+      const context = getLogContext(message);
+      if (!context || !context.guildMember || !context.channelId) {
+        return null;
+      }
 
-    const messageModel = new MessageModel({
-      guildId: context.guildId,
-      channelId: context.channelId,
-      messageId: context.messageId,
-      messageType: context.messageType,
-      message: context.senderMessage,
-      attachments: context.attachments,
-      components: context.components,
-      embeds: context.embeds,
-      senderId: context.senderId,
-      guildName: context.guildName,
-      channelName: context.channelName,
-      senderName: context.senderName,
-      raw: JSON.stringify(message),
-      createdAt: context.createdAt,
-    });
-    messageModel.isNew = true;
-    messageModels.push(messageModel);
-  }
-  if (messageModels.length === 0) {
+      const messageDocument = {
+        guildId: context.guildId,
+        channelId: context.channelId,
+        messageId: context.messageId,
+        messageType: context.messageType,
+        message: context.senderMessage,
+        attachments: context.attachments,
+        components: context.components,
+        embeds: context.embeds,
+        senderId: context.senderId,
+        guildName: context.guildName,
+        channelName: context.channelName,
+        senderName: context.senderName,
+        raw: JSON.stringify(message),
+        createdAt: context.createdAt,
+      } as const;
+      const messageModel = new MessageModel(messageDocument);
+      messageModel.isNew = true;
+
+      try {
+        const messageEmbedding = await processMessage(messageDocument);
+        if (messageEmbedding) {
+          messageModel.TEXT_MESSAGE = messageEmbedding.TEXT_MESSAGE;
+          messageModel.TEXT_ATTACHMENTS = messageEmbedding.TEXT_ATTACHMENTS!!;
+          messageModel.TEXT_COMPONENTS = messageEmbedding.TEXT_COMPONENTS!!;
+          messageModel.TEXT_EMBEDS = messageEmbedding.TEXT_EMBEDS!!;
+          messageModel.EMBEDDING_MODEL = messageEmbedding.EMBEDDING_MODEL!!;
+          messageModel.EMBEDDING_DIM = messageEmbedding.EMBEDDING_DIM!!;
+          messageModel.EMBEDDING_INPUT = messageEmbedding.EMBEDDING_INPUT!!;
+          messageModel.EMBEDDING = messageEmbedding.EMBEDDING!!;
+          messageModel.EMBEDDING_STATUS = messageEmbedding.EMBEDDING_STATUS!!;
+        }
+      } catch (e) {
+        // messageDocument.EMBEDDING_STATUS = null;
+        logger.error(e);
+      }
+
+      return messageModel;
+    },
+    { concurrency: 5 }
+  );
+
+  const validDocuments = messageModels.filter(
+    (doc): doc is NonNullable<typeof doc> => doc !== null
+  );
+
+  if (validDocuments.length === 0) {
     return null;
   }
 
-  const result = await MessageModel.collection.insertMany(messageModels, {
+  const result = await MessageModel.collection.insertMany(validDocuments, {
     ordered: false, // ignore duplicated
   });
   return result;
 };
 
-export const savePreviousMessages = async (guild: Guild) => {
+export const savePreviousMessages = async (
+  guild: Guild,
+  beforeMessageId?: string
+) => {
   // max 100, 이전 메시지 지정 가능
   const BATCH_SIZE = 100;
 
@@ -275,11 +307,11 @@ export const savePreviousMessages = async (guild: Guild) => {
       if (!('messages' in channel)) {
         continue;
       }
-      let lastMessageId: string | undefined = undefined;
-      logger.info(`Traverse ${channelName} lastMessageId: ${lastMessageId}`);
+      let lastMessageId: string | undefined = beforeMessageId;
 
       // eslint-disable-next-line no-constant-condition
       while (true) {
+        logger.info(`Traverse ${channelName} lastMessageId: ${lastMessageId}`);
         const options: FetchMessagesOptions = { limit: BATCH_SIZE };
         if (lastMessageId) {
           options.before = lastMessageId;
