@@ -1,6 +1,5 @@
 import {
   EmbedBuilder,
-  type Guild,
   type GuildMember,
   Message,
   EmbedAuthorOptions,
@@ -121,9 +120,21 @@ export function getMessageIdentityFilterFromMessage(
   });
 }
 
-function getGuild(guildId: string | null) {
-  const guild = client.guilds.cache.find((g: Guild) => g.id === guildId);
-  return guild;
+async function getGuild(guildId: string | null) {
+  if (!guildId) {
+    return undefined
+  }
+
+  const cachedGuild = client.guilds.cache.get(guildId);
+  if (cachedGuild) {
+    return cachedGuild;
+  }
+
+  try {
+    return await client.guilds.fetch(guildId);
+  } catch {
+    return undefined;
+  }
 }
 
 /**
@@ -132,19 +143,33 @@ function getGuild(guildId: string | null) {
  * @param memberId isMessage ? message.author.id : message.member?.user.id ?? message.user.id
  * @returns
  */
-export function getGuildMember(guildId: string | null, memberId: string | null) {
-  const guild = getGuild(guildId);
-  const member = guild?.members.cache.find(
+export async function getGuildMember(guildId: string | null, memberId: string | null) {
+  if (!guildId || !memberId) {
+    return undefined
+  }
+  const guild = await getGuild(guildId);
+  if (!guild) {
+    return undefined
+  }
+  const cachedMember = guild.members.cache.find(
     (gm: GuildMember) => gm.id === memberId
   );
-  return member;
+  if (cachedMember) {
+    return cachedMember;
+  }
+
+  try {
+    return await guild.members.fetch(memberId);
+  } catch {
+    return undefined;
+  }
 }
 
 export async function resolveGuildMember(
   message: Message | PartialMessage,
   memberId: string
 ): Promise<GuildMember | undefined> {
-  const cachedGuildMember = getGuildMember(message.guildId, memberId);
+  const cachedGuildMember = await getGuildMember(message.guildId, memberId);
   if (cachedGuildMember) {
     return cachedGuildMember;
   }
@@ -161,15 +186,31 @@ export async function resolveGuildMember(
   }
 }
 
-function getChannel(guildId: string | null, channelId: string | null) {
-  const guild = getGuild(guildId);
-  const channel = guild?.channels.cache.find(
+async function getChannel(guildId: string | null, channelId: string | null) {
+  if (!guildId || !channelId) {
+    return undefined
+  }
+  
+  const guild = await getGuild(guildId);
+  if (!guild) {
+    return undefined;
+  }
+
+  const cachedChannel = guild.channels.cache.find(
     channel => channel.id === channelId
   );
-  return channel;
+  if (cachedChannel) {
+    return cachedChannel;
+  }
+
+  try {
+    return await guild.channels.fetch(channelId);
+  } catch {
+    return undefined;
+  }
 }
 
-export function createUserProfileEmbed(
+export async function createUserProfileEmbed(
   message: Message | CommandInteraction,
   { asAnonUser }: { asAnonUser: boolean } = { asAnonUser: false },
   options?: APIEmbed | EmbedData
@@ -188,7 +229,7 @@ export function createUserProfileEmbed(
       ? message.author.defaultAvatarURL
       : message.user.defaultAvatarURL;
   } else {
-    const guildMember = getGuildMember(message.guildId, getSenderId(message));
+    const guildMember = await getGuildMember(message.guildId, getSenderId(message));
     author.name = getSenderName(guildMember);
     author.iconURL = getAvatarUrl(guildMember);
   }
@@ -211,14 +252,14 @@ export async function deleteMessage(message: Message) {
   }
 }
 
-export function createIconEmbedMessagePayload(
+export async function createIconEmbedMessagePayload(
   message: Message,
   matchKeyword: string,
   matchIcon: Icon,
   asAnonUser: boolean
 ) {
   if (matchIcon.isRemoteImage) {
-    const userProfileEmbed = createUserProfileEmbed(
+    const userProfileEmbed =( await createUserProfileEmbed(
       message,
       {
         asAnonUser,
@@ -230,7 +271,7 @@ export function createIconEmbedMessagePayload(
           height: 100,
         },
       }
-    ).setDescription(matchKeyword);
+    )).setDescription(matchKeyword);
 
     return {
       flags: MessageFlags.SuppressNotifications,
@@ -244,7 +285,7 @@ export function createIconEmbedMessagePayload(
       description: matchKeyword,
     });
 
-    const userProfileEmbed = createUserProfileEmbed(
+    const userProfileEmbed = (await createUserProfileEmbed(
       message,
       {
         asAnonUser,
@@ -256,7 +297,7 @@ export function createIconEmbedMessagePayload(
           height: 100,
         },
       }
-    ).setDescription(imageAttachment.description);
+    )).setDescription(imageAttachment.description);
 
     return {
       flags: MessageFlags.SuppressNotifications,
@@ -273,13 +314,13 @@ export function createIconFileMessagePayload(matchIcon: Icon) {
   } as const;
 }
 
-export const getLogContext = (
+export const getLogContext = async (
   message: Message | Interaction | CommandInteraction
-): LogContext | undefined => {
+): Promise<LogContext | undefined> => {
   const isMessage = message instanceof Message;
 
-  const guildMember = getGuildMember(message.guildId, getSenderId(message));
-  const channel = getChannel(message.guildId, message.channelId);
+  const guildMember = await getGuildMember(message.guildId, getSenderId(message));
+  const channel = await getChannel(message.guildId, message.channelId);
 
   const senderName = guildMember ? getSenderName(guildMember) : '';
 

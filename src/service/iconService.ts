@@ -19,7 +19,7 @@ export const replaceIcon = async (message: Message) => {
   const isAnon = isAnonMessage(messageText);
   if (!searchKeyword || (!isAnon && restText.length)) return;
 
-  const messageLogContext = getLogContext(message);
+  const messageLogContext = await getLogContext(message);
   if (!messageLogContext) return;
 
   const matchIcon = await IconSearchEngine.instance.searchIcon(
@@ -53,7 +53,7 @@ export const sendAndDeleteIconMessage = async (
   asAnonUser: boolean,
   logContext: LogContext
 ) => {
-  const iconEmbedMessagePayload = createIconEmbedMessagePayload(
+  const iconEmbedMessagePayload = await createIconEmbedMessagePayload(
     message,
     matchKeyword,
     matchIcon,

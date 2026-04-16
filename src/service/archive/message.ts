@@ -23,7 +23,7 @@ export const saveMessage = async (message: Message) => {
     logger.debug(
       `saveMessage-1 Before Create Message Context "${message.content}"`
     );
-    const context = getLogContext(message);
+    const context = await getLogContext(message);
     if (!context || !context.guildMember || !context.channelId) return;
 
     logger.debug(
@@ -94,7 +94,7 @@ export const updateMessage = async (
     logger.debug(
       `updateMessage-1 Before Create Message Update Context "${newMessage.content}"`
     );
-    const context = getLogContext(newMessage);
+    const context = await getLogContext(newMessage);
     if (!context || !context.guildMember || !context.channelId) return;
 
     logger.debug(
@@ -235,8 +235,9 @@ const saveMessagesBulk = async (messages: Message<boolean>[]) => {
     try {
       const documentResults = await Promise.allSettled(
         messageChunk.map(async message => {
-          const context = getLogContext(message);
+          const context = await getLogContext(message);
           if (!context || !context.guildMember || !context.channelId) {
+            logger.debug(`ignore message ${message.id}. guildMemger: ${context?.guildMember}, channelId: ${context?.channelId}`)
             return null;
           }
 
@@ -316,6 +317,7 @@ const saveMessagesBulk = async (messages: Message<boolean>[]) => {
         })),
         { ordered: false }
       );
+      logger.debug(`message bulk saved ${validDocuments.map(d => d.messageId).join(',')}`)
 
       savedDocumentCount += validDocuments.length;
     } catch (e) {

@@ -80,7 +80,7 @@ export const replaceImageToEmbed = async (message: Message) => {
   ) {
     return;
   }
-  const messageLogContext = getLogContext(message);
+  const messageLogContext = await getLogContext(message);
   if (!messageLogContext) {
     return;
   }
@@ -98,9 +98,11 @@ export const replaceImageToEmbed = async (message: Message) => {
     }
   );
 
-  const embedMessage = createUserProfileEmbed(message, undefined, {
-    description: message.content,
-  }).setImage(`attachment://${newImageAttachment.name}`);
+  const embedMessage = (
+    await createUserProfileEmbed(message, undefined, {
+      description: message.content,
+    })
+  ).setImage(`attachment://${newImageAttachment.name}`);
 
   await sendAndDeleteIconImageMessage(
     message,

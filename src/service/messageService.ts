@@ -37,11 +37,12 @@ export const summarizeLastMessages = async (
   }
 
   const messages = await getLastMessages(guildId, channelId, hours, count);
+  const context = await getLogContext(trigger);
   const summarization = await summarizeMessages({
     messages,
     guildId,
     channelId,
-    context: getLogContext(trigger),
+    context,
     logRequest: saveAiRequestBuilder(guildId, channelId, senderId, {
       hours,
       count,
@@ -75,6 +76,7 @@ export const questionLastMessages = async (
   question: string
 ) => {
   const messages = await getLastMessages(guildId, channelId, undefined, count);
+  const context = await getLogContext(trigger);
 
   const answer = await questionMessages({
     guildId,
@@ -85,7 +87,7 @@ export const questionLastMessages = async (
       question,
       count,
     }),
-    context: getLogContext(trigger),
+    context,
   });
   return unreplaceLaughs(answer);
 };
