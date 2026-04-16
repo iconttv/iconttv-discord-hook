@@ -17,7 +17,6 @@ import {
 import { retry } from 'es-toolkit';
 import { processMessage } from '../embedding/discord_processor';
 import { produceMessageToKafka } from '../kafkaService';
-import pMap from 'p-map';
 
 export const saveMessage = async (message: Message) => {
   try {
@@ -219,82 +218,112 @@ export const bulkDeleteMessage = async (
 };
 
 const saveMessagesBulk = async (messages: Message<boolean>[]) => {
-  const documents = await pMap(
-    messages,
-    async message => {
-      const context = getLogContext(message);
-      if (!context || !context.guildMember || !context.channelId) {
-        return null;
-      }
+  type ProcessMessageInput = Parameters<typeof processMessage>[0];
+  type ProcessMessageOutput = NonNullable<Awaited<ReturnType<typeof processMessage>>>;
+  type BulkMessageDocument = ProcessMessageInput &
+    Omit<Partial<ProcessMessageOutput>, 'EMBEDDING_STATUS'> & {
+      _CREATED_AT: Date;
+      EMBEDDING_STATUS?: boolean | null;
+    };
 
-      const doc: Record<string, unknown> = {
-        guildId: context.guildId,
-        channelId: context.channelId,
-        messageId: context.messageId,
-        messageType: context.messageType,
-        message: context.senderMessage,
-        attachments: context.attachments,
-        components: context.components,
-        embeds: context.embeds,
-        senderId: context.senderId,
-        guildName: context.guildName,
-        channelName: context.channelName,
-        senderName: context.senderName,
-        raw: JSON.stringify(message),
-        createdAt: context.createdAt,
-        _CREATED_AT: new Date(),
-      };
+  const CHUNK_SIZE = 5;
+  let savedDocumentCount = 0;
 
-      try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const messageEmbedding = await processMessage(doc as any);
-        if (messageEmbedding) {
-          doc.TEXT_MESSAGE = messageEmbedding.TEXT_MESSAGE;
-          doc.TEXT_ATTACHMENTS = messageEmbedding.TEXT_ATTACHMENTS;
-          doc.TEXT_COMPONENTS = messageEmbedding.TEXT_COMPONENTS;
-          doc.TEXT_EMBEDS = messageEmbedding.TEXT_EMBEDS;
-          doc.EMBEDDING_MODEL = messageEmbedding.EMBEDDING_MODEL;
-          doc.EMBEDDING_DIM = messageEmbedding.EMBEDDING_DIM;
-          doc.EMBEDDING_INPUT = messageEmbedding.EMBEDDING_INPUT;
-          doc.EMBEDDING = messageEmbedding.EMBEDDING;
-          doc.EMBEDDING_STATUS = messageEmbedding.EMBEDDING_STATUS;
-        } else {
-          doc.EMBEDDING_STATUS = null;
+  for (let index = 0; index < messages.length; index += CHUNK_SIZE) {
+    const messageChunk = messages.slice(index, index + CHUNK_SIZE);
+
+    try {
+      const documentResults = await Promise.allSettled(
+        messageChunk.map(async message => {
+          const context = getLogContext(message);
+          if (!context || !context.guildMember || !context.channelId) {
+            return null;
+          }
+
+          const doc: BulkMessageDocument = {
+            guildId: context.guildId,
+            channelId: context.channelId,
+            messageId: context.messageId,
+            messageType: context.messageType,
+            message: context.senderMessage,
+            attachments: context.attachments,
+            components: context.components,
+            embeds: context.embeds,
+            senderId: context.senderId,
+            guildName: context.guildName,
+            channelName: context.channelName,
+            senderName: context.senderName,
+            raw: JSON.stringify(message),
+            createdAt: context.createdAt,
+            _CREATED_AT: new Date(),
+          };
+
+          try {
+            const messageEmbedding = await processMessage(doc);
+            if (messageEmbedding) {
+              // Object.assign(doc, messageEmbedding);
+              doc.TEXT_MESSAGE = messageEmbedding.TEXT_MESSAGE;
+              doc.TEXT_ATTACHMENTS = messageEmbedding.TEXT_ATTACHMENTS;
+              doc.TEXT_COMPONENTS = messageEmbedding.TEXT_COMPONENTS;
+              doc.TEXT_EMBEDS = messageEmbedding.TEXT_EMBEDS;
+              doc.EMBEDDING_MODEL = messageEmbedding.EMBEDDING_MODEL;
+              doc.EMBEDDING_DIM = messageEmbedding.EMBEDDING_DIM;
+              doc.EMBEDDING_INPUT = messageEmbedding.EMBEDDING_INPUT;
+              doc.EMBEDDING = messageEmbedding.EMBEDDING;
+              doc.EMBEDDING_STATUS = messageEmbedding.EMBEDDING_STATUS;
+            } else {
+              doc.EMBEDDING_STATUS = null;
+            }
+          } catch (e) {
+            doc.EMBEDDING_STATUS = null;
+            logger.error(e);
+          }
+
+          return doc;
+        })
+      );
+
+      const validDocuments: BulkMessageDocument[] = [];
+
+      documentResults.forEach(result => {
+        if (result.status === 'rejected') {
+          logger.error(result.reason);
+          return;
         }
-      } catch (e) {
-        doc.EMBEDDING_STATUS = null;
-        logger.error(e);
+
+        if (result.value) {
+          validDocuments.push(result.value);
+        }
+      });
+
+      if (validDocuments.length === 0) {
+        continue;
       }
 
-      return doc;
-    },
-    { concurrency: 5 }
-  );
+      await MessageModel.bulkWrite(
+        validDocuments.map(doc => ({
+          updateOne: {
+            filter: {
+              guildId: doc.guildId,
+              channelId: doc.channelId,
+              messageId: doc.messageId,
+            },
+            update: {
+              $set: doc,
+            },
+            upsert: true,
+          },
+        })),
+        { ordered: false }
+      );
 
-  const validDocuments = documents.filter(
-    (doc): doc is NonNullable<typeof doc> => doc !== null
-  );
-
-  if (validDocuments.length === 0) {
-    return null;
+      savedDocumentCount += validDocuments.length;
+    } catch (e) {
+      logger.error(e);
+    }
   }
 
-  return await MessageModel.bulkWrite(
-    validDocuments.map(doc => ({
-      updateOne: {
-        filter: {
-          guildId: doc.guildId,
-          channelId: doc.channelId,
-          messageId: doc.messageId,
-        },
-        update: {
-          $set: doc,
-        },
-        upsert: true,
-      },
-    })),
-    { ordered: false }
-  );
+  return savedDocumentCount === 0 ? null : savedDocumentCount;
 };
 
 export const savePreviousMessages = async (
@@ -326,7 +355,7 @@ export const savePreviousMessages = async (
       // eslint-disable-next-line no-constant-condition
       while (true) {
         logger.info(`Traverse ${channelName} lastMessageId: ${lastMessageId}`);
-        const options: FetchMessagesOptions = { limit: BATCH_SIZE };
+        const options: FetchMessagesOptions = { limit: BATCH_SIZE, cache: false };
         if (lastMessageId) {
           options.before = lastMessageId;
         }
@@ -348,8 +377,8 @@ export const savePreviousMessages = async (
 
         try {
           const messageList = Array.from(messages.values());
-          const result = await saveMessagesBulk(messageList);
-          logger.info(`${channelName} save result ${result}`);
+          await saveMessagesBulk(messageList);
+          logger.info(`${channelName} saved messages ${messageList.length}`);
         } catch (error) {
           logger.error(`${channelName} failed to save messages ${error}`);
         }
