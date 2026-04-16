@@ -236,8 +236,8 @@ const saveMessagesBulk = async (messages: Message<boolean>[]) => {
       const documentResults = await Promise.allSettled(
         messageChunk.map(async message => {
           const context = await getLogContext(message);
-          if (!context || !context.guildMember || !context.channelId) {
-            logger.debug(`ignore message ${message.id}. guildMemger: ${context?.guildMember}, channelId: ${context?.channelId}`)
+          if (!context || !context.channelId) {
+            logger.debug(`ignore message ${message.id}. channelId: ${context?.channelId}`)
             return null;
           }
 
