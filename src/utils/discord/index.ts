@@ -344,7 +344,7 @@ export const getLogContext = async (
   return {
     senderName,
     senderMessage: isMessage ? message.content : `${message.context}`,
-    senderId: guildMember?.id || '',
+    senderId: guildMember?.id || message.member?.user.id || '',
     messageId: message.id,
     messageType: message.type,
     attachments: isMessage
@@ -353,8 +353,8 @@ export const getLogContext = async (
     components: isMessage ? message.components : [],
     embeds: isMessage ? message.embeds : [],
     guildMember,
-    guildName: guildMember?.guild?.name || '',
-    guildId: guildMember?.guild?.id || '',
+    guildName: guildMember?.guild?.name || message.guild?.name || '',
+    guildId: guildMember?.guild?.id || message.guildId || '',
     channel: channel_truncated,
     channelName: channel?.name || '',
     channelId: channel?.id || '',
