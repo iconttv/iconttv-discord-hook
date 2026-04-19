@@ -1,6 +1,6 @@
 import { ChatInputCommandInteraction, SlashCommandBuilder } from 'discord.js';
 import logger from '../../lib/logger';
-import { searchMessage, searchMessageEmbedding } from '../searchService';
+import { searchMessage, searchMessageEmbedding } from '../elasticService';
 import { trimText, truncateText } from '../../utils';
 
 export const data = new SlashCommandBuilder()
