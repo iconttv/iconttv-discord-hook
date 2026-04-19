@@ -22,6 +22,7 @@ const openai = new OpenAI({
     'HTTP-Referer': 'https://github.com/iconttv', // Optional. Site URL for rankings on openrouter.ai.
     'X-Title': 'iconttv-discord', // Optional. Site title for rankings on openrouter.ai.
   },
+      timeout: 60 * 1000,
 });
 
 const models = config.OPENROUTER_LLM_MODELS.split(',')

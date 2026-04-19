@@ -51,6 +51,7 @@ class AiClient {
         'HTTP-Referer': 'https://github.com/iconttv',
         'X-Title': 'iconttv',
       },
+      timeout: 60 * 1000,
     }),
     llm: new OpenAI({
       baseURL: config.VISION_OPENAI_BASEURL,
@@ -59,6 +60,7 @@ class AiClient {
         'HTTP-Referer': 'https://github.com/iconttv',
         'X-Title': 'iconttv',
       },
+      timeout: 60 * 1000,
     }),
   };
 
