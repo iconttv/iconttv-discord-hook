@@ -139,6 +139,12 @@ export const summarizeMessages = async ({
       messages: chatCompletionMessage,
       model,
       ...requestOptions,
+      trace: {
+        trace_id: `${guildId}_${channelId}_${context?.messageId}`,
+        trace_name: "Chat Summarization",
+        span_name: "Summarization Step",
+        generation_name: "Generate Summary",
+      }
     };
 
     if (model.startsWith('google/')) {
@@ -225,6 +231,12 @@ export const questionMessages = async ({
     messages: chatCompletionMessage,
     model,
     ...requestOptions,
+      trace: {
+        trace_id: `${guildId}_${channelId}_${context?.messageId}`,
+        trace_name: "Question",
+        span_name: "Question Step",
+        generation_name: "Generate Answer",
+      }
   };
 
   if (model.startsWith('google/')) {
