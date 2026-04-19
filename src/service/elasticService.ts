@@ -269,3 +269,57 @@ export const searchMessageEmbedding = async (
 
   return searchResult;
 };
+
+
+export const getMemberPortion = async (guildId: string, senderId: string, channelId?: string) => {
+  const client = getElasticClient();
+  const index = 'iconttv-discord-message_*';
+
+  const filters: Array<Record<string, unknown>> = [
+    { term: { guildId } },
+  ];
+
+  if (channelId) {
+    filters.push({ term: { channelId } });
+  }
+
+  const baseQuery = {
+    bool: {
+      filter: filters,
+    },
+  };
+
+  const senderQuery = {
+    bool: {
+      filter: [
+        ...filters,
+        { term: { senderId } },
+      ],
+    },
+  };
+
+  const [totalCountResult, senderCountResult] = await Promise.all([
+    client.count({
+      index,
+      query: baseQuery,
+    }),
+    client.count({
+      index,
+      query: senderQuery,
+    }),
+  ]);
+
+  const totalCount = totalCountResult.count ?? 0;
+  const senderCount = senderCountResult.count ?? 0;
+  const portion = totalCount === 0 ? 0 : senderCount / totalCount;
+
+  return {
+    guildId,
+    channelId: channelId ?? null,
+    senderId,
+    totalCount,
+    senderCount,
+    portion, // 0 ~ 1
+    percentage: portion * 100, // 0 ~ 100
+  };
+}
