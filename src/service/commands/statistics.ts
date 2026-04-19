@@ -10,12 +10,12 @@ export const data = new SlashCommandBuilder()
       .setDescription(
         '메시지를 수 초 후에 자동으로 삭제합니다. keep=false 이라면 삭제하지 않습니다.'
       )
-  .setRequired(true))
+  .setRequired(false))
 
 
 export const execute = async (interaction: ChatInputCommandInteraction) => { 
   const inChannel = interaction.options.get('channel')?.value ?? false;
-  const keepMessage = interaction.options.get('keep')?.value ?? false;
+  const keepMessage = interaction.options.get('keep')?.value ?? true;
 
 
   logger.debug(
