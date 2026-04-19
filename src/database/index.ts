@@ -14,5 +14,5 @@ export const createMongooseConnection = () => {
     dbName: config.MONGODB_DATABASE,
     maxPoolSize: 10,
   });
-  mongoose.set('debug', true);
+  mongoose.set('debug', false);
 };

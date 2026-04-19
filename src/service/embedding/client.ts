@@ -10,14 +10,22 @@ import sharp from 'sharp';
 import { config } from '../../config';
 import logger from '../../lib/logger';
 
+export interface MessageTraceSpan {
+  guildId?: string, channelId?: string, messageId?: string
+}
+
 const ocrChatCompletionMessageBase: OpenAI.ChatCompletionMessageParam[] = [
   {
     role: 'developer',
     content: [
-      'You are a preprocessor of image search engine. Your job is describe an image to text..',
-      '1. Provide a concise and precise description of the entire image content in Korean, excluding any embellishments or unnecessary phrases. Do not starts with words like `This image is ...`.',
-      '2. Accurately extract and list all text (letters, numbers, any language) exactly as it appears in the image, without converting it into sentences, adding extra words, nor translating to another language. Separate texts with commas or spaces.',
-      'Do not include any introductory or concluding sentences. Combine the image description and text extraction into a paragraph with a comma.',
+      'You preprocess images for a search engine.',
+      'Return exactly two lines in Korean.',
+      'Line 1 must start with "설명: " followed by one concise and precise description of the visible image content.',
+      'Do not use introductory phrases like "이 이미지는", "이 사진은", or similar.',
+      'Line 2 must start with "텍스트: " followed by all visible text extracted exactly as shown.',
+      'Do not translate, normalize, paraphrase, reorder significantly, or infer missing characters.',
+      'If there is no visible text, return "텍스트: [없음]".',
+      'Do not output anything else.',
     ].join('\n'),
   },
 ];
@@ -99,7 +107,7 @@ class AiClient {
     return `data:${contentType};base64,${imageBuffer.toString('base64')}`;
   }
 
-  async imageToText(urlOrBase64: string): Promise<string> {
+  async imageToText(urlOrBase64: string, traceSpan?: MessageTraceSpan): Promise<string> {
     let inputImage: string;
     try {
       logger.debug(`preprocessImage start ${urlOrBase64}`);
@@ -127,10 +135,16 @@ class AiClient {
         },
       ],
       max_completion_tokens: 1024,
-      temperature: 0.2,
-    });
+      temperature: 0.1,
+      trace: {
+        trace_id: `${traceSpan?.guildId}_${traceSpan?.channelId}_${traceSpan?.messageId}`,
+        trace_name: "Image Transcription",
+        span_name: "Transcription Step",
+        generation_name: "Generate Transcription",
+      }
+    } as OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming);
 
-    const caption = response.choices[0]?.message.content?.trim();
+    const caption = response.choices[0]?.message.content?.replace('[없음]','')?.trim();
     if (!caption || caption.length === 0) {
       throw new Error(
         `caption error ${urlOrBase64}\n${inputImage.slice(

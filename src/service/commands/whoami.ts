@@ -6,7 +6,7 @@ export const data = new SlashCommandBuilder()
   .setDescription('whoami');
 
 export const execute = async (interaction: ChatInputCommandInteraction) => {
-  const context = getLogContext(interaction);
+  const context = await getLogContext(interaction);
   if (!context) {
     await interaction.reply('채널 정보를 확인할 수 없습니다.');
   } else {

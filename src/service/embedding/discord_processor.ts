@@ -1,6 +1,6 @@
 import { Attachment, Component, Embed, EmbedType } from 'discord.js';
 import { databaseSqlite } from './failure_urls';
-import { aiClient } from './client';
+import { aiClient, MessageTraceSpan } from './client';
 import logger from '../../lib/logger';
 import { replaceDiscordEmoji } from './toolkit';
 import { config } from '../../config';
@@ -12,7 +12,8 @@ interface ProcessedText {
 }
 
 async function processAttachment(
-  attachment: Attachment
+  attachment: Attachment,
+  traceSpan?: MessageTraceSpan,
 ): Promise<ProcessedText | null> {
   const contentType = attachment.contentType || '';
   const id = attachment.id || attachment.name || 'unknown';
@@ -38,7 +39,7 @@ async function processAttachment(
     }
 
     if (contentType.startsWith('image/')) {
-      const caption = await aiClient.imageToText(url);
+      const caption = await aiClient.imageToText(url, traceSpan);
       text.push(`### FILE\n${caption}`);
 
       return { id, type: 'image', text: text.join('\n\n') };
@@ -68,7 +69,7 @@ async function processComponent(
   return null;
 }
 
-async function processEmbed(embed: Embed): Promise<ProcessedText | null> {
+async function processEmbed(embed: Embed, traceSpan?: MessageTraceSpan): Promise<ProcessedText | null> {
   if (!embed) {
     return null;
   }
@@ -111,7 +112,8 @@ async function processEmbed(embed: Embed): Promise<ProcessedText | null> {
     ) {
       try {
         const thumbnailText = await aiClient.imageToText(
-          embed.data.thumbnail.url
+          embed.data.thumbnail.url,
+          traceSpan,
         );
         text.push(`### THUMBNAIL\n${thumbnailText}`);
       } catch (error) {
@@ -171,6 +173,11 @@ export async function processMessage(
   const guildId = msgDoc.guildId;
   const channelId = msgDoc.channelId;
   const messageId = msgDoc.messageId;
+  const traceSpan = {
+            guildId,
+            channelId,
+            messageId,
+          }
 
   if (!guildId || !channelId || !messageId) {
     logger.info(
@@ -208,7 +215,7 @@ export async function processMessage(
       try {
         const processedAttachments: ProcessedText[] = [];
         for (const attachment of msgDoc.attachments) {
-          const processed = await processAttachment(attachment as Attachment);
+          const processed = await processAttachment(attachment as Attachment, traceSpan);
           if (processed) {
             processedAttachments.push(processed);
           }
@@ -256,7 +263,7 @@ export async function processMessage(
       try {
         const processedEmbeds: ProcessedText[] = [];
         for (const embed of msgDoc.embeds) {
-          const processed = await processEmbed(embed as Embed);
+          const processed = await processEmbed(embed as Embed, traceSpan);
           if (processed) {
             processedEmbeds.push(processed);
           }

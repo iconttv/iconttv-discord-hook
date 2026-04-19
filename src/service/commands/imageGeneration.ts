@@ -153,7 +153,7 @@ export const execute = async (interaction: ChatInputCommandInteraction) => {
   try {
     executionTimeSecMessage = getExecutionTimeSecMessage();
 
-    const userProfileEmbed = createUserProfileEmbed(interaction);
+    const userProfileEmbed = await createUserProfileEmbed(interaction);
 
     const attachments = imageUrls.map(imageUrl =>
       base64ImageToAttachment(imageUrl, { spoiler: true })
