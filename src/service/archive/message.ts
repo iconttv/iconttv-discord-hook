@@ -6,6 +6,7 @@ import {
   OmitPartialGroupDMChannel,
   PartialMessage,
   ReadonlyCollection,
+  SnowflakeUtil,
 } from 'discord.js';
 import MessageModel from '../../database/model/MessageModel';
 import logger from '../../lib/logger';
@@ -330,7 +331,8 @@ const saveMessagesBulk = async (messages: Message<boolean>[]) => {
 
 export const savePreviousMessages = async (
   guild: Guild,
-  beforeMessageId?: string
+  beforeMessageId?: string,
+  afterMessageId?: string,
 ) => {
   // max 100, 이전 메시지 지정 가능
   const BATCH_SIZE = 100;
@@ -356,8 +358,11 @@ export const savePreviousMessages = async (
 
       // eslint-disable-next-line no-constant-condition
       while (true) {
-        logger.info(`Traverse ${channelName} lastMessageId: ${lastMessageId}`);
+        logger.info(`Traverse ${channelName} lastMessageId: ${lastMessageId} afterMessageId ${afterMessageId}`);
         const options: FetchMessagesOptions = { limit: BATCH_SIZE, cache: false };
+        if (afterMessageId) {
+          options.after = afterMessageId;
+        }
         if (lastMessageId) {
           options.before = lastMessageId;
         }
@@ -392,3 +397,26 @@ export const savePreviousMessages = async (
     }
   }
 };
+
+
+export const savePreviousMessagesAfterJoin = async (
+  guild: Guild,
+) => {
+    const epoch = new Date();
+    const beforeMessageId = SnowflakeUtil.generate({
+      timestamp: epoch,
+    }).toString();
+  
+  const newestMessage = await MessageModel.findOne({
+    guildId: guild.id,
+  }).sort({ createdAt: -1 }).select('messageId');
+
+  await savePreviousMessages(guild, beforeMessageId, newestMessage?.messageId)
+
+  const oldestMessage = await MessageModel.findOne({
+    guildId: guild.id,
+  }).sort({ createdAt: 1 }).select('messageId');
+  if (oldestMessage) {
+    await savePreviousMessages(guild, oldestMessage.messageId)
+  }
+}

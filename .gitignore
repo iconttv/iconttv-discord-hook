@@ -16,4 +16,5 @@ logs/*
 !logs/.placeholder
 yarn-*.log
 
-database
+database/*.db*
+!src/database 
