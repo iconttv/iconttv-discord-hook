@@ -100,7 +100,7 @@ const getStreamingElapsed = (startAt: Date | null | undefined, endAt: Date) => {
     return 0;
   }
 
-  return Math.max(0, endAt.getTime() - startAt.getTime());
+  return Math.max(0, Math.floor((endAt.getTime() - startAt.getTime()) / 1000));
 };
 
 const closeStreamingDocuments = async (
