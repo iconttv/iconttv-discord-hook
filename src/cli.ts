@@ -263,7 +263,15 @@ program
 
       try {
         await trackArchiveWork(
-          archiver.savePreviousMessages(guild, beforeMessageId)
+          (async () => {
+            const textChannels = await archiver.getArchivableTextChannels(guild);
+
+            for (const [, channel] of textChannels) {
+              await archiver.savePreviousMessages(guild, channel, {
+                before: beforeMessageId,
+              });
+            }
+          })()
         );
         logger.info('done');
         await shutdown(0);
