@@ -7,6 +7,10 @@ import {
   updateMessage,
   savePreviousMessagesAfterJoin,
 } from '../../service/archive/message';
+import {
+  isArchiveShutdownRequested,
+  trackArchiveWork,
+} from '../../service/archive/lifecycle';
 import { webhook } from '../../utils/webhook';
 import { onMessageReactionChange } from '../../service/archive/reaction';
 import {
@@ -18,10 +22,16 @@ export const registerEventsArchive = (client: Client) => {
   client.once(Events.ClientReady, async event => {
     webhook.sendMessage('MessageArchive Ready', null, 'info');
     logger.info(`MessageStore Logged in as ${event.user.tag}`);
+
+    if (isArchiveShutdownRequested()) {
+      return;
+    }
     
     try {
-      await Promise.all(
-        event.guilds.cache.map(guild => reconcileGuildStreamingStates(guild))
+      await trackArchiveWork(
+        Promise.all(
+          event.guilds.cache.map(guild => reconcileGuildStreamingStates(guild))
+        )
       );
     } catch (e) {
       webhook.sendMessage('reconcileGuildStreamingStates', e, 'error');
@@ -31,22 +41,32 @@ export const registerEventsArchive = (client: Client) => {
 
   client.on(Events.GuildCreate, async guild => {
     logger.info(`Client invited to ${guild.name}. fetch all messages.`);
-    
-    try {
-      await reconcileGuildStreamingStates(guild);
-    } catch (e) {
-      webhook.sendMessage('reconcileGuildStreamingStates', e, 'error');
-      logger.error(e);
-    }
 
-    try {
-      setTimeout(() => {
-        void savePreviousMessagesAfterJoin(guild);
-      }, 0);
-    } catch (e) {
-      webhook.sendMessage('ArchiveGuildCreateError', e, 'error');
-      logger.error(e);
-    }
+    void trackArchiveWork(
+      (async () => {
+        if (isArchiveShutdownRequested()) {
+          return;
+        }
+
+        try {
+          await reconcileGuildStreamingStates(guild);
+        } catch (e) {
+          webhook.sendMessage('reconcileGuildStreamingStates', e, 'error');
+          logger.error(e);
+        }
+
+        if (isArchiveShutdownRequested()) {
+          return;
+        }
+
+        try {
+          await savePreviousMessagesAfterJoin(guild);
+        } catch (e) {
+          webhook.sendMessage('ArchiveGuildCreateError', e, 'error');
+          logger.error(e);
+        }
+      })()
+    );
   });
 
   client.on(Events.VoiceStateUpdate, async (oldState, newState) => {

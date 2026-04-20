@@ -18,6 +18,7 @@ import {
 import { retry } from 'es-toolkit';
 import { processMessage } from '../embedding/discord_processor';
 import { produceMessageToKafka } from '../kafkaService';
+import { isArchiveShutdownRequested } from './lifecycle';
 
 export const saveMessage = async (message: Message) => {
   try {
@@ -348,6 +349,10 @@ export const savePreviousMessages = async (
   });
 
   for (const [channelId, channel] of textChannels) {
+    if (isArchiveShutdownRequested()) {
+      break;
+    }
+
     const channelName = `${guild.name}_${channel.name} (${channelId})`;
 
     try {
@@ -358,6 +363,10 @@ export const savePreviousMessages = async (
 
       // eslint-disable-next-line no-constant-condition
       while (true) {
+        if (isArchiveShutdownRequested()) {
+          break;
+        }
+
         const options: FetchMessagesOptions = { limit: BATCH_SIZE, cache: false };
         if (afterMessageId) {
           options.after = afterMessageId;
@@ -402,21 +411,29 @@ export const savePreviousMessages = async (
 export const savePreviousMessagesAfterJoin = async (
   guild: Guild,
 ) => {
-    const epoch = new Date();
-    const beforeMessageId = SnowflakeUtil.generate({
-      timestamp: epoch,
-    }).toString();
-  
+  if (isArchiveShutdownRequested()) {
+    return;
+  }
+
+  const epoch = new Date();
+  const beforeMessageId = SnowflakeUtil.generate({
+    timestamp: epoch,
+  }).toString();
+
   const newestMessage = await MessageModel.findOne({
     guildId: guild.id,
   }).sort({ createdAt: -1 }).select('messageId');
 
-  await savePreviousMessages(guild, beforeMessageId, newestMessage?.messageId)
+  await savePreviousMessages(guild, beforeMessageId, newestMessage?.messageId);
+
+  if (isArchiveShutdownRequested()) {
+    return;
+  }
 
   const oldestMessage = await MessageModel.findOne({
     guildId: guild.id,
   }).sort({ createdAt: 1 }).select('messageId');
   if (oldestMessage) {
-    await savePreviousMessages(guild, oldestMessage.messageId)
+    await savePreviousMessages(guild, oldestMessage.messageId);
   }
-}
+};

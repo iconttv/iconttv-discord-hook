@@ -1,4 +1,5 @@
 import { Command } from 'commander';
+import mongoose from 'mongoose';
 
 import logger from './lib/logger';
 import { getLastMessages } from './utils/message';
@@ -11,6 +12,11 @@ import { calculateEmbedding } from './service/embedding/discord_processor';
 import { aiClient } from './service/embedding/client';
 import { config } from './config';
 import { Events, SnowflakeUtil } from 'discord.js';
+import {
+  requestArchiveShutdown,
+  trackArchiveWork,
+  waitForTrackedArchiveWork,
+} from './service/archive/lifecycle';
 
 const program = new Command();
 
@@ -207,16 +213,44 @@ program
   .requiredOption('-d, --date <string>', 'last date in yyyymmdd format')
   .action(async function (options: { guildId: string; date: string }) {
     await createMongooseConnection();
-    
-    logger.info(JSON.stringify(options))
+
+    logger.info(JSON.stringify(options));
     const epoch = new Date(`${options.date}T00:00:00.000Z`);
     const beforeMessageId = SnowflakeUtil.generate({
       timestamp: epoch,
     }).toString();
-    logger.info(beforeMessageId)
+    logger.info(beforeMessageId);
 
     const client = (await import('./lib/discord')).default;
     const archiver = await import('./service/archive/message');
+    let shutdownPromise: Promise<void> | null = null;
+
+    const shutdown = async (exitCode: number) => {
+      if (!shutdownPromise) {
+        shutdownPromise = (async () => {
+          requestArchiveShutdown();
+          await waitForTrackedArchiveWork();
+          client.destroy();
+          await mongoose.disconnect();
+        })();
+      }
+
+      await shutdownPromise;
+      exit(exitCode);
+    };
+
+    const shutdownSignals: NodeJS.Signals[] = [
+      'SIGINT',
+      'SIGUSR1',
+      'SIGUSR2',
+      'SIGTERM',
+    ];
+
+    shutdownSignals.forEach(eventType => {
+      process.once(eventType, () => {
+        void shutdown(0);
+      });
+    });
 
     client.once(Events.ClientReady, async event => {
       logger.info(`Logged in as ${event.user.tag}`);
@@ -225,10 +259,18 @@ program
         client.guilds.cache.get(options.guildId) ??
         (await client.guilds.fetch(options.guildId));
 
-      logger.info(guild.name)
-      await archiver.savePreviousMessages(guild, beforeMessageId);
-      logger.info('done')
-      exit(0)
+      logger.info(guild.name);
+
+      try {
+        await trackArchiveWork(
+          archiver.savePreviousMessages(guild, beforeMessageId)
+        );
+        logger.info('done');
+        await shutdown(0);
+      } catch (error) {
+        logger.error(error);
+        await shutdown(1);
+      }
     });
 
     client.login(config.DISCORD_BOT_TOKEN);
