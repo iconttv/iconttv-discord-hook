@@ -15,9 +15,12 @@ interface Config {
   /**
    * for llm and image generation
    */
-  OPENROUTER_API_KEY: string;
-  OPENROUTER_LLM_MODELS: string;
-  OPENROUTER_IMAGE_MODELS: string;
+  LLM_OPENAI_BASEURL: string;
+  LLM_OPENAI_API_KEY: string;
+  LLM_OPENAI_MODELS: string;
+  IMAGE_OPENAI_BASEURL: string;
+  IMAGE_OPENAI_API_KEY: string;
+  IMAGE_OPENAI_MODELS: string;
 
   // LLM_OPENAI_PROB: number;
   // OPENAI_API_BASEURL: string | undefined;
@@ -87,9 +90,12 @@ export const config: Config = {
   MONGODB_PASSWORD: process.env.MONGODB_PASSWORD!,
   MONGODB_DATABASE: process.env.MONGODB_DATABASE!,
 
-  OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY!,
-  OPENROUTER_LLM_MODELS: process.env.OPENROUTER_LLM_MODELS!,
-  OPENROUTER_IMAGE_MODELS: process.env.OPENROUTER_IMAGE_MODELS!,
+  LLM_OPENAI_BASEURL: process.env.LLM_OPENAI_BASEURL!,
+  LLM_OPENAI_API_KEY: process.env.LLM_OPENAI_API_KEY!,
+  LLM_OPENAI_MODELS: process.env.LLM_OPENAI_MODELS!,
+  IMAGE_OPENAI_BASEURL: process.env.IMAGE_OPENAI_BASEURL!,
+  IMAGE_OPENAI_API_KEY: process.env.IMAGE_OPENAI_API_KEY!,
+  IMAGE_OPENAI_MODELS: process.env.IMAGE_OPENAI_MODELS!,
 
   // LLM_OPENAI_PROB:
   //   Number.parseFloat(process.env.LLM_OPENAI_PROB) === undefined

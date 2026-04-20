@@ -7,7 +7,7 @@
 ```text
 src/utils/
 |- discord/index.ts        # Discord payload + context helper surface
-|- llm/                    # prompt assets + OpenRouter call facade
+|- llm/                    # prompt assets + OpenAI-compatible call facade
 |- image/                  # image generation facade
 |- auth.ts                 # guild permission gate helper
 |- error.ts                # provider error to reply text mapper
@@ -22,7 +22,7 @@ src/utils/
 |------|----------|-------|
 | Discord message payloads | `src/utils/discord/index.ts` | Embed/file payload factories + `LogContext` |
 | LLM prompt policy | `src/utils/llm/prompt-question.txt`, `src/utils/llm/prompt-summarization.txt` | Output safety + formatting rules |
-| LLM runtime integration | `src/utils/llm/index.ts`, `src/utils/llm/openrouter.ts` | Prompt rendering + provider call |
+| LLM runtime integration | `src/utils/llm/index.ts`, `src/utils/llm/openai.ts` | Prompt rendering + provider call |
 | Permission gating helper | `src/utils/auth.ts` | GPT command eligibility checks |
 | User-facing error text | `src/utils/error.ts` | Maps API errors into Korean replies |
 | Message links/history | `src/utils/message.ts` | Fetch helpers and Discord jump links |

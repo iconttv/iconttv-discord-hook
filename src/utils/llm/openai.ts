@@ -3,6 +3,13 @@ import { config } from '../../config';
 import logger from '../../lib/logger';
 import { makeChunk } from '../index';
 import {
+  getOpenAiProviderName,
+  getOpenRouterHeaders,
+  isOpenRouterBaseUrl,
+  OpenRouterTrace,
+  parseOpenAiModelList,
+} from '../openai';
+import {
   constructQuestionResult,
   constructSummarizationResult,
   convertMessagesToPrompt,
@@ -15,26 +22,29 @@ import {
   SummarizeOutputSchemaOpenai,
 } from './types';
 
+const llmBaseURL = config.LLM_OPENAI_BASEURL;
+const llmDefaultHeaders = getOpenRouterHeaders(llmBaseURL, 'iconttv-discord');
+const isOpenRouterLlm = isOpenRouterBaseUrl(llmBaseURL);
+const providerName = getOpenAiProviderName(llmBaseURL);
+
 const openai = new OpenAI({
-  baseURL: 'https://openrouter.ai/api/v1',
-  apiKey: config.OPENROUTER_API_KEY,
-  defaultHeaders: {
-    'HTTP-Referer': 'https://github.com/iconttv', // Optional. Site URL for rankings on openrouter.ai.
-    'X-Title': 'iconttv-discord', // Optional. Site title for rankings on openrouter.ai.
-  },
-      timeout: 60 * 1000,
+  baseURL: llmBaseURL,
+  apiKey: config.LLM_OPENAI_API_KEY,
+  ...(llmDefaultHeaders ? { defaultHeaders: llmDefaultHeaders } : {}),
+  timeout: 60 * 1000,
 });
 
-const models = config.OPENROUTER_LLM_MODELS.split(',')
-  .map(model => model.trim())
-  .filter(model => model.length > 0);
+const models = parseOpenAiModelList(
+  config.LLM_OPENAI_MODELS,
+  'LLM_OPENAI_MODELS'
+);
 
 const getModel = () => {
   const idx = Math.floor(Math.random() * models.length);
   return models[idx];
 };
 
-const google_extra_body = {
+const googleExtraBody = {
   provider: {
     // use google-vertex to specify safety_settings
     ignore: ['Google AI Studio'],
@@ -64,6 +74,12 @@ const google_extra_body = {
     ],
   },
 } as const;
+
+type OpenRouterChatCompletionCreateParams =
+  OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming & {
+    extra_body?: typeof googleExtraBody;
+    trace?: OpenRouterTrace;
+  };
 
 export const summarizeMessages = async ({
   messages,
@@ -97,7 +113,7 @@ export const summarizeMessages = async ({
   const messagePrompts = messageChunks.map(convertMessagesToPrompt);
 
   const model = getModel();
-  const requestOptions: Partial<OpenAI.ChatCompletionCreateParamsNonStreaming> =
+  const requestOptions: Partial<OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming> =
     {
       frequency_penalty: 0.5 + Math.random() * 0.1,
       presence_penalty: -0.3 + Math.random() * 0.2,
@@ -136,28 +152,30 @@ export const summarizeMessages = async ({
       content: 'Summarize given chats.',
     });
 
-    const openaiParams = {
+    const openaiParams: OpenRouterChatCompletionCreateParams = {
       messages: chatCompletionMessage,
       model,
       ...requestOptions,
-      trace: {
-        trace_id: `${guildId}_${channelId}_${context?.messageId}`,
-        trace_name: "Chat Summarization",
-        span_name: "Summarization Step",
-        generation_name: "Generate Summary",
-      }
     };
 
-    if (model.startsWith('google/')) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (openaiParams as any).extra_body = google_extra_body;
+    if (isOpenRouterLlm) {
+      openaiParams.trace = {
+        trace_id: `${guildId}_${channelId}_${context?.messageId}`,
+        trace_name: 'Chat Summarization',
+        span_name: 'Summarization Step',
+        generation_name: 'Generate Summary',
+      };
+
+      if (model.startsWith('google/')) {
+        openaiParams.extra_body = googleExtraBody;
+      }
     }
 
     const chatCompletion = await openai.chat.completions
       .create(openaiParams)
       .then(async res => {
         if (logRequest !== undefined) {
-          await logRequest('openai', model, openaiParams, res).catch(e =>
+          await logRequest(providerName, model, openaiParams, res).catch(e =>
             logger.error(e)
           );
         }
@@ -165,7 +183,7 @@ export const summarizeMessages = async ({
       })
       .catch(async e => {
         if (logRequest !== undefined) {
-          await logRequest('openai', model, openaiParams, e).catch(e =>
+          await logRequest(providerName, model, openaiParams, e).catch(e =>
             logger.error(e)
           );
         }
@@ -206,7 +224,7 @@ export const questionMessages = async ({
   const messagePrompt = convertMessagesToPrompt(messages);
 
   const model = getModel();
-  const requestOptions: Partial<OpenAI.ChatCompletionCreateParamsNonStreaming> =
+  const requestOptions: Partial<OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming> =
     {
       frequency_penalty: 0.5 + Math.random() * 0.1,
       presence_penalty: -0.3 + Math.random() * 0.2,
@@ -228,28 +246,30 @@ export const questionMessages = async ({
     { role: 'user', content: question },
   ];
 
-  const openaiParams = {
+  const openaiParams: OpenRouterChatCompletionCreateParams = {
     messages: chatCompletionMessage,
     model,
     ...requestOptions,
-      trace: {
-        trace_id: `${guildId}_${channelId}_${context?.messageId}`,
-        trace_name: "Question",
-        span_name: "Question Step",
-        generation_name: "Generate Answer",
-      }
   };
 
-  if (model.startsWith('google/')) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (openaiParams as any).extra_body = google_extra_body;
+  if (isOpenRouterLlm) {
+    openaiParams.trace = {
+        trace_id: `${guildId}_${channelId}_${context?.messageId}`,
+        trace_name: 'Question',
+        span_name: 'Question Step',
+        generation_name: 'Generate Answer',
+      };
+
+    if (model.startsWith('google/')) {
+      openaiParams.extra_body = googleExtraBody;
+    }
   }
 
   const chatCompletion = await openai.chat.completions
     .create(openaiParams)
     .then(async res => {
       if (logRequest !== undefined) {
-        await logRequest('openai', model, openaiParams, res).catch(e =>
+        await logRequest(providerName, model, openaiParams, res).catch(e =>
           logger.error(e)
         );
       }
@@ -257,7 +277,7 @@ export const questionMessages = async ({
     })
     .catch(async e => {
       if (logRequest !== undefined) {
-        await logRequest('openai', model, openaiParams, e).catch(e =>
+        await logRequest(providerName, model, openaiParams, e).catch(e =>
           logger.error(e)
         );
       }

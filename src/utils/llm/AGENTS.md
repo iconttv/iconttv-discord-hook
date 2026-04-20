@@ -7,7 +7,7 @@
 ```text
 src/utils/llm/
 |- index.ts                # summarize/question facade exports
-|- openrouter.ts           # provider call orchestration and prompt loading
+|- openai.ts               # provider call orchestration and prompt loading
 \- types.ts                # OpenAI JSON schema output contracts
 ```
 
@@ -15,7 +15,7 @@ src/utils/llm/
 | Task | Location | Notes |
 |------|----------|-------|
 | Summarize/question entrypoints | `src/utils/llm/index.ts` | Thin facade used by services |
-| OpenRouter call logic | `src/utils/llm/openrouter.ts` | Model selection, prompt fetch, logRequest hooks |
+| OpenAI-compatible call logic | `src/utils/llm/openai.ts` | Model selection, prompt fetch, logRequest hooks |
 | Output schema contracts | `src/utils/llm/types.ts` | `SummarizeOutputSchemaOpenai`, `questionOutputSchemaOpenai` |
 | Prompt policy source | `static/prompt-question.txt`, `static/prompt-summarization.txt` | Runtime-fetched prompt templates |
 

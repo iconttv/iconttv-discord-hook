@@ -358,7 +358,6 @@ export const savePreviousMessages = async (
 
       // eslint-disable-next-line no-constant-condition
       while (true) {
-        logger.info(`Traverse ${channelName} lastMessageId: ${lastMessageId} afterMessageId ${afterMessageId}`);
         const options: FetchMessagesOptions = { limit: BATCH_SIZE, cache: false };
         if (afterMessageId) {
           options.after = afterMessageId;
@@ -366,6 +365,7 @@ export const savePreviousMessages = async (
         if (lastMessageId) {
           options.before = lastMessageId;
         }
+        logger.info(`Traverse ${channelName} options: ${JSON.stringify(options)}`);
 
         const messages = await retry(
           async () => {
