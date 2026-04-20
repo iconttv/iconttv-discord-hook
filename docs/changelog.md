@@ -83,3 +83,8 @@
 
 1.0.8
 - allow image input for image generation
+
+1.0.9
+- itvstat 명령어 추가 
+  - GatewayIntentBits.GuildVoiceStates 권한 필요
+- openrouter 대신 openai 호환 API 사용으로 변경

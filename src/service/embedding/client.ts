@@ -9,6 +9,11 @@ import {
 import sharp from 'sharp';
 import { config } from '../../config';
 import logger from '../../lib/logger';
+import {
+  getOpenRouterHeaders,
+  isOpenRouterBaseUrl,
+  OpenRouterTrace,
+} from '../../utils/openai';
 
 export interface MessageTraceSpan {
   guildId?: string, channelId?: string, messageId?: string
@@ -42,24 +47,37 @@ const summarizeChatCompletionMessageBase: OpenAI.ChatCompletionMessageParam[] =
     },
   ];
 
+const embeddingDefaultHeaders = getOpenRouterHeaders(
+  config.EMBEDDING_OPENAI_BASEURL,
+  'iconttv'
+);
+const visionDefaultHeaders = getOpenRouterHeaders(
+  config.VISION_OPENAI_BASEURL,
+  'iconttv'
+);
+const shouldUseVisionOpenRouterExtras = isOpenRouterBaseUrl(
+  config.VISION_OPENAI_BASEURL
+);
+
+type VisionChatCompletionCreateParams =
+  OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming & {
+    trace?: OpenRouterTrace;
+  };
+
 class AiClient {
   client = {
     embedding: new OpenAI({
       baseURL: config.EMBEDDING_OPENAI_BASEURL,
       apiKey: config.EMBEDDING_OPENAI_API_KEY,
-      defaultHeaders: {
-        'HTTP-Referer': 'https://github.com/iconttv',
-        'X-Title': 'iconttv',
-      },
+      ...(embeddingDefaultHeaders
+        ? { defaultHeaders: embeddingDefaultHeaders }
+        : {}),
       timeout: 60 * 1000,
     }),
     llm: new OpenAI({
       baseURL: config.VISION_OPENAI_BASEURL,
       apiKey: config.VISION_OPENAI_API_KEY,
-      defaultHeaders: {
-        'HTTP-Referer': 'https://github.com/iconttv',
-        'X-Title': 'iconttv',
-      },
+      ...(visionDefaultHeaders ? { defaultHeaders: visionDefaultHeaders } : {}),
       timeout: 60 * 1000,
     }),
   };
@@ -120,7 +138,7 @@ class AiClient {
       inputImage = urlOrBase64;
     }
 
-    const response = await this.client.llm.chat.completions.create({
+    const params: VisionChatCompletionCreateParams = {
       model: this.model.llm,
       messages: [
         ...ocrChatCompletionMessageBase,
@@ -138,13 +156,18 @@ class AiClient {
       ],
       max_completion_tokens: 1024,
       temperature: 0.1,
-      trace: {
+    };
+
+    if (shouldUseVisionOpenRouterExtras) {
+      params.trace = {
         trace_id: `${traceSpan?.guildId}_${traceSpan?.channelId}_${traceSpan?.messageId}`,
-        trace_name: "Image Transcription",
-        span_name: "Transcription Step",
-        generation_name: "Generate Transcription",
-      }
-    } as OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming);
+        trace_name: 'Image Transcription',
+        span_name: 'Transcription Step',
+        generation_name: 'Generate Transcription',
+      };
+    }
+
+    const response = await this.client.llm.chat.completions.create(params);
 
     const caption = response.choices[0]?.message.content?.replace('[없음]','')?.trim();
     if (!caption || caption.length === 0) {

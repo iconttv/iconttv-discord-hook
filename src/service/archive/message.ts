@@ -3,9 +3,11 @@ import {
   FetchMessagesOptions,
   Guild,
   Message,
+  NonThreadGuildBasedChannel,
   OmitPartialGroupDMChannel,
   PartialMessage,
   ReadonlyCollection,
+  SnowflakeUtil,
 } from 'discord.js';
 import MessageModel from '../../database/model/MessageModel';
 import logger from '../../lib/logger';
@@ -17,6 +19,7 @@ import {
 import { retry } from 'es-toolkit';
 import { processMessage } from '../embedding/discord_processor';
 import { produceMessageToKafka } from '../kafkaService';
+import { isArchiveShutdownRequested } from './lifecycle';
 
 export const saveMessage = async (message: Message) => {
   try {
@@ -328,67 +331,192 @@ const saveMessagesBulk = async (messages: Message<boolean>[]) => {
   return savedDocumentCount === 0 ? null : savedDocumentCount;
 };
 
-export const savePreviousMessages = async (
-  guild: Guild,
-  beforeMessageId?: string
-) => {
-  // max 100, 이전 메시지 지정 가능
-  const BATCH_SIZE = 100;
+const BATCH_SIZE = 100;
 
-  const textChannels = guild.channels.cache.filter(channel => {
+type SavePreviousMessagesOptions = Pick<
+  FetchMessagesOptions,
+  'before' | 'limit' | 'cache'
+> & {
+  stopAfterMessageId?: string;
+};
+
+export const getArchivableTextChannels = async (guild: Guild) => {
+  const channels = await guild.channels.fetch();
+  const selfMember = guild.members.me;
+
+  if (!selfMember) {
+    return channels.filter(
+      (channel): channel is NonThreadGuildBasedChannel => channel !== null && false
+    );
+  }
+
+  return channels.filter((channel): channel is NonThreadGuildBasedChannel => {
     return (
+      channel !== null &&
       channel.isTextBased() &&
+      'messages' in channel &&
       channel.viewable &&
-      guild.members.me &&
-      channel.permissionsFor(guild.members.me).has('ViewChannel') &&
-      channel.permissionsFor(guild.members.me).has('ReadMessageHistory')
+      channel.permissionsFor(selfMember).has('ViewChannel') &&
+      channel.permissionsFor(selfMember).has('ReadMessageHistory')
     );
   });
+};
 
-  for (const [channelId, channel] of textChannels) {
-    const channelName = `${guild.name}_${channel.name} (${channelId})`;
+const getChannelArchiveBounds = async (guildId: string, channelId: string) => {
+  const [newestMessage, oldestMessage] = await Promise.all([
+    MessageModel.findOne({
+      guildId,
+      channelId,
+    })
+      .sort({ messageId: -1 })
+      .select('messageId')
+      .lean(),
+    MessageModel.findOne({
+      guildId,
+      channelId,
+    })
+      .sort({ messageId: 1 })
+      .select('messageId')
+      .lean(),
+  ]);
 
-    try {
-      if (!('messages' in channel)) {
-        continue;
-      }
-      let lastMessageId: string | undefined = beforeMessageId;
+  return {
+    newestMessageId: newestMessage?.messageId,
+    oldestMessageId: oldestMessage?.messageId,
+  };
+};
 
-      // eslint-disable-next-line no-constant-condition
-      while (true) {
-        logger.info(`Traverse ${channelName} lastMessageId: ${lastMessageId}`);
-        const options: FetchMessagesOptions = { limit: BATCH_SIZE, cache: false };
-        if (lastMessageId) {
-          options.before = lastMessageId;
-        }
+const getOldestMessageId = (messages: Message<boolean>[]) => {
+  if (messages.length === 0) {
+    return undefined;
+  }
 
-        const messages = await retry(
-          async () => {
-            const messages = await channel.messages.fetch(options);
-            return messages;
-          },
-          {
-            retries: 5,
-            delay: (attempts: number) => 2 ** attempts,
-          }
-        );
-        if (messages.size === 0) {
-          break; // 더 이상 불러올 메시지가 없으면 종료
-        }
-        lastMessageId = messages.last()?.id;
+  return messages.reduce((oldestMessageId, message) => {
+    return BigInt(message.id) < BigInt(oldestMessageId)
+      ? message.id
+      : oldestMessageId;
+  }, messages[0].id);
+};
 
-        try {
-          const messageList = Array.from(messages.values());
-          await saveMessagesBulk(messageList);
-          logger.info(`${channelName} saved messages ${messageList.length}`);
-        } catch (error) {
-          logger.error(`${channelName} failed to save messages ${error}`);
-        }
-      }
+export const savePreviousMessages = async (
+  guild: Guild,
+  channel: NonThreadGuildBasedChannel,
+  options?: SavePreviousMessagesOptions,
+) => {
+  if (isArchiveShutdownRequested()) {
+    return;
+  }
 
-      logger.info(`${channelName} save messgeas done`);
-    } catch (error) {
-      logger.error(`${channelName} failed to fetch messages ${error}`);
+  const channelName = `${guild.name}_${channel.name} (${channel.id})`;
+
+  try {
+    if (!channel.isTextBased() || !('messages' in channel)) {
+      return;
     }
+
+    const fetchOptions: FetchMessagesOptions = {
+      before: options?.before,
+      limit: options?.limit ?? BATCH_SIZE,
+      cache: options?.cache ?? false,
+    };
+
+    while (!isArchiveShutdownRequested()) {
+      logger.info(`Traverse ${channelName} options: ${JSON.stringify(fetchOptions)}`);
+
+      const messages = await retry(
+        async () => {
+          const messages = await channel.messages.fetch(fetchOptions);
+          return messages;
+        },
+        {
+          retries: 5,
+          delay: (attempts: number) => 2 ** attempts,
+        }
+      );
+      if (messages.size === 0) {
+        break; // 더 이상 불러올 메시지가 없으면 종료
+      }
+
+      const messageList = Array.from(messages.values());
+      const messagesToSave = options?.stopAfterMessageId
+        ? messageList.filter(
+            message => BigInt(message.id) > BigInt(options.stopAfterMessageId!)
+          )
+        : messageList;
+
+      try {
+        await saveMessagesBulk(messagesToSave);
+        logger.info(`${channelName} saved messages ${messagesToSave.length}`);
+      } catch (error) {
+        logger.error(`${channelName} failed to save messages ${error}`);
+      }
+
+      const oldestMessageId = getOldestMessageId(messageList);
+      if (!oldestMessageId || fetchOptions.before === oldestMessageId) {
+        break;
+      }
+
+      if (
+        options?.stopAfterMessageId &&
+        BigInt(oldestMessageId) <= BigInt(options.stopAfterMessageId)
+      ) {
+        break;
+      }
+
+      fetchOptions.before = oldestMessageId;
+    }
+
+    logger.info(`${channelName} save messgeas done`);
+  } catch (error) {
+    logger.error(`${channelName} failed to fetch messages ${error}`);
+  }
+};
+
+
+export const savePreviousMessagesAfterJoin = async (
+  guild: Guild,
+) => {
+  if (isArchiveShutdownRequested()) {
+    return;
+  }
+
+  const epoch = new Date();
+  const beforeMessageId = SnowflakeUtil.generate({
+    timestamp: epoch,
+  }).toString();
+
+  const textChannels = await getArchivableTextChannels(guild);
+
+  for (const [, channel] of textChannels) {
+    if (isArchiveShutdownRequested()) {
+      break;
+    }
+
+    const { newestMessageId, oldestMessageId } = await getChannelArchiveBounds(
+      guild.id,
+      channel.id
+    );
+
+    if (newestMessageId) {
+      await savePreviousMessages(guild, channel, {
+        before: beforeMessageId,
+        stopAfterMessageId: newestMessageId,
+      });
+    }
+
+    if (isArchiveShutdownRequested()) {
+      break;
+    }
+
+    if (oldestMessageId) {
+      await savePreviousMessages(guild, channel, {
+        before: oldestMessageId,
+      });
+      continue;
+    }
+
+    await savePreviousMessages(guild, channel, {
+      before: beforeMessageId,
+    });
   }
 };

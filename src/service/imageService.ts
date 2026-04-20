@@ -1,5 +1,5 @@
 import { saveAiRequestBuilder } from './common';
-import { openRouterGenerateImage } from '../utils/image/index';
+import { generateImage } from '../utils/image/index';
 
 export const generateImageFromUser = async (
   guildId: string,
@@ -8,11 +8,9 @@ export const generateImageFromUser = async (
   prompt: string,
   imageInputUrls: string[] | undefined
 ) => {
-  return openRouterGenerateImage(
+  return generateImage(
     prompt,
     imageInputUrls,
     saveAiRequestBuilder(guildId, channelId, senderId, { prompt })
   );
-
-  throw new Error('unavailable provider.');
 };
