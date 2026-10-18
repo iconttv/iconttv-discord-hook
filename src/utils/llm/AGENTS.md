@@ -1,7 +1,7 @@
 # UTILS LLM KNOWLEDGE BASE
 
 ## OVERVIEW
-`src/utils/llm/` is the LLM integration boundary for summarize/question flows and schema-constrained outputs.
+`src/utils/llm/` is the text LLM boundary for summarization/question flows, remotely fetched prompt policies, and schema-constrained Discord output. Image generation lives in the sibling `src/utils/image/` module.
 
 ## STRUCTURE
 ```text
@@ -17,14 +17,35 @@ src/utils/llm/
 | Summarize/question entrypoints | `src/utils/llm/index.ts` | Thin facade used by services |
 | OpenAI-compatible call logic | `src/utils/llm/openai.ts` | Model selection, prompt fetch, logRequest hooks |
 | Output schema contracts | `src/utils/llm/types.ts` | `SummarizeOutputSchemaOpenai`, `questionOutputSchemaOpenai` |
-| Prompt policy source | `static/prompt-question.txt`, `static/prompt-summarization.txt` | Runtime-fetched prompt templates |
+| Prompt policy source | `static/prompt-question.txt`, `static/prompt-summarization.txt`, `static/prompt-persona.txt` | Runtime fetches raw GitHub URLs, not local files |
+| Shared provider contracts | `src/utils/openai.ts` | Model-list parsing, exact OpenRouter host detection, provider name, headers |
+| Message serialization/rendering | `src/utils/message.ts` | JSONL input, JSON parsing, Discord jump links |
+| Service cache/request storage | `src/service/messageService.ts`, `src/service/common.ts` | Five-minute summary cache and `saveAiRequestBuilder` |
+| Detailed coding conventions | `docs/coding-conventions/ai-and-prompts.md` | Current contracts, independent LLM comparisons, limitations, edit checklist |
 
 ## CONVENTIONS
-- Keep output schema enforcement via `response_format: json_schema`.
-- Keep prompt files externalized under `static/` and fetched by branch-aware `GITHUB_BASEURL`.
-- Preserve provider-specific safety/body configuration branches already in use.
+- Preserve `response_format: json_schema`, strict object schemas, required properties, and matching result types/formatters. Summary uses `topics[{topic,startMessageId}]` plus one `comment`; question uses `answer` and `startMessageIds`.
+- Prompts live under root `static/`; there are no `src/utils/llm/*.txt` files. Fetch uses `config.GITHUB_BASEURL` (prod: `main`, otherwise: `develop`), not the current checkout or local filesystem.
+- Use `convertMessagesToPrompt` for JSONL, `EMBEDDING_INPUT`/TEXT fallback, reactions, and laugh normalization. Input still contains sender names; output anonymization is a separate prompt policy.
+- Keep 600-message sequential summary chunks, one randomly selected model per call, and prior JSON as an assistant message describing cumulative state, never a system instruction. Question calls do not use this chunk loop.
+- Reuse provider helpers in `src/utils/openai.ts`. OpenRouter-only headers and traces must not leak into unrelated providers; Google safety `extra_body` applies only to OpenRouter `google/` text models.
+- OpenRouter requests use `reasoning: { exclude: true }`; do not disable reasoning or force none/low/medium globally. Other endpoints must not receive this provider-specific field.
+- Extract only final content with `getChatCompletionText`; use `stripReasoningText` for explicit think/thinking/reasoning blocks, including structured display fields and cached summary returns. Never fall back to separate reasoning fields.
+- SDK is `openai@^7.38.0`. Preserve Chat/Responses API boundaries; output filtering does not guarantee final answers fit Discord's 2000-character limit.
+- Construct SDK clients and parse model lists on first feature use, not import. Embedding and Vision clients initialize independently. Never insert fake credentials to bypass SDK validation; missing credentials remain an error when the feature is called.
+- Await the optional `LogAiRequest(provider, model, params, responseOrError)` callback on API success/failure, log callback failures without replacing the API result, and rethrow original API failures.
+- Keep Korean output, no person-name/nickname output, question paraphrasing, and application-generated jump links. Persona applies to the summary comment, not topic content.
+- Write static system instructions in English; require Korean output and preserve the confirmed average participant age in the 20s. Questions are history-grounded; cumulative summaries merge earlier topics and new evidence. Prompt length targets are not runtime Discord-length guarantees.
 
 ## ANTI-PATTERNS
-- Do not return free-form output when schema contracts are expected.
-- Do not inline long prompt text directly into TS files.
-- Do not remove prompt constraints around anonymization and wording preservation.
+- Do not replace strict schemas with free-form output or `json_object`, invent new result fields, or duplicate message/link formatters.
+- Do not inline long text prompt policy in TS or assume local static edits immediately affect runtime fetches.
+- Do not describe prompt-only anonymization as a runtime privacy validator or input redaction guarantee.
+- Do not copy raw conversations into question output, remove name-leak constraints, or equate paraphrasing with deleting sensitive meaning.
+
+## NOTES
+- Summary has a `skipSystemPrompt` type field but does not consume it; question does consume it and still sends an empty system message with the output schema.
+- Prompt HTTP status and output IDs are not validated here; JSON parsing is not full runtime schema validation. These are limitations, not recommended patterns.
+- Service-owned cache and request records are distinct from provider traces and operational logs. Never add API keys or authorization headers to stored payloads.
+- Regressions: `node --import tsx --test tests/openai-output.test.ts tests/openai-initialization.test.ts`. The initialization test isolates its subprocess and removes AI settings; isolate the runner as well to avoid formatter logger files.
+- Detailed Korean guidance: [AI and prompts](../../../docs/coding-conventions/ai-and-prompts.md).

@@ -4,10 +4,13 @@ import logger from '../../lib/logger';
 import { LogAiRequest } from '../../type';
 import {
   buildOpenAiRequestUrl,
+  getChatCompletionText,
   getOpenAiProviderName,
   getOpenRouterHeaders,
   isOpenRouterBaseUrl,
   parseOpenAiModelList,
+  OpenRouterReasoning,
+  stripReasoningText,
 } from '../openai';
 
 const imageBaseURL = config.IMAGE_OPENAI_BASEURL;
@@ -18,19 +21,23 @@ const imageDefaultHeaders = getOpenRouterHeaders(
   'iconttv-discord'
 );
 
-const openai = new OpenAI({
-  baseURL: imageBaseURL,
-  apiKey: config.IMAGE_OPENAI_API_KEY,
-  ...(imageDefaultHeaders ? { defaultHeaders: imageDefaultHeaders } : {}),
-  timeout: 60 * 1000,
-});
+let openai: OpenAI | undefined;
 
-const models = parseOpenAiModelList(
-  config.IMAGE_OPENAI_MODELS,
-  'IMAGE_OPENAI_MODELS'
-);
+const getOpenAiClient = (): OpenAI => {
+  if (!openai) {
+    openai = new OpenAI({
+      baseURL: imageBaseURL,
+      apiKey: config.IMAGE_OPENAI_API_KEY,
+      ...(imageDefaultHeaders ? { defaultHeaders: imageDefaultHeaders } : {}),
+      timeout: 60 * 1000,
+    });
+  }
+  return openai;
+};
 
+let models: string[] | undefined;
 const getModel = () => {
+  models ??= parseOpenAiModelList(config.IMAGE_OPENAI_MODELS, 'IMAGE_OPENAI_MODELS');
   const idx = Math.floor(Math.random() * models.length);
   return models[idx];
 };
@@ -48,7 +55,7 @@ interface ImageGenerationRequest {
   model: string;
   messages: ImageGenerationRequestMessage[];
   modalities: ['image', 'text'];
-  include_reasoning?: true;
+  reasoning?: OpenRouterReasoning;
   provider?: {
     ignore: string[];
   };
@@ -66,7 +73,7 @@ interface ImageGenerationRequest {
 interface ImageGenerationResponse {
   choices?: Array<{
     message?: {
-      content?: string;
+      content?: unknown;
       images?: Array<{
         image_url?: {
           url?: string;
@@ -117,10 +124,10 @@ const extractOpenRouterGeneratedImages = async (
     throw new Error('no response');
   }
 
-  const content = choices[0]?.message?.content;
+  const content = getChatCompletionText(choices[0]?.message);
   const images = choices[0]?.message?.images;
   if (!Array.isArray(images) || images.length === 0) {
-    throw new Error(content ?? 'no image response');
+    throw new Error(content || 'no image response');
   }
 
   const imageUrls = images
@@ -128,7 +135,7 @@ const extractOpenRouterGeneratedImages = async (
     .filter((url): url is string => typeof url === 'string' && url.length > 0);
 
   if (imageUrls.length === 0) {
-    throw new Error(content ?? 'no image response');
+    throw new Error(content || 'no image response');
   }
 
   return Promise.all(imageUrls.map(normalizeGeneratedImage));
@@ -173,7 +180,7 @@ const generateImageWithResponsesApi = async (
     tool_choice: { type: 'image_generation' },
   };
 
-  const response = await openai.responses.create(params)
+  const response = await getOpenAiClient().responses.create(params)
     .then(async res => {
       await logOpenaiRequest?.(providerName, model, params, res).catch(e =>
         logger.error(JSON.stringify(e))
@@ -193,7 +200,7 @@ const generateImageWithResponsesApi = async (
     .filter((result): result is string => typeof result === 'string' && result.length > 0);
 
   if (images.length === 0) {
-    throw new Error(response.output_text || 'no image response');
+    throw new Error(stripReasoningText(response.output_text) || 'no image response');
   }
 
   logger.info(`imageGenerate result. images: ${images.length}`);
@@ -252,7 +259,7 @@ export const generateImage = async (
   };
 
   if (isOpenRouterImage) {
-    params.include_reasoning = true;
+    params.reasoning = { exclude: true };
 
     if (model.startsWith('google/')) {
       params.provider = {

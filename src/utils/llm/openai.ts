@@ -3,10 +3,12 @@ import { config } from '../../config';
 import logger from '../../lib/logger';
 import { makeChunk } from '../index';
 import {
+  getChatCompletionText,
   getOpenAiProviderName,
   getOpenRouterHeaders,
   isOpenRouterBaseUrl,
   OpenRouterTrace,
+  OpenRouterReasoning,
   parseOpenAiModelList,
 } from '../openai';
 import {
@@ -27,19 +29,23 @@ const llmDefaultHeaders = getOpenRouterHeaders(llmBaseURL, 'iconttv-discord');
 const isOpenRouterLlm = isOpenRouterBaseUrl(llmBaseURL);
 const providerName = getOpenAiProviderName(llmBaseURL);
 
-const openai = new OpenAI({
-  baseURL: llmBaseURL,
-  apiKey: config.LLM_OPENAI_API_KEY,
-  ...(llmDefaultHeaders ? { defaultHeaders: llmDefaultHeaders } : {}),
-  timeout: 60 * 1000,
-});
+let openai: OpenAI | undefined;
 
-const models = parseOpenAiModelList(
-  config.LLM_OPENAI_MODELS,
-  'LLM_OPENAI_MODELS'
-);
+const getOpenAiClient = (): OpenAI => {
+  if (!openai) {
+    openai = new OpenAI({
+      baseURL: llmBaseURL,
+      apiKey: config.LLM_OPENAI_API_KEY,
+      ...(llmDefaultHeaders ? { defaultHeaders: llmDefaultHeaders } : {}),
+      timeout: 60 * 1000,
+    });
+  }
+  return openai;
+};
 
+let models: string[] | undefined;
 const getModel = () => {
+  models ??= parseOpenAiModelList(config.LLM_OPENAI_MODELS, 'LLM_OPENAI_MODELS');
   const idx = Math.floor(Math.random() * models.length);
   return models[idx];
 };
@@ -78,6 +84,7 @@ const googleExtraBody = {
 type OpenRouterChatCompletionCreateParams =
   OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming & {
     extra_body?: typeof googleExtraBody;
+    reasoning?: OpenRouterReasoning;
     trace?: OpenRouterTrace;
   };
 
@@ -139,7 +146,7 @@ export const summarizeMessages = async ({
 
     if (summarizationText !== undefined && summarizationText.length > 0) {
       chatCompletionMessage.push({
-        role: 'system',
+        role: 'assistant',
         content: summarizationText,
       });
     }
@@ -159,6 +166,7 @@ export const summarizeMessages = async ({
     };
 
     if (isOpenRouterLlm) {
+      openaiParams.reasoning = { exclude: true };
       openaiParams.trace = {
         trace_id: `${guildId}_${channelId}_${context?.messageId}`,
         trace_name: 'Chat Summarization',
@@ -171,7 +179,7 @@ export const summarizeMessages = async ({
       }
     }
 
-    const chatCompletion = await openai.chat.completions
+    const chatCompletion = await getOpenAiClient().chat.completions
       .create(openaiParams)
       .then(async res => {
         if (logRequest !== undefined) {
@@ -190,8 +198,9 @@ export const summarizeMessages = async ({
         throw e;
       });
 
-    if (!chatCompletion.choices[0].message.content) break;
-    summarizationText = chatCompletion.choices[0].message.content;
+    const content = getChatCompletionText(chatCompletion.choices[0]?.message);
+    if (!content) break;
+    summarizationText = content;
   }
 
   const summarization = constructSummarizationResult(
@@ -253,6 +262,7 @@ export const questionMessages = async ({
   };
 
   if (isOpenRouterLlm) {
+    openaiParams.reasoning = { exclude: true };
     openaiParams.trace = {
         trace_id: `${guildId}_${channelId}_${context?.messageId}`,
         trace_name: 'Question',
@@ -265,7 +275,7 @@ export const questionMessages = async ({
     }
   }
 
-  const chatCompletion = await openai.chat.completions
+  const chatCompletion = await getOpenAiClient().chat.completions
     .create(openaiParams)
     .then(async res => {
       if (logRequest !== undefined) {
@@ -284,12 +294,13 @@ export const questionMessages = async ({
       throw e;
     });
 
-  if (!chatCompletion.choices[0].message.content) return;
+  const content = getChatCompletionText(chatCompletion.choices[0]?.message);
+  if (!content) return;
 
   const answer = constructQuestionResult(
     guildId,
     channelId,
-    chatCompletion.choices[0].message.content.trim()
+    content
   );
 
   return answer + `\n(${model})`;

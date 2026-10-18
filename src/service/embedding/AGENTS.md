@@ -1,31 +1,30 @@
 # SERVICE EMBEDDING KNOWLEDGE BASE
 
 ## OVERVIEW
-`src/service/embedding/` converts Discord message artifacts into searchable text and vector embeddings.
-
-## STRUCTURE
-```text
-src/service/embedding/
-|- client.ts               # OpenAI clients: embedding + vision/summary
-|- discord_processor.ts    # message/attachment/embed preprocessing
-|- toolkit.ts              # URL/image/text utility functions
-\- failure_urls.ts         # SQLite failed-url store
-```
+`src/service/embedding/` returns searchable text and vector fields for Discord artifacts. Mongo persistence belongs to archive/CLI callers. See [archive and persistence conventions](../../../docs/coding-conventions/archive-and-persistence.md) and [AI and prompt conventions](../../../docs/coding-conventions/ai-and-prompts.md).
 
 ## WHERE TO LOOK
-| Task | Location | Notes |
-|------|----------|-------|
-| End-to-end message processing | `src/service/embedding/discord_processor.ts` | Produces `TEXT_*` and `EMBEDDING_*` fields |
-| Provider calls and prompts | `src/service/embedding/client.ts` | OCR/summary prompts + embedding creation |
-| URL/image utility behavior | `src/service/embedding/toolkit.ts` | URL liveness, data URL decode, markdown conversion |
-| Failed URL dedupe store | `src/service/embedding/failure_urls.ts` | WAL SQLite table + `INSERT OR IGNORE` |
+| Task | Location / symbol | Notes |
+|------|-------------------|-------|
+| Artifact preprocessing | `discord_processor.ts` / `processMessage` | Partial `TEXT_*` / `EMBEDDING_*` results, null for missing identity |
+| Combined embedding input | `discord_processor.ts` / `calculateEmbedding` | Text, attachment, component, embed block order |
+| Provider calls and prompts | `client.ts` / `aiClient` | Embedding, vision, extraction and tracing |
+| Utility behavior | `toolkit.ts` | URL/image/text conversion and emoji normalization |
+| Failed URL store | `failure_urls.ts` / `databaseSqlite` | Import-time SQLite open, WAL and prepared statements |
 
 ## CONVENTIONS
-- Keep preprocess prompts concise and free of intro/outro boilerplate.
-- Use `databaseSqlite` failed URL checks before repeated network/image processing.
-- Keep `TEXT_MESSAGE`, `TEXT_ATTACHMENTS`, `TEXT_COMPONENTS`, `TEXT_EMBEDS` contract stable for downstream search.
+- Keep `TEXT_MESSAGE` and artifact `Map<string, string>` fields aligned with `MessageModel`; do not flatten them into a new storage contract.
+- Preserve `calculateEmbedding` headers and text/attachment/component/embed ordering. Model metadata comes from config, dimension from the returned vector length.
+- Distinguish absent status (no result assigned), false (embedding unavailable/failed), true (embedding returned), and Mongo's nullable default. Artifact failures can coexist with successful embeddings.
+- Attachments support `image/` and `text/` content types; do not infer extension support. Components currently log and skip. Embeds process selected metadata and thumbnail captions, not arbitrary URL bodies.
+- Check the failed URL store before attachment/thumbnail requests; log failures and preserve other successful preprocessing results.
+- Keep extraction prompts free of user-facing intro/outro wrappers. Review provider/prompt changes against the linked AI conventions.
+- OCR/document summaries use `getChatCompletionText` to keep only final text; OpenRouter requests set `reasoning: { exclude: true }` without disabling reasoning or forcing effort. Keep reasoning out of stored searchable text.
+- Embedding and Vision SDK clients are independently lazy and cached. Importing aiClient must not require credentials for either feature; actual calls still require valid authentication. Do not supply fabricated API keys.
 
-## ANTI-PATTERNS
-- Do not add user-facing narrative wrappers to extracted OCR/summarized text.
-- Do not remove fallback behavior from URL reader (`Jina` -> direct fetch).
-- Do not silently swallow preprocessing/provider failures without logging.
+## LIMITATIONS AND SIDE EFFECTS
+- Importing `failure_urls.ts` creates/opens `./database/failure_urls.db`; do not import it just to inspect behavior or document the module.
+- Failed URLs are permanently skipped without TTL, automatic retry or stored reason. Inserts use `INSERT OR IGNORE`; unsupported attachment skips are not cached failures.
+- `close()` is idempotent; reads/inserts after close throw. The archive entrypoint currently does not close this store.
+- `processMessage` does not persist intermediate Mongo results. Callers explicitly copy returned fields, and message edits currently do not invoke it.
+- CLI embedding repair defaults to null status, not false, and reuses saved embedding input/text rather than re-fetching all artifacts.

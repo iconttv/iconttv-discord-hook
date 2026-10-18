@@ -6,6 +6,7 @@ import MessageSummarizationModel from '../database/model/MessageSummarizationMod
 import { unreplaceLaughs } from '../utils/index';
 import { saveAiRequestBuilder } from './common';
 import { getLastMessages } from '../utils/message';
+import { stripReasoningText } from '../utils/openai';
 
 export const summarizeLastMessages = async (
   trigger: Message | Interaction | CommandInteraction,
@@ -33,7 +34,7 @@ export const summarizeLastMessages = async (
     .exec();
 
   if (cached.length) {
-    return `${cached[0].summarization}\n\n(최근 5분 이내 응답에서 캐시됨)`;
+    return `${stripReasoningText(cached[0].summarization ?? '')}\n\n(최근 5분 이내 응답에서 캐시됨)`;
   }
 
   const messages = await getLastMessages(guildId, channelId, hours, count);

@@ -17,7 +17,7 @@ RUN yarn build
 FROM node:24-slim
 
 LABEL title="iconttv-discord-hook"
-LABEL version="1.0"
+LABEL version="1.0.10"
 
 WORKDIR /app
 
