@@ -1,34 +1,33 @@
 # UTILS DISCORD KNOWLEDGE BASE
 
 ## OVERVIEW
-`src/utils/discord/index.ts` defines shared Discord context and payload builders used by service, repository, and Kafka paths.
-
-## STRUCTURE
-```text
-src/utils/discord/
-\- index.ts                # LogContext + message/embed/attachment helpers
-```
+`index.ts` supplies shared Discord metadata, identity filters, member resolution, and message payload builders. Detailed field contracts and black-box comparisons: [Discord and commands conventions](../../../docs/coding-conventions/discord-and-commands.md).
 
 ## WHERE TO LOOK
-| Task | Location | Notes |
-|------|----------|-------|
-| Log context schema | `src/utils/discord/index.ts` (`LogContext`) | Canonical shape for message metadata |
-| Sender identity resolution | `src/utils/discord/index.ts` (`getSenderId`) | Handles `Message` vs `Interaction` paths |
-| Context extraction | `src/utils/discord/index.ts` (`getLogContext`) | Guild/member/channel snapshot for downstream use |
-| User embed payload | `src/utils/discord/index.ts` (`createUserProfileEmbed`) | Anonymous vs named rendering |
-| Icon response payloads | `src/utils/discord/index.ts` (`createIconEmbedMessagePayload`, `createIconFileMessagePayload`) | Suppressed notification payloads |
-| Image attachment conversion | `src/utils/discord/index.ts` (`base64ImageToAttachment`) | Base64 -> `AttachmentBuilder` |
+| Task | Symbols | Notes |
+|------|---------|-------|
+| Shared metadata | `LogContext`, `getLogContext` | Async extraction; flat fields and Date timestamp, message/interaction differences |
+| Sender resolution | `getSenderId`, `getSenderName`, `getAvatarUrl` | Message/interaction normalization and guild-member fallback policies |
+| Member lookup | `getGuildMember`, `resolveGuildMember` | Cache then API; missing IDs or fetch failures resolve undefined |
+| Persistence identity | `MessageIdentityFilter`, `getMessageIdentityFilter`, `getMessageIdentityFilterFromMessage` | All three guild/channel/message IDs required; null when incomplete |
+| User profile | `createUserProfileEmbed` | Async; named or anonymous author, DarkBlue, original timestamp |
+| Icon payloads | `createIconEmbedMessagePayload`, `createIconFileMessagePayload` | Remote/local branches, notification suppression |
+| Attachment conversion | `base64ImageToAttachment` | Data URL or bare base64; ASCII filename, optional SPOILER_ prefix |
+| Original deletion | `deleteMessage` | Checks deletable and logs/swallow failures; resolved Promise does not prove deletion |
 
 ## CONVENTIONS
-- Build sender/channel metadata via helper functions; avoid re-deriving IDs from raw interaction fields in each service.
-- Keep generated icon replies non-noisy by preserving `MessageFlags.SuppressNotifications` usage.
-- Use ASCII attachment names (for example `image.png`) when constructing embed attachments.
-- Preserve fallback behavior for missing guild/member/channel objects; downstream callers rely on empty-string defaults.
+- Reuse helpers instead of recreating sender/member/context schemas in services. Await async context and payload builders.
+- Preserve `LogContext` flat fields, arrays, and `createdAt: Date`. Attachments are JSON-converted; current embeds/components retain Discord objects. Channel context prunes large guild collections.
+- Treat empty-string metadata defaults as unavailable data. A non-null context is not proof of a complete identity.
+- Use the identity helpers for persistence filters. They require nonempty guildId/channelId/messageId but do not validate Snowflake syntax. Do not filter mutations by messageId alone.
+- `getSenderId` includes a user fallback that `getLogContext.senderId` does not always preserve. Do not assume the two results are identical when membership is unavailable.
+- Preserve `MessageFlags.SuppressNotifications` on icon replies; this is not ephemeral visibility or complete mention suppression.
+- Use ASCII attachment names and identical `attachment://` references; retain the actual extension. Generated-image spoiler attachments should not silently become visible image embeds.
+- Reuse the existing anonymous author policy (telecom-style name and default avatar). Anonymous display does not anonymize internal LogContext.
+- When changing shared contracts, update all affected consumers together rather than introducing parallel schemas or compatibility aliases.
 
-## ANTI-PATTERNS
-- Do not inline custom `Message`/`Interaction` casts in feature code when helper methods already normalize both paths.
-- Do not bypass `getLogContext` for Kafka or LLM logging payloads; field parity matters across consumers.
-- Do not use localized/non-ASCII attachment filenames in embed payloads.
-
-## NOTES
-- This module is imported across service and repository boundaries; keep changes backward-compatible.
+## CURRENT RISKS
+- `Message`/`PartialMessage` support is explicit on identity/member helpers, not a blanket guarantee that every payload builder handles partial input.
+- `getLogContext` can return populated objects with missing sender/guild/channel values. Preserve explicit guards at service/storage boundaries.
+- `src/service/iconService.ts` currently starts sending and original deletion separately; do not copy this race. New send/delete sequencing should confirm send success first.
+- A TextChannel cast is not a runtime channel guard, and helper extraction is not a bot-message filter.
