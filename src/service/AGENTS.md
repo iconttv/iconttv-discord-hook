@@ -36,7 +36,7 @@ src/service/
 - Keep interaction reply/defer/edit lifecycle in command handlers. Services orchestrate feature behavior; message replacement services intentionally send/delete Discord messages, so services are not universally side-effect free.
 - Pass explicit guild/channel/sender context into service calls instead of relying on global state.
 - Use `saveAiRequestBuilder` (`src/service/common.ts`) when issuing LLM summarize/question requests.
-- Preserve integration-specific activation: Kafka uses truthy `KAFKA_ENABLE` plus `KAFKA_REST_PROXY`; Elastic validates host/API when queried; some AI clients initialize on import. Do not assume a single feature-flag convention.
+- Preserve integration-specific activation: Kafka uses truthy `KAFKA_ENABLE` plus `KAFKA_REST_PROXY`; Elastic validates host/API when queried; AI SDK clients initialize lazily per feature. Missing credentials must not break unused-feature imports. Do not assume a single feature-flag convention.
 - Reuse message identity and LogContext helpers; preserve TEXT_/EMBEDDING_ field names and Icon DTO shapes.
 - Treat live ingestion, backfill, message update, and CLI re-embedding as separate paths; they do not currently have identical side effects.
 

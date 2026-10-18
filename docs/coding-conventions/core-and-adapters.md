@@ -84,7 +84,7 @@ export class IconFunzinnuRepository extends IconttvRepository {
 
 - Elasticsearch는 호출 시 host/API 설정을 검사하고 없으면 예외를 던진다. `ELASTIC_API` 형식은 `id:api_key`다.
 - Kafka는 `KAFKA_ENABLE`과 `KAFKA_REST_PROXY`가 모두 truthy인 경우 활성화된다. 문자열 `'false'`도 truthy이므로 boolean parser가 있다고 가정하면 안 된다. REST Proxy로 broker를 조회하고 KafkaJS producer로 보낸다. REST Proxy에 메시지를 직접 POST하는 구조가 아니다.
-- OpenAI 클라이언트 일부는 import 시 생성된다. 선택 기능의 env가 타입상 optional이라는 사실만으로 전체 CLI가 설정 없이 실행된다고 단정하지 않는다.
+- OpenAI 클라이언트와 대화·이미지 모델 목록은 각 기능 첫 호출 때 초기화하고 재사용한다. 임베딩과 Vision 클라이언트도 서로 독립적으로 지연 생성한다. API 키 누락은 해당 기능 호출에서 실패하며, 사용하지 않는 AI 기능 때문에 import나 CLI 도움말이 실패하지 않는다. 가짜 키나 무인증 fallback은 추가하지 않는다.
 
 ### 4.3 진입점과 종료
 
@@ -99,7 +99,7 @@ export class IconFunzinnuRepository extends IconttvRepository {
 
 `src/cli.ts --help`도 정적 import 때문에 파일 로거와 `./database/failure_urls.db`를 초기화한다. 운영 디렉터리에서 단순 도움말이 완전한 읽기 전용이라고 가정하지 않는다.
 
-안전한 확인은 소스·package·tsconfig를 임시 디렉터리에 복사하고 node_modules를 연결한 뒤, 가짜 API 설정과 임시 작업 디렉터리에서 도움말을 실행하는 방식이다. 이 작업에서 실제로 exit 0과 세 명령의 출력을 확인했다. Discord 로그인, Mongo 연결, API 요청을 검증했다는 의미는 아니다.
+안전한 확인은 소스·package·tsconfig를 임시 디렉터리에 복사하고 node_modules를 연결한 뒤 임시 작업 디렉터리에서 도움말을 실행하는 방식이다. AI 설정을 모두 제거한 환경에서도 exit 0과 세 명령의 출력을 확인했다. Discord 로그인, Mongo 연결, API 요청을 검증했다는 의미는 아니다.
 
 자동화 에이전트는 root [AGENTS.md](../../AGENTS.md)의 금지 명령을 따른다. Docker helper는 stop/remove/recreate를 수행하므로 문서 검증용으로 실행하지 않는다.
 

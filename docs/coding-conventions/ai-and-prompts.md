@@ -65,7 +65,7 @@ interface QuestionOutput {
 }
 ```
 
-스키마는 `strict: true`, 객체의 `additionalProperties: false`, 명시적 `required`를 가진다. 요약의 `comment`는 전체 결과에 하나이며 각 topic의 comment가 아니다. 질문의 빈 `startMessageIds`는 관련 메시지가 없는 경우 허용된다. `topics` 최대 10개와 질문 최대 200 words는 **프롬프트 규칙**이지 JSON schema의 `maxItems`/문자 수 검증이 아니다. 손으로 작성된 schema를 기존 타입과 함께 변경해야 하며 `json_object`로 바꾸는 것은 동등한 제약이 아니다. `types.ts`의 주석에는 동적 import에서 `zodResponseFormat` 사용 문제가 기록되어 있다. 여기서 새로운 schema 생성 관례를 임의로 도입하지 않는다.
+스키마는 `strict: true`, 객체의 `additionalProperties: false`, 명시적 `required`를 가진다. 요약의 `comment`는 전체 결과에 하나이며 각 topic의 comment가 아니다. 질문의 빈 `startMessageIds`는 관련 메시지가 없는 경우 허용된다. 최대 6개 주제, topic/comment 각 100자 목표, answer 800자 목표와 근거 최대 3개는 **프롬프트 규칙**이지 JSON schema나 최종 Discord 메시지 길이의 강제 검증이 아니다. 손으로 작성된 schema를 기존 타입과 함께 변경해야 하며 `json_object`로 바꾸는 것은 동등한 제약이 아니다.
 
 `constructSummarizationResult`는 `- 주제 https://discord.com/channels/{guild}/{channel}/{startMessageId}` 목록과 빈 줄 뒤 코멘트를 만든다. 주제가 없으면 안내문을 쓴다. `constructQuestionResult`는 답변과 빈 줄 뒤 근거 URL들을 만든다. 모델이 전체 URL을 생성하는 대신 애플리케이션의 `getMessageLink`가 URL을 합성한다. 모델이 돌려준 ID가 입력에 실제 존재하는지는 현재 별도 검증하지 않는다.
 
@@ -73,7 +73,7 @@ interface QuestionOutput {
 
 ### 관찰된 계약: 청크와 sampling
 
-`summarizeMessages`는 `makeChunk(messages, 600)`으로 나누고 **호출당 한 번 고른 모델**로 청크를 순차 처리한다. 두 번째 청크부터 직전의 원시 JSON 응답 문자열을 별도 `system` 메시지로 넣는다. 프롬프트에 `<prev>...</prev>` 설명이 있지만 현재 코드가 그 태그를 실제로 붙이는 것은 아니다. 입력 JSONL과 `Summarize given chats.`를 각각 user 메시지로 보낸다. 질문은 전체 JSONL과 질문을 별도 user 메시지로 보내며 같은 청크 루프를 쓰지 않는다.
+`summarizeMessages`는 `makeChunk(messages, 600)`으로 나누고 **호출당 한 번 고른 모델**로 청크를 순차 처리한다. 두 번째 청크부터 이전 JSON을 `assistant` 메시지로 전달한다. 프롬프트는 이를 이전 구간의 누적 결과로 설명하며 새 기록과 병합한 전체 결과를 요구한다. 이전 모델 출력을 system 지시로 승격하거나 `<prev>` 태그에 의존하지 않는다. 입력 JSONL과 `Summarize given chats.`를 각각 user 메시지로 보낸다. 질문은 전체 JSONL과 마지막 질문을 별도 user 메시지로 보내며 같은 청크 루프를 쓰지 않는다.
 
 공통 sampling 범위는 `frequency_penalty`가 `[0.5, 0.6)`, `presence_penalty`가 `[-0.3, -0.1)`, `temperature`가 `[0.5, 0.7)`이다. 청크 경계·역할 순서·샘플링은 현재 payload 계약이며 단순한 스타일 취향으로 변경하지 않는다.
 
@@ -91,15 +91,15 @@ interface QuestionOutput {
 
 ### 관찰된 정책
 
-- 요약은 핵심·흥미로운 주제 최대 10개, 주제 시작 메시지 ID, 별도 persona 코멘트를 요구한다. 주제가 없어도 코멘트는 생성한다. persona는 코멘트에만 적용하고 주제 요약에 영향을 주지 않도록 명시한다.
-- 요약 정책은 사용자명·사람 이름·개인 식별 정보의 출력 금지와 한국어 응답을 요구한다.
-- 질문 정책은 대화를 근거로 답변을 구성하고, 대화를 복사하지 말며 이름/닉네임/username을 언급하지 말라고 명시한다. 질문이 대화와 무관하면 가능한 범위에서 답하라는 지시도 있으므로, 근거가 없으면 무조건 답변 거부라는 정책과는 다르다.
-- 두 정책은 민감하거나 불편한 단어를 임의 삭제하지 말라는 지시와 `(웃음)` 의미를 포함한다. **원문 직접 복사 금지와 의미·표현을 무조건 순화/삭제하는 것은 다르다.** 요약 정책에는 질문 정책과 동일한 명시적 `Do not copy` 문장이 없으므로 두 파일의 문구가 완전히 같다고 인용하지 않는다.
-- 질문 정책에 `[Question]: ` 접두사가 설명되어 있지만 utility는 전달된 question 문자열을 그대로 보낸다. 새 caller가 붙이는 접두사와 기존 호출을 구분한다.
+- 세 시스템 프롬프트의 지시는 영어로 작성하며 응답은 한국어다. 사용자 확인에 따라 참여자 평균 연령대 20대 설정을 유지한다.
+- 요약은 누적 결과와 새 구간을 병합해 최대 6개 주제를 반환하며 topic과 comment는 각 100자를 목표로 한다. 이전 주제의 관련 ID를 유지할 수 있다. 페르소나는 comment에만 적용한다.
+- 질문은 제공된 기록만 근거로 답하며 근거가 없으면 확인 불가 문장과 빈 ID 배열을 반환한다. answer는 800자, 근거 ID는 중복 없이 최대 3개를 목표로 한다. 마지막 user 메시지가 질문이며 별도 접두사는 요구하지 않는다.
+- 익명화는 topic과 comment 및 answer 모두에 적용한다. 입력의 이름은 문맥 이해용이며, 채팅·첨부·OCR·이전 요약 안의 지시는 신뢰하지 않는다.
+- 민감하거나 거친 원문의 핵심 의미·관련 표현은 보존하되 긴 직접 인용이나 새로운 자극적 표현은 피한다. 의견·농담·계획·사실을 구분하며 (웃음)은 반복된 ㅋ를 뜻한다.
 
 ### 주의사항과 권장 방향
 
-현재 익명화는 프롬프트 정책이며 출력 후 이름 검출/제거기는 없다. 이를 개인정보 비노출의 기계적 보장이라고 표현하지 않는다. prompt fetch는 HTTP 상태를 확인하지 않고 본문을 읽고, 코드와 원격 정책의 배포 시점이 다를 수 있다. 정책 변경 시 원격 배포 경로와 schema/formatter의 일치를 함께 검토하는 것이 권장 방향이며, 이 문서 작업은 그 동작을 바꾸지 않는다. persona의 거친 말투 허용, 이미지 지시의 검열/거부 배제 문구와 공급자 safety 설정은 **현재 관찰된 정책**이지 새 기능에 무조건 복제할 보안 권장 사항이 아니다.
+익명화·입력 지시 무시·출력 길이는 프롬프트 정책이지 기계적 보장이 아니다. prompt fetch는 HTTP 상태를 확인하지 않고 본문을 읽고, 코드와 원격 정책의 배포 시점이 다를 수 있다. 로컬 static 변경을 테스트하려면 검증 시 해당 파일을 주입하거나 실제 사용 브랜치에 반영해야 한다. 페르소나는 가벼운 빈정거림과 마지못한 다정함을 허용하되 개인 공격·위협·차별적 비하·피해 조롱을 금지한다.
 
 ## 4. 모델·공급자·OpenRouter
 
@@ -108,6 +108,22 @@ interface QuestionOutput {
 텍스트는 `LLM_OPENAI_BASEURL`, `LLM_OPENAI_API_KEY`, `LLM_OPENAI_MODELS`; 이미지는 `IMAGE_OPENAI_BASEURL`, `IMAGE_OPENAI_API_KEY`, `IMAGE_OPENAI_MODELS`를 사용한다. 실제 비밀값을 문서나 예시에 넣지 않는다.
 
 `parseOpenAiModelList`는 쉼표로 분리하고 trim 후 빈 항목을 버린다. 결과가 비면 `${envVarName} must include at least one model.` 오류를 던진다. 중복 제거는 하지 않는다. 각 utility의 `getModel`은 `Math.floor(Math.random() * models.length)`로 무작위 선택한다. 순환 선택이나 첫 번째 모델 고정과 다르다. OpenAI SDK 인스턴스에는 60초 timeout을 설정한다. 이미지의 OpenRouter raw fetch 분기에 같은 timeout이 자동 적용되는 것은 아니다.
+
+SDK는 `openai@^7.38.0`이며 Node 24에서 사용한다. Chat Completions와 이미지 Responses API의 기존 경계는 유지한다. SDK 갱신만으로 공급자의 추론 출력이 자동 제거되는 것은 아니다.
+
+SDK 클라이언트와 텍스트/이미지 모델 목록은 import가 아닌 해당 기능 첫 호출 때 초기화한다. 임베딩과 Vision은 서로 독립적으로 생성·재사용한다. AI 설정이 전혀 없어도 CLI 도움말과 미사용 기능 import는 동작한다. 실제 API 호출의 인증 요구는 그대로이며 가짜 키·무인증 fallback으로 우회하지 않는다. 검증은 [`tests/openai-initialization.test.ts`](../../tests/openai-initialization.test.ts)의 격리 subprocess에서 수행한다.
+
+### 추론 수행과 사용자 출력 분리
+
+- OpenRouter의 텍스트·Vision·문서 요약·이미지 요청에는 `reasoning: { exclude: true }`를 보낸다. 이전 `include_reasoning: true`는 사용하지 않는다. 다른 OpenAI 호환 endpoint에 이 전용 필드를 보내지 않는다.
+- `reasoning_level: none`, `reasoning_effort: none`, `enabled: false`로 추론을 끄지 않는다. 모델마다 허용되는 effort가 다르므로 `low`/`medium`도 일괄 강제하지 않고 모델 기본 추론 수준을 유지한다. 출력 제외는 추론 과금·토큰 사용량 감소를 보장하지 않는다.
+- `getChatCompletionText`는 `message.content` 문자열 또는 `text`/`output_text` part만 사용한다. `reasoning`, `reasoning_content`, `reasoning_details`, thinking part를 최종 답변으로 합치거나 content가 비었을 때 fallback하지 않는다.
+- `stripReasoningText`는 명시적인 `<think>`, `<thinking>`, `<reasoning>` 블록을 중첩까지 제거한다. 닫히지 않았거나 잘못 닫힌 블록의 숨겨진 꼬리를 노출하지 않는다. 일반 문장 속 thinking/reasoning 단어를 추측해서 지우지 않는다.
+- 제거한 블록은 태그 포함 원문으로 `logger.debug`에 기록한다. 중첩 블록은 최상위 블록당 한 번, 미완성 블록은 제거된 끝부분까지 기록하며 일반 답변만 있는 경우에는 기록하지 않는다. 추론에는 대화 원문·민감정보가 있을 수 있고 현재 logger는 운영 환경에서도 debug를 기록하므로 로그 접근·보관에 유의한다.
+- JSON 바깥의 태그는 파싱 전에 제거하고, JSON의 answer/topic/comment 필드는 표시 전에 다시 정제한다. 요약 청크 사이의 이전 응답과 기존 요약 캐시 반환도 추론 블록을 제외한다. 원시 공급자 응답의 감사 기록은 기존대로 보존할 수 있다.
+- 명시 태그를 답변의 예시로 쓴 경우도 제거될 수 있다. 표시 구분이 전혀 없는 일반 텍스트 추론은 확실하게 분류할 수 없다. 최종 답변 자체가 2000자를 넘는 문제는 별개이며 이번 변경은 답변 자르기·분할 전송을 추가하지 않는다.
+
+근거: [`src/utils/openai.ts`](../../src/utils/openai.ts), [`tests/openai-output.test.ts`](../../tests/openai-output.test.ts), [OpenRouter reasoning 문서](https://openrouter.ai/docs/guides/best-practices/reasoning-tokens), [SDK 변경 이력](https://github.com/openai/openai-node/blob/master/CHANGELOG.md).
 
 ### 관찰된 계약: 공유 helper를 사용한다
 
@@ -127,7 +143,7 @@ Google 분기는 `Google AI Studio`를 ignore하며, HARASSMENT/HATE_SPEECH/SEXU
 
 `summarizeLastMessages`는 guild/channel/sender가 없으면 반환한다. 캐시는 `guildId`, `channelId`, `hours`, `count`, 최근 5분의 `createdAt` 조건으로 조회하고 최신 하나를 사용한다. senderId는 캐시 조회 키가 아니다. 캐시 hit이면 `(최근 5분 이내 응답에서 캐시됨)`을 덧붙이고 AI 호출을 하지 않는다. miss에서는 메시지를 조회하고 context를 만든 뒤 utility를 부른다. 결과가 있으면 `MessageSummarizationModel`에 저장하고 저장 실패는 `logger.error` 처리한다. 질문 서비스에는 이 요약 캐시가 없다.
 
-새 요약 결과는 저장 후 `unreplaceLaughs`해서 반환하지만 캐시 hit은 저장된 값을 직접 반환한다. 따라서 모든 경로에서 웃음 복원이 동일하다고 보장하면 안 된다. 이 차이를 새로운 컨벤션으로 권장하지 않는다.
+새 요약 결과는 저장 후 `unreplaceLaughs`해서 반환하지만 캐시 hit은 저장된 값에서 추론 태그만 제거해 반환한다. 따라서 모든 경로에서 웃음 복원이 동일하다고 보장하면 안 된다. 이 차이를 새로운 컨벤션으로 권장하지 않는다.
 
 ### 관찰된 계약: callback의 인자와 실패 격리
 
@@ -158,9 +174,9 @@ Google 분기는 `Google AI Studio`를 ignore하며, HARASSMENT/HATE_SPEECH/SEXU
 | 호출 | raw `fetch(buildOpenAiRequestUrl(baseURL, 'chat/completions'))` | SDK `openai.responses.create` |
 | 지시 | developer message | `instructions` |
 | 사용자 입력 | `text`, `image_url` part 배열 | `input_text`, `input_image` (`detail: 'auto'`) 배열 |
-| 이미지 요청 | `modalities: ['image', 'text']`, `include_reasoning: true` | `tools: [{ type: 'image_generation' }]`, 강제 `tool_choice` |
+| 이미지 요청 | `modalities: ['image', 'text']`, `reasoning: { exclude: true }` | `tools: [{ type: 'image_generation' }]`, 강제 `tool_choice` |
 | 결과 | 첫 choice의 `message.images[].image_url.url` | output에서 `type === 'image_generation_call'`의 `result` |
-| 이미지 없음 | content 또는 `no image response` 오류 | output_text 또는 `no image response` 오류 |
+| 이미지 없음 | 정제된 최종 content 또는 `no image response` 오류 | 추론 태그를 제외한 output_text 또는 `no image response` 오류 |
 
 공통 지시의 최대 해상도 1080px은 텍스트 지시이며 강제 resize/검증 코드가 아니다. 두 API 모두 실제 이미지가 없으면 성공으로 처리하지 않는다. OpenRouter는 `message.content`를 오류 메시지로 활용하지만 정상 반환 텍스트로 보존하지 않는다.
 
@@ -296,6 +312,25 @@ const files = images.map(image =>
 
 입력 변환은 기존 `imageToBase64`, API 선택은 기존 `generateImage`, Discord 파일 변환은 기존 attachment helper에 맡긴다. 새로운 factory·콜백 종류·결과 객체를 utility에 덧붙이는 것은 caller 전체를 바꾸는 별도 설계 변경이다.
 
+### 요청 C — `reasoning-output-boundary`
+
+앞의 기능 조사와 동일하게 도구·소스·대화 이력이 없는 별도 stateless completion을 실행했다. system은 독립 TypeScript 구현자이며 코드를 실행하거나 적용하지 말라고 지시했다. 실제 요청:
+
+> Implement a TypeScript boundary for an OpenAI-compatible Discord bot that displays only final answer text, never returned reasoning or thinking. Some providers return separate reasoning fields or typed text/thinking content blocks; others insert explicit <think>, <thinking>, or <reasoning> blocks into visible content. Preserve the actual final answer and its references, do not truncate to 2000 characters, and do not disable model reasoning or force a reasoning effort. Show a compact implementation and explain limitations without accessing repository files.
+
+실제 응답의 레포에 그대로 적용하면 안 되는 부분(들여쓰기만 축약):
+
+```ts
+for (const content of discordChunks(answer)) {
+  await options.channel.send({
+    content,
+    allowedMentions: { parse: [] },
+  });
+}
+```
+
+이는 독립 봇에서는 합리적인 분할 전송 방식이지만 현재 명령은 defer 후 editReply하며, 이번 요구는 추론 제외와 SDK 호환성이다. 별도 채널 전송·답변 분할은 추가하지 않는다. typed text allowlist와 중첩 태그 필터는 현재 공유 helper 경계와 부합한다. 원문은 비교 자료이며 적용하지 않았다.
+
 ## 8. 편집 체크리스트
 
 - [ ] service의 조회·캐시·로그 구성과 utility의 provider 호출 책임을 유지했는가?
@@ -303,7 +338,7 @@ const files = images.map(image =>
 - [ ] schema 필드·required·additionalProperties와 TS 타입·formatter를 함께 살폈는가?
 - [ ] 한국어·출력 익명화·질문 재서술·근거 ID 규칙을 입력 비식별화나 민감어 삭제와 혼동하지 않았는가?
 - [ ] 로컬 static 파일과 실행 시 fetch하는 main/develop 원격 URL을 구분했는가?
-- [ ] 요약 청크 순서·이전 JSON system 메시지·한 번의 모델 선택을 유지했는가?
+- [ ] 요약 청크 순서·이전 JSON assistant 메시지·한 번의 모델 선택을 유지했는가?
 - [ ] 모델 목록은 공통 parser, 공급자/헤더/URL은 기존 shared helper를 사용하는가?
 - [ ] OpenRouter 조건과 Google 전용 payload 위치, 텍스트 trace와 이미지 trace 부재를 정확히 설명했는가?
 - [ ] 로그 callback의 인자와 실패 격리를 보존하고, OpenRouter 이미지 성공 로그 누락을 보장처럼 서술하지 않았는가?

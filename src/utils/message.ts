@@ -4,6 +4,7 @@ import { replaceLaughs } from './index';
 import logger from '../lib/logger';
 import { QuestionOutput, SummarizationOutput } from './llm/types';
 import mongoose from 'mongoose';
+import { stripReasoningText } from './openai';
 
 const convertReactions = (reactions: MessageFromDatabase['reactions']) => {
   if (!reactions || !Array.isArray(reactions) || reactions.length === 0) {
@@ -175,7 +176,7 @@ export const getLastMessages = async (
 };
 
 const unwrapJsonBlocks = (jsonRaw: string): string => {
-  let text = jsonRaw.trim();
+  let text = stripReasoningText(jsonRaw);
   const startToken = '```json';
   const endToken = '```';
   if (text.startsWith(startToken)) text = text.slice(startToken.length);
@@ -204,14 +205,14 @@ export const constructSummarizationResult = (
       return (
         prev +
         '\n' +
-        `- ${curr.topic} ` +
+        `- ${stripReasoningText(curr.topic)} ` +
         getMessageLink(guildId, channelId, curr.startMessageId)
       );
     }, '')
     .trim();
 
   return `${topics.length === 0 ? '요약된 내용이 없습니다.' : topics}\n\n${
-    summarizationJson.comment
+    stripReasoningText(summarizationJson.comment)
   }`;
 };
 
@@ -228,5 +229,5 @@ export const constructQuestionResult = (
     }, '')
     .trim();
 
-  return `${answerJson.answer}\n\n${messageLinks}`;
+  return `${stripReasoningText(answerJson.answer)}\n\n${messageLinks}`;
 };

@@ -52,7 +52,7 @@ Start with `src/AGENTS.md` and scoped AGENTS for module maps. Do not assume Type
 - CI workflow only automates PR creation from `develop` to `main`; there is no build/lint/test quality gate in Actions.
 - Follow the detailed conventions in `docs/coding-conventions/`. Distinguish current contracts from known defects; do not copy defects as recommended patterns.
 - Convention updates require three steps: inspect the feature/module; request an independent black-box implementation from a separate stateless LLM without source/internal conventions; compare with current code and document genuine mismatches as repo-incompatible examples. Never apply generated implementations as part of documentation work.
-- CLI `--help` has import-time file logger and SQLite initialization. For non-mutating checks, use an isolated temporary source copy/work directory with dummy API settings.
+- CLI `--help` has import-time file logger and SQLite initialization. For non-mutating checks, use an isolated temporary source copy/work directory. AI clients/models initialize lazily; help must work without AI settings.
 - `config.ts` is the current environment contract; `src/global.d.ts` contains legacy provider keys and is not a complete current config map.
 
 ## ANTI-PATTERNS (THIS PROJECT)
@@ -83,7 +83,7 @@ Runtime commands are declared in `package.json`; this is a map, not permission t
 | Docker helpers | `scripts/docker-up.sh`, `scripts/docker-register-commands.sh` | Destructive/runtime operations, not validation commands |
 
 ## NOTES
-- No project test command is defined; no test framework config was found.
+- No project test script or third-party test framework is defined. Regressions use Node's runner: `node --import tsx --test tests/openai-output.test.ts tests/openai-initialization.test.ts`. Run from an isolated source/work-directory copy to keep logger files out of the repository.
 - `yarn build` runs `tsc` with `tsconfig.json`; `tsconfig.build.json` exists but is not wired by scripts.
 - `scripts/docker-up.sh` force-removes/stops compose containers before recreate (no explicit volume removal flag).
 - For subsystem details, start at `src/AGENTS.md` and drill down to child AGENTS files.

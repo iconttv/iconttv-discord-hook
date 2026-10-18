@@ -10,9 +10,11 @@ import sharp from 'sharp';
 import { config } from '../../config';
 import logger from '../../lib/logger';
 import {
+  getChatCompletionText,
   getOpenRouterHeaders,
   isOpenRouterBaseUrl,
   OpenRouterTrace,
+  OpenRouterReasoning,
 } from '../../utils/openai';
 
 export interface MessageTraceSpan {
@@ -90,25 +92,38 @@ const shouldUseVisionOpenRouterExtras = isOpenRouterBaseUrl(
 type VisionChatCompletionCreateParams =
   OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming & {
     trace?: OpenRouterTrace;
+    reasoning?: OpenRouterReasoning;
   };
 
 class AiClient {
-  client = {
-    embedding: new OpenAI({
-      baseURL: config.EMBEDDING_OPENAI_BASEURL,
-      apiKey: config.EMBEDDING_OPENAI_API_KEY,
-      ...(embeddingDefaultHeaders
-        ? { defaultHeaders: embeddingDefaultHeaders }
-        : {}),
-      timeout: 60 * 1000,
-    }),
-    llm: new OpenAI({
-      baseURL: config.VISION_OPENAI_BASEURL,
-      apiKey: config.VISION_OPENAI_API_KEY,
-      ...(visionDefaultHeaders ? { defaultHeaders: visionDefaultHeaders } : {}),
-      timeout: 60 * 1000,
-    }),
-  };
+  private embeddingClient?: OpenAI;
+  private visionClient?: OpenAI;
+
+  private getEmbeddingClient(): OpenAI {
+    if (!this.embeddingClient) {
+      this.embeddingClient = new OpenAI({
+        baseURL: config.EMBEDDING_OPENAI_BASEURL,
+        apiKey: config.EMBEDDING_OPENAI_API_KEY,
+        ...(embeddingDefaultHeaders
+          ? { defaultHeaders: embeddingDefaultHeaders }
+          : {}),
+        timeout: 60 * 1000,
+      });
+    }
+    return this.embeddingClient;
+  }
+
+  private getVisionClient(): OpenAI {
+    if (!this.visionClient) {
+      this.visionClient = new OpenAI({
+        baseURL: config.VISION_OPENAI_BASEURL,
+        apiKey: config.VISION_OPENAI_API_KEY,
+        ...(visionDefaultHeaders ? { defaultHeaders: visionDefaultHeaders } : {}),
+        timeout: 60 * 1000,
+      });
+    }
+    return this.visionClient;
+  }
 
   model = {
     embedding: config.EMBEDDING_OPENAI_MODEL!,
@@ -116,7 +131,7 @@ class AiClient {
   };
 
   async createEmbeddingText(text: string): Promise<number[]> {
-    const response = await this.client.embedding.embeddings.create({
+    const response = await this.getEmbeddingClient().embeddings.create({
       input: text,
       model: this.model.embedding,
     });
@@ -187,6 +202,7 @@ class AiClient {
     };
 
     if (shouldUseVisionOpenRouterExtras) {
+      params.reasoning = { exclude: true };
       params.trace = {
         trace_id: `${traceSpan?.guildId}_${traceSpan?.channelId}_${traceSpan?.messageId}`,
         trace_name: 'Image Transcription',
@@ -195,9 +211,9 @@ class AiClient {
       };
     }
 
-    const response = await this.client.llm.chat.completions.create(params);
+    const response = await this.getVisionClient().chat.completions.create(params);
 
-    const caption = response.choices[0]?.message.content?.replace('[없음]','')?.trim();
+    const caption = getChatCompletionText(response.choices[0]?.message)?.replace('[없음]','')?.trim();
     if (!caption || caption.length === 0) {
       throw new Error(
         `caption error ${urlOrBase64}\n${inputImage.slice(
@@ -224,7 +240,7 @@ class AiClient {
   }
 
   async _summarizeText(content: string): Promise<string> {
-    const response = await this.client.llm.chat.completions.create({
+    const params: VisionChatCompletionCreateParams = {
       model: this.model.llm,
       messages: [
         ...summarizeChatCompletionMessageBase,
@@ -245,9 +261,15 @@ class AiClient {
       max_completion_tokens: 1024,
       temperature: 0.2,
       frequency_penalty: 0.7,
-    });
+    };
 
-    const summarization = response.choices[0]?.message.content?.trim();
+    if (shouldUseVisionOpenRouterExtras) {
+      params.reasoning = { exclude: true };
+    }
+
+    const response = await this.getVisionClient().chat.completions.create(params);
+
+    const summarization = getChatCompletionText(response.choices[0]?.message)?.trim();
     if (!summarization || summarization.length === 0) {
       throw new Error(
         `caption error ${content.slice(0, 100)}...\n${JSON.stringify(response)}`

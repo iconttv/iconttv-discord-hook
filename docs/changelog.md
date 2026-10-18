@@ -88,3 +88,14 @@
 - itvstat 명령어 추가 
   - GatewayIntentBits.GuildVoiceStates 권한 필요
 - openrouter 대신 openai 호환 API 사용으로 변경
+
+1.0.10
+- OpenAI SDK를 7.38.0으로 갱신하고 기존 Chat Completions·이미지 Responses 연동 유지
+- OpenRouter reasoning 출력 제외 적용; 추론 비활성화/effort 강제 설정 없이 모델 기본값 유지
+- 질문·요약·OCR·문서 전처리와 이미지 오류에서 thinking/reasoning 블록을 제외하고 최종 답변만 사용
+- 기존 요약 캐시의 추론 태그 제거 및 응답 추출 회귀 테스트 추가
+- 사용하지 않는 AI 기능의 키 누락으로 시작 시 종료되지 않도록 SDK 클라이언트·모델 목록을 첫 호출 시 초기화; 임베딩/Vision 독립 생성 및 AI 설정 없는 CLI 도움말 회귀 검증
+- stripReasoningText가 제거한 추론 블록 원문을 debug 로그에 기록 (중첩 중복 제외, 미완성 블록 포함)
+- 질문·요약·페르소나 시스템 프롬프트를 영어 지시로 정리하고 한국어 출력·평균 연령대 20대 설정 유지
+- 기록 근거·익명화·입력 지시 분리·간결한 출력 및 누적 요약 병합 규칙 명확화
+- 이전 요약은 system 지시가 아닌 assistant의 누적 결과로 전달

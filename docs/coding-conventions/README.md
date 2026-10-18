@@ -37,6 +37,7 @@
 | `archive-multimodal-embedding` | 멀티모달 전처리·임베딩 | [아카이브·영속성](archive-and-persistence.md) |
 | `ai-conversation` | 대화 요약·질문 | [AI·프롬프트](ai-and-prompts.md) |
 | `ai-image-multimodal` | 이미지 입력·생성 | [AI·프롬프트](ai-and-prompts.md) |
+| `reasoning-output-boundary` | 추론 수행을 유지하며 최종 텍스트만 추출 | [AI·프롬프트](ai-and-prompts.md) |
 
 ### 3. 현재 코드와 비교해 컨벤션 확정
 

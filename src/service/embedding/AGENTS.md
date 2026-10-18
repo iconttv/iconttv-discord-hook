@@ -19,6 +19,8 @@
 - Attachments support `image/` and `text/` content types; do not infer extension support. Components currently log and skip. Embeds process selected metadata and thumbnail captions, not arbitrary URL bodies.
 - Check the failed URL store before attachment/thumbnail requests; log failures and preserve other successful preprocessing results.
 - Keep extraction prompts free of user-facing intro/outro wrappers. Review provider/prompt changes against the linked AI conventions.
+- OCR/document summaries use `getChatCompletionText` to keep only final text; OpenRouter requests set `reasoning: { exclude: true }` without disabling reasoning or forcing effort. Keep reasoning out of stored searchable text.
+- Embedding and Vision SDK clients are independently lazy and cached. Importing aiClient must not require credentials for either feature; actual calls still require valid authentication. Do not supply fabricated API keys.
 
 ## LIMITATIONS AND SIDE EFFECTS
 - Importing `failure_urls.ts` creates/opens `./database/failure_urls.db`; do not import it just to inspect behavior or document the module.
