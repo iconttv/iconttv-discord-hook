@@ -35,7 +35,7 @@ src/utils/llm/
 - Construct SDK clients and parse model lists on first feature use, not import. Embedding and Vision clients initialize independently. Never insert fake credentials to bypass SDK validation; missing credentials remain an error when the feature is called.
 - Await the optional `LogAiRequest(provider, model, params, responseOrError)` callback on API success/failure, log callback failures without replacing the API result, and rethrow original API failures.
 - Keep Korean output, no person-name/nickname output, question paraphrasing, and application-generated jump links. Persona applies to the summary comment, not topic content.
-- Write static system instructions in English; require Korean output and preserve the confirmed average participant age in the 20s. Questions are history-grounded; cumulative summaries merge earlier topics and new evidence. Prompt length targets are not runtime Discord-length guarantees.
+- Write static system instructions in English; require Korean output and preserve the confirmed average participant age in the 20s. Ground conversation-specific facts in history, but answer independent arithmetic/general questions directly with no history IDs. Mixed questions cite only the history actually used. Cumulative summaries merge earlier topics and new evidence. Prompt length targets are not runtime Discord-length guarantees.
 
 ## ANTI-PATTERNS
 - Do not replace strict schemas with free-form output or `json_object`, invent new result fields, or duplicate message/link formatters.
