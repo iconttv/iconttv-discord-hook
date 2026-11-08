@@ -6,6 +6,11 @@ interface Config {
   WEBHOOK_DISCORD: string;
   DISCORD_BOT_TOKEN: string;
   DISCORD_CLIENT_ID: string;
+  WEB_PUBLIC_URL: string;
+  WEB_SESSION_SECRET: string | undefined;
+  WEB_SESSION_TTL_SECONDS: string;
+  WEB_HOST: string;
+  WEB_PORT: string;
   MONGODB_HOST: string;
   MONGODB_PORT: string;
   MONGODB_USERNAME: string;
@@ -84,6 +89,11 @@ export const config: Config = {
   WEBHOOK_DISCORD: process.env.WEBHOOK_DISCORD!,
   DISCORD_BOT_TOKEN: process.env.DISCORD_BOT_TOKEN!,
   DISCORD_CLIENT_ID: process.env.DISCORD_CLIENT_ID!,
+  WEB_PUBLIC_URL: process.env.WEB_PUBLIC_URL ?? 'https://iconttv-discord.probius.dev',
+  WEB_SESSION_SECRET: process.env.WEB_SESSION_SECRET,
+  WEB_SESSION_TTL_SECONDS: process.env.WEB_SESSION_TTL_SECONDS ?? '1800',
+  WEB_HOST: process.env.WEB_HOST ?? '0.0.0.0',
+  WEB_PORT: process.env.WEB_PORT ?? '3011',
   MONGODB_HOST: process.env.MONGODB_HOST!,
   MONGODB_PORT: process.env.MONGODB_PORT!,
   MONGODB_USERNAME: process.env.MONGODB_USERNAME!,
