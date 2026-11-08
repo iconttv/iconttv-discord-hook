@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark light" />
+    <meta name="referrer" content="no-referrer" />
+    <title>대화 검색 · iconttv</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/style.css" />
+    <script type="module" src="/app.js"></script>
+  </head>
+  <body>
+    <div class="app-title">
+      <span class="brand-mark">i</span>
+      <span id="window-title">iconttv · 대화 아카이브</span>
+    </div>
+    <div class="app-layout">
+      <nav class="server-rail" aria-label="서버">
+        <div class="server-icon home-icon">
+          <!-- Discord glyph: Simple Icons (CC0-1.0), simpleicons.org -->
+          <svg
+            viewBox="0 0 24 24"
+            role="img"
+            aria-label="Discord"
+            focusable="false"
+          >
+            <path
+              fill="currentColor"
+              d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189Z"
+            />
+          </svg>
+        </div>
+        <div class="rail-divider"></div>
+        <button
+          id="server-icon"
+          class="server-icon selected"
+          title="현재 서버"
+          aria-label="현재 서버"
+        >
+          #
+        </button>
+        <div class="rail-bottom" title="디스코드 대화 아카이브">⌘</div>
+      </nav>
+      <aside class="sidebar" id="sidebar" aria-label="채널과 설정">
+        <div class="server-heading">
+          <strong id="guild-name">대화 아카이브</strong
+          ><button
+            id="close-sidebar"
+            class="icon-button mobile-only"
+            aria-label="채널 목록 닫기"
+          >
+            ×
+          </button>
+        </div>
+        <div class="sidebar-content">
+          <button class="nav-item active" id="browse-nav">
+            <span class="nav-symbol">⌕</span> 대화 검색
+          </button>
+          <button class="nav-item" id="settings-nav" hidden>
+            <span class="nav-symbol">⚙</span> 서버 설정
+          </button>
+          <div class="section-label">
+            검색 채널 <span id="channel-count"></span>
+          </div>
+          <div id="channels">
+            <p class="sidebar-hint">
+              디스코드에서 받은 링크로<br />서버에 연결해 주세요.
+            </p>
+          </div>
+        </div>
+        <div class="user-panel">
+          <div id="user-avatar" class="avatar small-avatar">?</div>
+          <div class="user-detail">
+            <strong id="user-name">연결되지 않음</strong
+            ><span id="session-time">웹 세션 대기 중</span>
+          </div>
+          <button
+            id="logout"
+            class="icon-button"
+            title="이 브라우저에서 로그아웃"
+            aria-label="로그아웃"
+            hidden
+          >
+            ↪
+          </button>
+        </div>
+      </aside>
+      <button
+        id="drawer-shade"
+        class="drawer-shade"
+        hidden
+        aria-label="채널 목록 닫기"
+      ></button>
+      <main class="main-panel">
+        <header class="channel-header">
+          <button
+            id="open-sidebar"
+            class="icon-button mobile-only"
+            aria-label="채널 목록 열기"
+            aria-expanded="false"
+          >
+            ☰</button
+          ><span class="header-hash">#</span>
+          <h1 id="page-title">대화 검색</h1>
+          <a
+            class="discord-link"
+            id="guild-link"
+            href="https://discord.com/channels/@me"
+            target="_blank"
+            rel="noopener noreferrer"
+            >디스코드 열기 ↗</a
+          >
+        </header>
+        <div
+          id="discord-fallback"
+          class="discord-fallback"
+          role="status"
+          hidden
+        >
+          <span>디스코드 앱이 열리지 않으면</span>
+          <a
+            id="discord-browser-link"
+            data-browser-only
+            target="_blank"
+            rel="noopener noreferrer"
+            >브라우저로 열기</a
+          >
+          <button
+            id="dismiss-discord-fallback"
+            class="icon-button"
+            aria-label="앱 열기 안내 닫기"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+              <path
+                d="m4 4 8 8m0-8-8 8"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+              />
+            </svg>
+          </button>
+        </div>
+        <section id="gate" class="gate" aria-live="polite">
+          <div class="gate-symbol">#</div>
+          <h2 id="gate-title">대화를 불러오고 있어요</h2>
+          <p id="gate-description">잠시만 기다려 주세요.</p>
+          <button id="copy-command" class="primary-button" hidden>
+            /itvweb 명령어 복사
+          </button>
+        </section>
+        <section id="search-view" class="view" hidden>
+          <form id="search-form" class="search-toolbar" role="search">
+            <div class="search-input-wrap">
+              <span aria-hidden="true">⌕</span
+              ><input
+                id="keyword"
+                name="keyword"
+                aria-label="검색어"
+                placeholder="검색어 입력"
+                maxlength="200"
+                autocomplete="off"
+              /><button
+                id="clear-keyword"
+                type="button"
+                class="icon-button"
+                title="검색어 지우기"
+                aria-label="검색어 지우기"
+              >
+                ×</button
+              ><button class="search-submit" type="submit">검색</button>
+            </div>
+            <div class="filter-row">
+              <label class="checkbox-label"
+                ><input id="embedding" type="checkbox" /> 임베딩 검색
+                사용</label
+              >
+              <span class="filter-separator"></span>
+              <label class="date-label"
+                >기간
+                <input type="date" id="after" aria-label="시작일 (UTC)" /><span
+                  >—</span
+                ><input type="date" id="before" aria-label="종료일 (UTC)"
+              /></label>
+              <button type="button" id="reset-filters" class="text-button">
+                초기화
+              </button>
+              <span class="filter-spacer"></span
+              ><label class="sort-label"
+                ><span class="sr-only">정렬</span
+                ><select id="sort" aria-label="정렬">
+                  <option value="relevance">관련도순</option>
+                  <option value="newest">최신순</option>
+                  <option value="oldest">오래된순</option>
+                </select></label
+              >
+            </div>
+          </form>
+          <div class="result-summary">
+            <h2 id="result-title">최근 메시지</h2>
+            <span id="result-count"></span
+            ><span class="scope-label" id="scope-label">모든 채널</span>
+          </div>
+          <div id="search-notice" class="notice" role="status" hidden></div>
+          <div
+            class="message-scroll"
+            id="message-scroll"
+            tabindex="0"
+            aria-label="메시지 목록"
+          >
+            <div
+              id="messages"
+              role="feed"
+              aria-label="검색된 메시지"
+              aria-busy="false"
+            ></div>
+            <div
+              id="result-state"
+              class="result-state"
+              role="status"
+              hidden
+            ></div>
+          </div>
+          <footer class="pagination">
+            <span id="pagination-description">페이지당 25개</span>
+            <div>
+              <button id="previous-page" class="secondary-button" disabled>
+                ← 이전</button
+              ><span id="page-number" aria-live="polite">1</span
+              ><button id="next-page" class="secondary-button" disabled>
+                다음 →
+              </button>
+            </div>
+          </footer>
+        </section>
+        <section id="settings-view" class="view settings-view" hidden>
+          <div class="settings-content">
+            <span class="eyebrow">서버 설정</span>
+            <h2>봇 설정</h2>
+            <p class="settings-intro">이 서버에 적용할 봇 기능을 설정합니다.</p>
+            <form id="settings-form">
+              <label class="setting-row"
+                ><span
+                  ><strong>작은 이미지를 임베드로 표시</strong
+                  ><span
+                    >작은 이미지 첨부를 프로필과 함께 깔끔한 메시지로
+                    변환합니다.</span
+                  ></span
+                ><input type="checkbox" role="switch" id="image-resize" /><span
+                  class="switch"
+                  aria-hidden="true"
+                ></span
+              ></label>
+              <label class="setting-row"
+                ><span
+                  ><strong>모든 사용자에게 질문 명령 허용</strong
+                  ><span
+                    >서버 구성원 누구나 /itvques를 사용할 수 있습니다. 서버의 AI
+                    사용 권한은 별도로 적용됩니다.</span
+                  ></span
+                ><input
+                  type="checkbox"
+                  role="switch"
+                  id="question-everyone" /><span
+                  class="switch"
+                  aria-hidden="true"
+                ></span
+              ></label>
+              <div
+                id="settings-status"
+                class="settings-status"
+                role="status"
+              ></div>
+              <div class="settings-actions">
+                <span id="settings-dirty">변경 사항이 없습니다.</span
+                ><button
+                  type="button"
+                  id="settings-reset"
+                  class="text-button"
+                  disabled
+                >
+                  되돌리기</button
+                ><button
+                  type="submit"
+                  id="settings-save"
+                  class="primary-button"
+                  disabled
+                >
+                  변경 사항 저장
+                </button>
+              </div>
+            </form>
+            <p class="settings-footnote">
+              설정은 현재 웹 세션의 디스코드 권한으로 관리됩니다.
+            </p>
+          </div>
+        </section>
+      </main>
+    </div>
+    <div id="toast" class="toast" role="status" hidden></div>
+    <dialog
+      id="auth-dialog"
+      class="auth-dialog"
+      aria-labelledby="auth-dialog-title"
+      aria-describedby="auth-dialog-description"
+    >
+      <div class="auth-dialog-content">
+        <h2 id="auth-dialog-title">인증 오류 (401)</h2>
+        <p id="auth-dialog-description"></p>
+        <p id="close-page-hint" role="status" hidden>
+          브라우저가 자동 닫기를 차단했어요. 이 탭을 직접 닫아 주세요.
+        </p>
+      </div>
+      <div class="auth-dialog-actions">
+        <button id="leave-page" class="primary-button" autofocus>
+          페이지 나가기
+        </button>
+      </div>
+    </dialog>
+  </body>
+</html>

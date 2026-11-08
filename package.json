@@ -8,7 +8,11 @@
   "scripts": {
     "cli": "cross-env NODE_ENV=prod tsx ./src/cli.ts",
     "dev": "cross-env NODE_ENV=dev nodemon --exec tsx ./src/index.ts",
-    "build": "tsc",
+    "build": "tsc && yarn web-build",
+    "web-dev": "cross-env NODE_ENV=dev nodemon --watch src --watch web --ext ts,js,css,html,svg --exec tsx ./src/web.ts",
+    "web-build": "node scripts/build-web.mjs",
+    "web-start": "cross-env NODE_ENV=prod node ./dist/web.js",
+    "test:web": "node scripts/test-web.mjs",
     "start": "cross-env NODE_ENV=prod node ./dist/index.js",
     "archive-dev": "cross-env NODE_ENV=dev nodemon --exec tsx ./src/archive.ts",
     "archive-start": "cross-env NODE_ENV=prod node ./dist/archive.js",

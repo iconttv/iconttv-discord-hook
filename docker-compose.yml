@@ -1,4 +1,22 @@
 services:
+  iconttv-discord-web:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    container_name: iconttv-discord-web
+    command: dist/web.js
+    user: 1000:1000
+    env_file:
+      - .env
+    environment:
+      - TZ=Asia/Seoul
+      - WEB_PORT=${WEB_PORT:-3011}
+    ports:
+      - '${WEB_PORT:-3011}:${WEB_PORT:-3011}'
+    volumes:
+      - ./logs/web:/app/logs
+    restart: unless-stopped
+
   iconttv-discord-hook:
     build:
       context: .
