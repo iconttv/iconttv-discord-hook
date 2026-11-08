@@ -62,7 +62,6 @@ export const createWebAssets = (directory: string) => {
       content: bundle.contents.get(file)!,
       type,
       version: bundle.version,
-      immutable: Boolean(versioned && file !== 'index.html'),
     };
   };
 };

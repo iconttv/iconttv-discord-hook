@@ -177,9 +177,6 @@ export const createWebServer = (dependencies: WebDependencies) => {
     { start: number; count: number; active: number }
   >();
   const server = createServer(async (request, response) => {
-    response.setHeader('Cache-Control', 'no-store');
-    response.setHeader('CDN-Cache-Control', 'no-store');
-    response.setHeader('Cloudflare-CDN-Cache-Control', 'no-store');
     response.setHeader('Referrer-Policy', 'no-referrer');
     response.setHeader('X-Content-Type-Options', 'nosniff');
     response.setHeader('X-Frame-Options', 'DENY');
@@ -334,14 +331,6 @@ export const createWebServer = (dependencies: WebDependencies) => {
         throw new HttpError(405, '허용되지 않은 요청 방식입니다.');
       const asset = await getAsset(path);
       if (!asset) throw new HttpError(404, '페이지를 찾을 수 없습니다.');
-      // Content-versioned public files are safe to reuse across deployments.
-      // HTML, API responses, unversioned aliases and errors remain no-store.
-      if (asset.immutable) {
-        const cacheControl = 'public, max-age=31536000, immutable';
-        response.setHeader('Cache-Control', cacheControl);
-        response.setHeader('CDN-Cache-Control', cacheControl);
-        response.setHeader('Cloudflare-CDN-Cache-Control', cacheControl);
-      }
       response.writeHead(200, {
         'Content-Type': `${asset.type}; charset=utf-8`,
         'X-Web-Asset-Version': asset.version,
