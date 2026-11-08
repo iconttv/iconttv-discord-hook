@@ -1,10 +1,14 @@
-import { Client } from '@elastic/elasticsearch';
+import { Client, type estypes } from '@elastic/elasticsearch';
+import {
+  buildTextSearchQuery,
+  buildEmbeddingSearchQuery,
+  type MessageSearchOptions,
+} from './elasticSearchQuery';
 import { config } from '../config';
 import { getMessageLink } from '../utils/message';
 
 // you should import fetch from 'node-fetch',
 // else `fetch failed TypeError: fetch failed` occurs
-import logger from '../lib/logger';
 import { aiClient } from './embedding/client';
 
 let _elasticClient: Client;
@@ -49,17 +53,23 @@ interface SearchResultSource {
   message: string;
   embeddingInput: string;
   link: string;
+  senderId?: string;
+  senderName?: string;
+  raw?: unknown;
 }
 
 const normalizeSearchResultSource = (
   source: SearchResultSource
 ): SearchResultSource => {
   source['@timestamp'] = new Date(source['@timestamp']).toLocaleString();
-  source.link = getMessageLink(source.guildId, source.channelId, source.messageId);
+  source.link = getMessageLink(
+    source.guildId,
+    source.channelId,
+    source.messageId
+  );
   source.message = cleanEmbeddingInput(source.embeddingInput);
   return source;
 };
-
 
 const cleanEmbeddingInput = (text: string): string => {
   return text
@@ -68,216 +78,93 @@ const cleanEmbeddingInput = (text: string): string => {
     .join('\n');
 };
 
-export const searchMessage = async (
+export class MessageSearchBackendError extends Error {
+  constructor(readonly cause: unknown) {
+    super('Elasticsearch search failed.');
+  }
+}
+
+type SearchResponse = estypes.SearchResponse<SearchResultSource>;
+const executeMessageSearch = async (
+  query: estypes.SearchRequest,
+  options: MessageSearchOptions
+): Promise<SearchResponse> => {
+  try {
+    return await getElasticClient().search<SearchResultSource>(
+      query,
+      options.raw ? { requestTimeout: 5000, maxRetries: 0 } : undefined
+    );
+  } catch (error) {
+    throw new MessageSearchBackendError(error);
+  }
+};
+
+export function searchMessage(
   guildId: string,
   keyword: string,
-  channelId: string | null
-) => {
-  const client = getElasticClient();
-  const matchConditions = [
-    {
-      match: {
-        guildId: guildId,
-      },
-    },
-    {
-      exists: { field: 'embeddingInput' },
-    },
-    {
-      exists: { field: 'guildId' },
-    },
-    {
-      exists: { field: 'channelId' },
-    },
-    {
-      exists: { field: 'messageId' },
-    },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ] as any[];
-  if (channelId !== null) {
-    matchConditions.push({
-      match: {
-        channelId: channelId,
-      },
-    });
-  }
-
-  const queryString = (() => {
-    if (
-      keyword.includes(' AND ') ||
-      keyword.includes(' OR ') ||
-      keyword.includes(' NOT ')
-    ) {
-      return keyword;
-    }
-
-    return keyword
-      .split(' ')
-      .filter(k => k.length > 0)
-      .join(' AND ');
-  })();
-  logger.debug(`queryString: ${queryString}`);
-
-  const result = await client.search({
-    index: 'iconttv-discord-message_*',
-    size: 10,
-    _source: [
-      '@timestamp',
-      'guildId',
-      'channelId',
-      'messageId',
-      'embeddingInput',
-    ],
-    query: {
-      function_score: {
-        query: {
-          bool: {
-            must: [
-              ...matchConditions,
-              {
-                query_string: {
-                  default_field: 'embeddingInput',
-                  query: queryString,
-                },
-              },
-            ],
-          },
-        },
-        functions: [
-          {
-            gauss: {
-              '@timestamp': {
-                origin: 'now',
-                scale: '30d', // 30일 이내는 점수가 1에 가깝게 증가
-                decay: 0.5, // 시간이 30일 차이나면 점수가 반으로 감소
-              },
-            },
-            weight: 20, // 가중치를 조절해서 날짜 점수 영향력 조절
-          },
-        ],
-        score_mode: 'sum',
-        boost_mode: 'sum',
-      },
-    },
-    sort: [
-      {
-        _score: {
-          order: 'desc',
-        },
-      },
-    ],
-  });
-
-  const searchResult = result.hits.hits.map(hit => {
-    logger.debug(`score: ${hit._score}`);
-    return normalizeSearchResultSource(hit._source as SearchResultSource);
-  });
-
-  return searchResult;
-};
-
-export const searchMessageEmbedding = async (
+  channelId: string | null,
+  options: MessageSearchOptions & { raw: true }
+): Promise<SearchResponse>;
+export function searchMessage(
   guildId: string,
-  searchWords: string,
-  channelId: string | null
-) => {
-  const client = getElasticClient();
-  const matchConditions = [
-    {
-      match: {
-        guildId: guildId,
-      },
-    },
-    {
-      exists: { field: 'embedding' },
-    },
-    {
-      exists: { field: 'embeddingInput' },
-    },
-    {
-      exists: { field: 'guildId' },
-    },
-    {
-      exists: { field: 'channelId' },
-    },
-    {
-      exists: { field: 'messageId' },
-    },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ] as any[];
-  if (channelId !== null) {
-    matchConditions.push({
-      match: {
-        channelId: channelId,
-      },
-    });
-  }
-  const queryEmbedding = await aiClient.createEmbeddingText(
-    getEmbeddingQueryInstruct(searchWords)
+  keyword: string,
+  channelId: string | null,
+  options?: MessageSearchOptions & { raw?: false }
+): Promise<SearchResultSource[]>;
+export async function searchMessage(
+  guildId: string,
+  keyword: string,
+  channelId: string | null,
+  options: MessageSearchOptions = {}
+): Promise<SearchResponse | SearchResultSource[]> {
+  const result = await executeMessageSearch(
+    buildTextSearchQuery(guildId, keyword, channelId, options),
+    options
   );
-  logger.debug(`embedding created ${searchWords} ${queryEmbedding.length}`);
+  return options.raw
+    ? result
+    : result.hits.hits.map(hit => normalizeSearchResultSource(hit._source!));
+}
 
-  const result = await client.search({
-    index: 'iconttv-discord-message_*',
-    size: 8,
-    min_score: 0.44,
-    _source: [
-      '@timestamp',
-      'guildId',
-      'channelId',
-      'messageId',
-      'embeddingInput',
-      'embedding',
-    ],
-    query: {
-      script_score: {
-        query: {
-          bool: {
-            must: matchConditions,
-          },
-        },
-        script: {
-          source: `
-            double cosineSim = cosineSimilarity(params.query_vector, 'embedding') * 1.5 + 1.0;
+export function searchMessageEmbedding(
+  guildId: string,
+  keyword: string,
+  channelId: string | null,
+  options: MessageSearchOptions & { raw: true }
+): Promise<SearchResponse>;
+export function searchMessageEmbedding(
+  guildId: string,
+  keyword: string,
+  channelId: string | null,
+  options?: MessageSearchOptions & { raw?: false }
+): Promise<SearchResultSource[]>;
+export async function searchMessageEmbedding(
+  guildId: string,
+  keyword: string,
+  channelId: string | null,
+  options: MessageSearchOptions = {}
+): Promise<SearchResponse | SearchResultSource[]> {
+  const vector = await aiClient.createEmbeddingText(
+    getEmbeddingQueryInstruct(keyword)
+  );
+  const result = await executeMessageSearch(
+    buildEmbeddingSearchQuery(guildId, channelId, vector, options),
+    options
+  );
+  return options.raw
+    ? result
+    : result.hits.hits.map(hit => normalizeSearchResultSource(hit._source!));
+}
 
-            long timeMillis = doc['@timestamp'].value.toInstant().toEpochMilli();
-            long nowMillis = params.now;
-            double daysDiff = (nowMillis - timeMillis) / (1000.0 * 60.0 * 60.0 * 24.0);
-
-            double datePenaltyFactor = -1.0;
-            double datePenalty = 0.0;
-            if (daysDiff > 30) {
-              datePenalty = (daysDiff - 30) / 365.0;
-            }
-
-            double rawScore = cosineSim + (datePenalty * datePenaltyFactor);
-            return Math.max(0.0, rawScore);
-          `,
-          params: {
-            query_vector: queryEmbedding,
-            now: Date.now(),
-          },
-        },
-      },
-    },
-  });
-
-  const searchResult = result.hits.hits.map(hit => {
-    logger.debug(`score: ${hit._score}`);
-    return normalizeSearchResultSource(hit._source as SearchResultSource);
-  });
-
-  return searchResult;
-};
-
-
-export const getMemberPortion = async (guildId: string, senderId: string, channelId?: string) => {
+export const getMemberPortion = async (
+  guildId: string,
+  senderId: string,
+  channelId?: string
+) => {
   const client = getElasticClient();
   const index = 'iconttv-discord-message_*';
 
-  const filters: Array<Record<string, unknown>> = [
-    { term: { guildId } },
-  ];
+  const filters: Array<Record<string, unknown>> = [{ term: { guildId } }];
 
   if (channelId) {
     filters.push({ term: { channelId } });
@@ -291,10 +178,7 @@ export const getMemberPortion = async (guildId: string, senderId: string, channe
 
   const senderQuery = {
     bool: {
-      filter: [
-        ...filters,
-        { term: { senderId } },
-      ],
+      filter: [...filters, { term: { senderId } }],
     },
   };
 
@@ -322,4 +206,4 @@ export const getMemberPortion = async (guildId: string, senderId: string, channe
     portion, // 0 ~ 1
     percentage: portion * 100, // 0 ~ 100
   };
-}
+};

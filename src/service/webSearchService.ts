@@ -1,12 +1,11 @@
 import MessageModel from '../database/model/MessageModel';
 import { getMessageLink } from '../utils/message';
-import { getElasticClient } from './elasticService';
-import { aiClient } from './embedding/client';
 import {
-  buildWebSearchQuery,
-  buildMongoSearchFilter,
-  WEB_PAGE_SIZE,
-} from '../web/searchQuery';
+  searchMessage,
+  searchMessageEmbedding,
+  MessageSearchBackendError,
+} from './elasticService';
+import { buildMongoSearchFilter, WEB_PAGE_SIZE } from '../web/searchQuery';
 import type {
   WebSearchOptions,
   WebSearchResult,
@@ -27,18 +26,6 @@ import {
 import logger from '../lib/logger';
 
 const elasticCircuit = new CircuitBreaker();
-
-interface SearchSource {
-  '@timestamp'?: string;
-  guildId?: string;
-  channelId?: string;
-  messageId?: string;
-  senderId?: string;
-  senderName?: string;
-  embeddingInput?: string;
-  message?: string;
-  raw?: unknown;
-}
 
 export const searchWebMessages = async (
   session: WebSearchScope,
@@ -71,30 +58,39 @@ const searchElastic = async (
   session: WebSearchScope,
   options: WebSearchOptions
 ): Promise<WebSearchResult> => {
-  const vector =
-    options.mode === 'semantic'
-      ? await aiClient.createEmbeddingText(
-          `Instruct: Retrieve relevant messages that best matches the query\n${options.keyword}`
-        )
-      : undefined;
-  const query = buildWebSearchQuery(session, options, vector);
+  const searchOptions = {
+    allowedChannelIds: session.channels.map(channel => channel.id),
+    after: options.after,
+    before: options.before,
+    sort: options.sort,
+    offset: (options.page - 1) * WEB_PAGE_SIZE,
+    limit: WEB_PAGE_SIZE + 1,
+    raw: true as const,
+  };
   const result = await (async () => {
     try {
-      const response = await getElasticClient().search<SearchSource>(query, {
-        requestTimeout: 5000,
-        maxRetries: 0,
-      });
+      const search =
+        options.mode === 'semantic' ? searchMessageEmbedding : searchMessage;
+      const response = await search(
+        session.guildId,
+        options.keyword,
+        options.channelId ?? null,
+        searchOptions
+      );
       if (response.timed_out || (response._shards.failed ?? 0) > 0)
         throw new BackendUnavailable();
       return response;
     } catch (error) {
+      // Provider failures and invalid scope are not Elasticsearch outages.
+      if (!(error instanceof MessageSearchBackendError)) throw error;
+      const cause = error.cause;
       const status =
-        error && typeof error === 'object' && 'statusCode' in error
-          ? error.statusCode
+        cause && typeof cause === 'object' && 'statusCode' in cause
+          ? cause.statusCode
           : undefined;
       // A malformed query is an implementation/configuration problem, not a
       // dependency outage; don't silently hide it behind a different search.
-      if (status === 400) throw error;
+      if (status === 400) throw cause;
       logger.warn(
         'Elasticsearch request unavailable; using the web search circuit breaker.'
       );
@@ -156,7 +152,8 @@ const searchElastic = async (
         avatarUrl: archivedAvatar(
           message?.raw ?? hit.raw,
           message?.senderId ?? hit.senderId ?? '',
-          session.guildId
+          session.guildId,
+          false
         ),
         parentChannelName: session.channels.find(
           channel => channel.id === hit.channelId
@@ -222,7 +219,8 @@ const searchStoredMessages = async (
         avatarUrl: archivedAvatar(
           message.raw,
           message.senderId,
-          session.guildId
+          session.guildId,
+          false
         ),
         timestamp: message.createdAt?.toISOString() ?? '',
         editedTimestamp: archivedEditedTimestamp(message.editedAt, message.raw),

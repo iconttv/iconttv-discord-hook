@@ -1,4 +1,8 @@
 import type { estypes } from '@elastic/elasticsearch';
+import {
+  buildTextSearchQuery,
+  buildEmbeddingSearchQuery,
+} from '../service/elasticSearchQuery';
 import type { WebSearchOptions, WebSearchScope } from './types';
 
 export const WEB_PAGE_SIZE = 25;
@@ -51,81 +55,25 @@ export const buildWebSearchQuery = (
   options: WebSearchOptions,
   vector?: number[]
 ): estypes.SearchRequest => {
-  const allowed = session.channels.map(channel => channel.id);
-  if (options.channelId && !allowed.includes(options.channelId))
-    throw new Error('Channel is outside session scope.');
-  const filter: estypes.QueryDslQueryContainer[] = [
-    { term: { guildId: session.guildId } },
-    { terms: { channelId: options.channelId ? [options.channelId] : allowed } },
-    { exists: { field: 'messageId' } },
-  ];
-  if (options.after || options.before)
-    filter.push({
-      range: {
-        '@timestamp': {
-          ...(options.after ? { gte: `${options.after}T00:00:00.000Z` } : {}),
-          ...(options.before ? { lte: `${options.before}T23:59:59.999Z` } : {}),
-        },
-      },
-    });
-  const bool: estypes.QueryDslBoolQuery = {
-    filter,
-    must_not: [{ term: { isDeleted: true } }],
+  const searchOptions = {
+    allowedChannelIds: session.channels.map(channel => channel.id),
+    after: options.after,
+    before: options.before,
+    sort: options.sort,
+    offset: (options.page - 1) * WEB_PAGE_SIZE,
+    limit: WEB_PAGE_SIZE + 1,
   };
-  let query: estypes.QueryDslQueryContainer;
-  if (options.mode === 'semantic') {
-    if (!vector?.length)
-      throw new Error('Embedding is required for semantic search.');
-    filter.push({ exists: { field: 'embedding' } });
-    query = {
-      script_score: {
-        query: { bool },
-        script: {
-          source: "cosineSimilarity(params.vector, 'embedding') + 1.0",
-          params: { vector },
-        },
-      },
-    };
-  } else if (options.keyword) {
-    bool.must = [
-      {
-        simple_query_string: {
-          query: options.keyword,
-          fields: ['embeddingInput'],
-          default_operator: 'and',
-          flags: 'AND|OR|NOT|PHRASE|PREFIX|WHITESPACE|ESCAPE',
-        },
-      },
-    ];
-    query = { bool };
-  } else query = { bool };
-  return {
-    index: 'iconttv-discord-message_*',
-    from: (options.page - 1) * WEB_PAGE_SIZE,
-    size: WEB_PAGE_SIZE + 1,
-    track_total_hits: true,
-    timeout: '10s',
-    _source: [
-      '@timestamp',
-      'guildId',
-      'channelId',
-      'messageId',
-      'senderId',
-      'senderName',
-      'embeddingInput',
-      'message',
-    ],
-    query,
-    sort:
-      options.sort === 'relevance'
-        ? [
-            { _score: { order: 'desc' } },
-            { '@timestamp': 'desc' },
-            { messageId: 'asc' },
-          ]
-        : [
-            { '@timestamp': options.sort === 'oldest' ? 'asc' : 'desc' },
-            { messageId: 'asc' },
-          ],
-  };
+  return options.mode === 'semantic'
+    ? buildEmbeddingSearchQuery(
+        session.guildId,
+        options.channelId ?? null,
+        vector ?? [],
+        searchOptions
+      )
+    : buildTextSearchQuery(
+        session.guildId,
+        options.keyword,
+        options.channelId ?? null,
+        searchOptions
+      );
 };
