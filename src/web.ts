@@ -10,6 +10,7 @@ import {
   getWebConfiguration,
 } from './service/webSessionService';
 import { searchWebMessages } from './service/webSearchService';
+import { getWebAvatars } from './service/webAvatarService';
 import { scheduleWebSessionCleanup } from './service/webSessionCleanupService';
 import {
   getGuildSettingById,
@@ -48,6 +49,7 @@ const main = async () => {
     isHealthy: () => !stopping && mongoose.connection.readyState === 1,
     findSession: findWebSession,
     search: searchWebMessages,
+    avatars: getWebAvatars,
     getSettings: async guildId => {
       const setting = await getGuildSettingById(guildId);
       return {

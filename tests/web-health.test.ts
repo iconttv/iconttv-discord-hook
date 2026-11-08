@@ -1,18 +1,28 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { setTimeout as delay } from 'node:timers/promises';
-import { WebHealthProbe } from '../src/web/health';
+import { WebHealthProbe, getWebHealthOrigin } from '../src/web/health';
+
+test('health targets the internal compose service and follows WEB_PORT with an optional override', () => {
+  assert.equal(getWebHealthOrigin(), 'http://iconttv-discord-web:3011');
+  assert.equal(getWebHealthOrigin('4011'), 'http://iconttv-discord-web:4011');
+  assert.equal(getWebHealthOrigin('', '  '), 'http://iconttv-discord-web:3011');
+  assert.equal(
+    getWebHealthOrigin('4011', 'http://localhost:4011'),
+    'http://localhost:4011'
+  );
+});
 
 test('health caches both outcomes for five seconds and shares concurrent probes', async () => {
   let now = 0;
   let calls = 0;
   let available = true;
   let release: (() => void) | undefined;
-  const probe = new WebHealthProbe('https://web.example:3011', {
+  const probe = new WebHealthProbe(getWebHealthOrigin(), {
     now: () => now,
     fetch: async (url, options) => {
       calls++;
-      assert.equal(String(url), 'https://web.example:3011/health');
+      assert.equal(String(url), 'http://iconttv-discord-web:3011/health');
       assert.equal(options?.redirect, 'error');
       assert.equal(options?.cache, 'no-store');
       await new Promise<void>(resolve => {

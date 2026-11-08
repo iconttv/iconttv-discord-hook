@@ -10,10 +10,106 @@ import {
   PermissionFlagsBits,
 } from 'discord.js';
 import type { GuildBasedChannel } from 'discord.js';
-import { selectReadableWebChannels } from '../src/service/webChannelService';
+import {
+  selectReadableWebChannels,
+  discoverWebChannels,
+} from '../src/service/webChannelService';
+import MessageModel from '../src/database/model/MessageModel';
 
 // Real discord.js permission resolution: role and member overwrites must be
 // applied to the requesting member, not to the bot's much broader permissions.
+test('channel discovery shares concurrent work and caches archive metadata without caching user permissions', async t => {
+  let now = 0;
+  t.mock.method(Date, 'now', () => now);
+  let archiveQueries = 0;
+  let lists = 0;
+  let active = 0;
+  const fetches: string[] = [];
+  let canRead = true;
+  let deleted = false;
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => {
+    release = resolve;
+  });
+  const channel = {
+    id: '300',
+    guildId: '100',
+    name: 'archived',
+    type: ChannelType.PublicThread,
+    parent: { name: 'parent' },
+    isTextBased: () => true,
+    isThread: () => true,
+    permissionsFor: () =>
+      new PermissionsBitField(
+        canRead
+          ? [
+              PermissionFlagsBits.ViewChannel,
+              PermissionFlagsBits.ReadMessageHistory,
+            ]
+          : []
+      ),
+  } as unknown as GuildBasedChannel;
+  const cache = new Map<string, GuildBasedChannel>();
+  const guild = {
+    id: '100',
+    channels: {
+      cache,
+      fetch: async (id?: string) => {
+        if (!id) {
+          lists++;
+          await gate;
+          return new Map();
+        }
+        fetches.push(id);
+        if (id === '301' || deleted) throw new Error('deleted');
+        cache.set(id, channel);
+        return channel;
+      },
+      fetchActiveThreads: async () => {
+        active++;
+        await gate;
+        return { threads: new Map() };
+      },
+    },
+  } as unknown as Guild;
+  t.mock.method(MessageModel, 'distinct', () => {
+    archiveQueries++;
+    return { maxTimeMS: async () => ['300', '301'] };
+  });
+  const first = discoverWebChannels(guild);
+  assert.equal(discoverWebChannels(guild), first);
+  assert.equal(lists, 1);
+  assert.equal(active, 1);
+  assert.equal(archiveQueries, 1);
+  release();
+  assert.deepEqual(
+    (await first).map(item => item.id),
+    ['300']
+  );
+  const member = { id: '200' } as GuildMember;
+  assert.equal(
+    (await selectReadableWebChannels(await discoverWebChannels(guild), member))
+      .length,
+    1
+  );
+  canRead = false;
+  assert.deepEqual(
+    await selectReadableWebChannels(await discoverWebChannels(guild), member),
+    []
+  );
+  assert.deepEqual(fetches, ['300', '301']);
+  assert.equal(archiveQueries, 1);
+  now = 30000;
+  await discoverWebChannels(guild);
+  assert.deepEqual(fetches, ['300', '301', '300']);
+  deleted = true;
+  cache.delete('300');
+  assert.deepEqual(await discoverWebChannels(guild), []);
+  now = 300001;
+  await discoverWebChannels(guild);
+  assert.equal(archiveQueries, 2);
+});
+
 test('channel snapshots obey role/member overwrites and ReadMessageHistory', async () => {
   const client = new Client({ intents: [GatewayIntentBits.Guilds] });
   const guild = new Guild(client, {

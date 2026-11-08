@@ -56,6 +56,11 @@ export interface WebSearchMessage {
   link: string;
 }
 
+export interface WebMessageReference {
+  id: string;
+  channelId: string;
+}
+
 export interface WebSearchResult {
   messages: WebSearchMessage[];
   page: number;

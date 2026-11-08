@@ -12,7 +12,9 @@
   </head>
   <body>
     <div class="app-title">
-      <span class="brand-mark">i</span>
+      <span id="title-guild-icon" class="title-guild-icon" aria-hidden="true"
+        >#</span
+      >
       <span id="window-title">iconttv · 대화 아카이브</span>
     </div>
     <div class="app-layout">
@@ -171,10 +173,16 @@
               ><button class="search-submit" type="submit">검색</button>
             </div>
             <div class="filter-row">
-              <label class="checkbox-label"
-                ><input id="embedding" type="checkbox" /> 임베딩 검색
-                사용</label
-              >
+              <div class="search-modes">
+                <label class="checkbox-label"
+                  ><input id="all-channels" type="checkbox" checked /> 전체 채널
+                  검색</label
+                >
+                <label class="checkbox-label"
+                  ><input id="embedding" type="checkbox" /> 임베딩 검색
+                  사용</label
+                >
+              </div>
               <span class="filter-separator"></span>
               <label class="date-label"
                 >기간

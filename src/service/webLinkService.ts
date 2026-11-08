@@ -10,7 +10,7 @@ import { config } from '../config';
 import logger from '../lib/logger';
 import { truncateText } from '../utils';
 import { getMessageLink } from '../utils/message';
-import { WebHealthProbe } from '../web/health';
+import { WebHealthProbe, getWebHealthOrigin } from '../web/health';
 import { searchWebMessages } from './webSearchService';
 import { createWebSession, getWebConfiguration } from './webSessionService';
 import {
@@ -18,7 +18,9 @@ import {
   selectReadableWebChannels,
 } from './webChannelService';
 
-const health = new WebHealthProbe(config.WEB_PUBLIC_URL);
+const health = new WebHealthProbe(
+  getWebHealthOrigin(config.WEB_PORT, config.WEB_HEALTH_URL)
+);
 const defaultServices = {
   isHealthy: () => health.check(),
   discoverChannels: discoverWebChannels,
@@ -52,14 +54,13 @@ export const replyWithWebLink = async (
       return;
     }
     const guild = interaction.guild;
-    await guild.roles.fetch();
-    const member = await guild.members.fetch({
-      user: interaction.user.id,
-      force: true,
-    });
+    const [, member, candidates] = await Promise.all([
+      guild.roles.fetch(),
+      guild.members.fetch({ user: interaction.user.id, force: true }),
+      services.discoverChannels(guild),
+    ]);
     // The active endpoint describes the bot's access, not the invoking user's.
     // Recalculate member permissions (and private membership) for each result.
-    const candidates = await services.discoverChannels(guild);
     const current = interaction.channel;
     const channels = await selectReadableWebChannels(candidates, member);
     if (

@@ -207,19 +207,26 @@ export const archivedMentions = (raw: unknown) => {
 export const archivedAvatar = (
   raw: unknown,
   userId: string,
-  guildId: string
+  guildId: string,
+  includeDefault = true
 ) => {
   const data = archivedData(raw);
   const author = record(data.author);
   const member = record(data.member);
   if (/^\d+$/.test(userId) && /^\d+$/.test(guildId)) {
     if (typeof member.avatar === 'string' && /^[\w]+$/.test(member.avatar)) {
-      return `https://cdn.discordapp.com/guilds/${guildId}/users/${userId}/avatars/${member.avatar}.webp?size=80`;
+      return `https://cdn.discordapp.com/guilds/${guildId}/users/${userId}/avatars/${member.avatar}.webp?size=128`;
     }
     if (typeof author.avatar === 'string' && /^[\w]+$/.test(author.avatar)) {
-      return `https://cdn.discordapp.com/avatars/${userId}/${author.avatar}.webp?size=80`;
+      return `https://cdn.discordapp.com/avatars/${userId}/${author.avatar}.webp?size=128`;
     }
-    return `https://cdn.discordapp.com/embed/avatars/${Number((BigInt(userId) >> BigInt(22)) % BigInt(6))}.png`;
+    if (!includeDefault) return '';
+    const discriminator = String(author.discriminator ?? '0');
+    const index =
+      /^\d{4}$/.test(discriminator) && discriminator !== '0000'
+        ? Number(discriminator) % 5
+        : Number((BigInt(userId) >> BigInt(22)) % BigInt(6));
+    return `https://cdn.discordapp.com/embed/avatars/${index}.png`;
   }
   return '';
 };

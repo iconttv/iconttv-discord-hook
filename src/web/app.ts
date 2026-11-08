@@ -6,6 +6,7 @@ import type {
   WebSearchResult,
   WebSession,
   WebSettings,
+  WebMessageReference,
 } from './types';
 import { getWebCapabilities } from './permissions';
 import { SemanticSearchUnavailable } from './circuitBreaker';
@@ -19,6 +20,10 @@ export interface WebDependencies {
     session: WebSession,
     options: WebSearchOptions
   ): Promise<WebSearchResult>;
+  avatars?(
+    session: WebSession,
+    references: WebMessageReference[]
+  ): Promise<Record<string, string>>;
   getSettings(guildId: string): Promise<WebSettings>;
   saveSettings(
     guildId: string,
@@ -127,6 +132,33 @@ const readSettings = (body: Record<string, unknown>): WebSettings => {
   return body as unknown as WebSettings;
 };
 
+const readAvatarReferences = (
+  body: Record<string, unknown>,
+  session: WebSession
+): WebMessageReference[] => {
+  if (
+    Object.keys(body).length !== 1 ||
+    !Array.isArray(body.messages) ||
+    body.messages.length > 25
+  )
+    throw new HttpError(400, '아바타 요청 형식을 확인해 주세요.');
+  return body.messages.map(value => {
+    if (
+      !value ||
+      typeof value !== 'object' ||
+      Object.keys(value).length !== 2 ||
+      typeof value.id !== 'string' ||
+      !/^\d{1,20}$/.test(value.id) ||
+      typeof value.channelId !== 'string' ||
+      !/^\d{1,20}$/.test(value.channelId)
+    )
+      throw new HttpError(400, '메시지 정보를 확인해 주세요.');
+    if (!session.channels.some(channel => channel.id === value.channelId))
+      throw new HttpError(403, '조회할 수 없는 채널입니다.');
+    return { id: value.id, channelId: value.channelId };
+  });
+};
+
 export const createWebServer = (dependencies: WebDependencies) => {
   const secure = new URL(dependencies.origin).protocol === 'https:';
   const cookie = (token: string, age: number) =>
@@ -215,13 +247,23 @@ export const createWebServer = (dependencies: WebDependencies) => {
           });
           return;
         }
-        if (path === '/api/search' && request.method === 'GET') {
-          const options = readOptions(url.searchParams, session);
+        const avatarRequest =
+          path === '/api/avatars' && request.method === 'POST';
+        if (
+          (path === '/api/search' && request.method === 'GET') ||
+          avatarRequest
+        ) {
+          const references = avatarRequest
+            ? readAvatarReferences(await readJson(request), session)
+            : undefined;
+          const options = avatarRequest
+            ? undefined
+            : readOptions(url.searchParams, session);
           const now = Date.now();
           for (const [key, value] of requests)
             if (now - value.start >= 60000 && value.active === 0)
               requests.delete(key);
-          const requester = `${session.guildId}:${session.userId}`;
+          const requester = `${session.guildId}:${session.userId}:${avatarRequest ? 'avatars' : 'search'}`;
           let limit = requests.get(requester);
           if (!limit) {
             if (requests.size >= 10000)
@@ -239,7 +281,17 @@ export const createWebServer = (dependencies: WebDependencies) => {
           limit.count++;
           limit.active++;
           try {
-            json(response, 200, await dependencies.search(session, options));
+            json(
+              response,
+              200,
+              avatarRequest
+                ? {
+                    avatars:
+                      (await dependencies.avatars?.(session, references!)) ??
+                      {},
+                  }
+                : await dependencies.search(session, options!)
+            );
           } finally {
             limit.active--;
           }

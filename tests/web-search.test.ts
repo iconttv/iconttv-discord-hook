@@ -40,10 +40,88 @@ test('all Elasticsearch query modes enforce guild and readable channel filters',
     page: 2,
   });
   assert.equal(scoped.from, 25);
-  assert.match(JSON.stringify(scoped.query), /"channelId":\["allowed"\]/);
+  assert.match(
+    JSON.stringify(scoped.query),
+    /"term":\{"channelId":"allowed"\}/
+  );
   assert.doesNotMatch(
     JSON.stringify(buildWebSearchQuery(session, base).query),
     /embeddingInput/
+  );
+});
+
+test('semantic search preserves legacy scoring and its floor with paging and every sort order', () => {
+  const scope = {
+    guildId: '100',
+    channels: [{ id: '200', name: 'allowed', category: '' }],
+  };
+  const options: WebSearchOptions = {
+    keyword: 'meaning',
+    mode: 'semantic',
+    sort: 'relevance',
+    page: 2,
+  };
+  for (const sort of ['relevance', 'newest', 'oldest'] as const) {
+    const query = buildWebSearchQuery(scope, { ...options, sort }, [0.1, 0.2]);
+    assert.equal(query.min_score, 0.44);
+    assert.equal(query.track_total_hits, true);
+    assert.equal(query.from, 25);
+    assert.match(
+      JSON.stringify(query.query),
+      /cosineSimilarity.*\* 1\.5 \+ 1\.0/
+    );
+    assert.match(JSON.stringify(query.query), /daysDiff > 30/);
+    assert.match(JSON.stringify(query.query), /365\.0/);
+    assert.match(JSON.stringify(query.query), /cosineSim - datePenalty/);
+  }
+  for (const keyword of ['', 'literal'])
+    assert.equal(
+      buildWebSearchQuery(scope, { ...options, mode: 'text', keyword })
+        .min_score,
+      undefined
+    );
+});
+
+test('text search preserves legacy Boolean keywords and recency weighting independently of sort order', () => {
+  const scope = {
+    guildId: '100',
+    channels: [{ id: '200', name: 'allowed', category: '' }],
+  };
+  for (const sort of ['relevance', 'newest', 'oldest'] as const) {
+    const query = buildWebSearchQuery(scope, {
+      keyword: 'alpha beta',
+      mode: 'text',
+      sort,
+      page: 1,
+    });
+    const body = JSON.stringify(query.query);
+    assert.match(body, /alpha AND beta/);
+    assert.match(body, /"scale":"30d","decay":0.5/);
+    assert.match(body, /"weight":20/);
+    assert.match(body, /"boost_mode":"sum"/);
+    assert.equal(
+      JSON.stringify(query.sort).includes('"_score"'),
+      sort === 'relevance'
+    );
+    if (sort === 'oldest')
+      assert.match(JSON.stringify(query.sort), /"@timestamp":"asc"/);
+  }
+  const or = buildWebSearchQuery(scope, {
+    keyword: 'alpha OR beta',
+    mode: 'text',
+    sort: 'relevance',
+    page: 1,
+  });
+  assert.match(JSON.stringify(or.query), /alpha OR beta/);
+  const latest = buildWebSearchQuery(scope, {
+    keyword: '',
+    mode: 'text',
+    sort: 'newest',
+    page: 1,
+  });
+  assert.doesNotMatch(
+    JSON.stringify(latest.query),
+    /function_score|query_string|embedding/
   );
 });
 

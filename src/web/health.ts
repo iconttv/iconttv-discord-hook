@@ -1,3 +1,6 @@
+export const getWebHealthOrigin = (port = '3011', override?: string) =>
+  override?.trim() || `http://iconttv-discord-web:${port || '3011'}`;
+
 interface HealthProbeOptions {
   ttlMs?: number;
   timeoutMs?: number;

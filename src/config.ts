@@ -7,6 +7,7 @@ interface Config {
   DISCORD_BOT_TOKEN: string;
   DISCORD_CLIENT_ID: string;
   WEB_PUBLIC_URL: string;
+  WEB_HEALTH_URL: string | undefined;
   WEB_SESSION_SECRET: string | undefined;
   WEB_SESSION_TTL_SECONDS: string;
   WEB_HOST: string;
@@ -90,6 +91,7 @@ export const config: Config = {
   DISCORD_BOT_TOKEN: process.env.DISCORD_BOT_TOKEN!,
   DISCORD_CLIENT_ID: process.env.DISCORD_CLIENT_ID!,
   WEB_PUBLIC_URL: process.env.WEB_PUBLIC_URL ?? 'https://iconttv-discord.probius.dev',
+  WEB_HEALTH_URL: process.env.WEB_HEALTH_URL,
   WEB_SESSION_SECRET: process.env.WEB_SESSION_SECRET,
   WEB_SESSION_TTL_SECONDS: process.env.WEB_SESSION_TTL_SECONDS ?? '1800',
   WEB_HOST: process.env.WEB_HOST ?? '0.0.0.0',
