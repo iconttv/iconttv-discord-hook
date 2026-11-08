@@ -10,9 +10,9 @@ services:
       - .env
     environment:
       - TZ=Asia/Seoul
-      - WEB_PORT=3011
+      - WEB_PORT=${WEB_PORT:-3011}
     ports:
-      - '127.0.0.1:3011:3011'
+      - '${WEB_PORT:-3011}:${WEB_PORT:-3011}'
     volumes:
       - ./logs/web:/app/logs
     restart: unless-stopped

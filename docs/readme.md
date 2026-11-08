@@ -76,7 +76,7 @@ yarn web-start
 yarn test:web
 ```
 
-`web-build`는 FE 자산만 `dist/public/`으로 복사합니다. FE는 외부 CDN 스크립트나 별도 번들러 없이 ES module/CSS로 동작합니다. Docker 이미지에도 같은 자산을 포함하며 compose의 `iconttv-discord-web`은 `127.0.0.1:3011`에 노출합니다. 도메인의 HTTPS 리버스 프록시가 `/health`, `/search`, `/settings`, 정적 파일과 `/api/*`를 이 웹 서비스로 전달해야 합니다. 봇 컨테이너에서도 `WEB_PUBLIC_URL`로 접속할 수 있어야 합니다. 토큰이 최초 URL에 있으므로 프록시 access log에는 query string을 기록하지 않도록 설정하세요. 응답은 no-store/no-referrer 정책을 사용합니다.
+`web-build`는 FE 자산만 `dist/public/`으로 복사합니다. FE는 외부 CDN 스크립트나 별도 번들러 없이 ES module/CSS로 동작합니다. Docker 이미지에도 같은 자산을 포함하며 compose의 `iconttv-discord-web`은 호스트 IP를 지정하지 않은 `${WEB_PORT:-3011}:${WEB_PORT:-3011}` 포트 매핑으로 노출합니다. `.env`의 `WEB_PORT`를 호스트·컨테이너 포트와 웹 리스너에 동일하게 적용하며, 미설정 또는 빈 값이면 3011을 사용합니다. 도메인의 HTTPS 리버스 프록시가 `/health`, `/search`, `/settings`, 정적 파일과 `/api/*`를 이 웹 서비스로 전달해야 합니다. 봇 컨테이너에서도 `WEB_PUBLIC_URL`로 접속할 수 있어야 합니다. 토큰이 최초 URL에 있으므로 프록시 access log에는 query string을 기록하지 않도록 설정하세요. 응답은 no-store/no-referrer 정책을 사용합니다.
 
 운영 적용에는 환경변수 설정, 도메인/HTTPS 프록시 연결, 새 이미지 배포, 변경된 슬래시 명령 등록 및 봇 재시작이 필요합니다. 빌드/회귀 검사는 이 작업들을 수행하지 않습니다. 아래 명령 등록/봇 실행 절차는 운영자가 별도로 수행합니다.
 
