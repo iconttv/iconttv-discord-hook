@@ -22,7 +22,7 @@
 
 ### 검색 웹 POC (1.1.0)
 
-봇과 같은 저장소의 `web/`에 정적 화면을 두고 `src/web.ts`를 별도 HTTP 프로세스로 실행합니다. HTML에는 사용자/메시지를 포함하지 않으며, 브라우저가 같은 origin의 API에서 데이터를 가져옵니다. 운영 도메인은 `https://iconttv-discord.probius.dev`입니다. HTML은 정적 파일 내용의 해시를 포함한 `/assets/<version>/...` 주소로 JS·CSS·favicon을 불러옵니다. JS 하위 모듈도 같은 버전 경로를 사용하여 재배포 후 CDN의 이전 파일이 섞이지 않게 합니다. 응답에는 브라우저·CDN 모두 `no-store`를 지정합니다.
+봇과 같은 저장소의 `web/`에 정적 화면을 두고 `src/web.ts`를 별도 HTTP 프로세스로 실행합니다. HTML에는 사용자/메시지를 포함하지 않으며, 브라우저가 같은 origin의 API에서 데이터를 가져옵니다. 운영 도메인은 `https://iconttv-discord.probius.dev`입니다. HTML은 정적 파일 내용의 해시를 포함한 `/assets/<version>/...` 주소로 JS·CSS·favicon을 불러옵니다. JS 하위 모듈도 같은 버전 경로를 사용하여 재배포 후 CDN의 이전 파일이 섞이지 않게 합니다. 버전 경로의 JS·CSS·이미지는 브라우저·CDN에 `public, max-age=31536000, immutable`을 지정합니다. HTML·API·버전 없는 파일 주소·오류 응답은 `no-store`를 유지합니다. 앱 스크립트는 `data-cfasync="false"`로 Rocket Loader 처리를 제외하고, 필요한 JS 모듈은 `modulepreload`로 병렬 요청합니다. Cloudflare에 별도 캐시 우회 규칙이 있다면 `/assets/*`는 우회 대상에서 제외하고 원본 캐시 헤더를 존중하도록 설정해야 합니다.
 
 - `/itvsc`: 웹이 정상일 때 본인에게만 보이는 웹 링크를 발급합니다. 웹이 내려가 있으면 봇 프로세스에서 검색하여 기존처럼 짧은 본문·원문 링크·시각 목록으로 응답합니다. 이 응답도 본인에게만 보이며 사용자별 채널 권한을 적용합니다. `keyword`는 선택(최대 180자), `channel`은 기본 **true**, `embedding`은 기본 false입니다. `channel:false`는 허용된 모든 채널로 시작합니다. 기존 `keep` 옵션은 제거했습니다.
 - `/itvweb`: 검색어 없이 웹을 열어 최근 메시지와 서버 설정에 접근합니다. 웹이 내려가 있으면 `현재 웹페이지를 사용할 수 없습니다.`로 응답합니다. 기존 `/itvsetting` 모달도 유지합니다.

@@ -295,6 +295,49 @@ test('HTTP session, channel boundaries, optional keyword, paging and settings au
     module.headers.get('x-web-asset-version'),
     shell.headers.get('x-web-asset-version')
   );
+  const version = shell.headers.get('x-web-asset-version');
+  const assertCache = (response: Response, value: string) => {
+    for (const header of [
+      'cache-control',
+      'cdn-cache-control',
+      'cloudflare-cdn-cache-control',
+    ])
+      assert.equal(response.headers.get(header), value);
+  };
+  for (const file of [
+    'app.js',
+    'style.css',
+    'message-format.js',
+    'discord-links.js',
+    'message-images.js',
+    'favicon.svg',
+  ]) {
+    for (const method of ['GET', 'HEAD']) {
+      const asset = await fetch(`${base}/assets/${version}/${file}`, {
+        method,
+      });
+      assert.equal(asset.status, 200);
+      assertCache(asset, 'public, max-age=31536000, immutable');
+      assert.equal(asset.headers.get('set-cookie'), null);
+    }
+  }
+  assertCache(shell, 'no-store');
+  assertCache(login, 'no-store');
+  for (const path of [
+    '/app.js',
+    '/style.css',
+    '/health',
+    '/api/session',
+    '/api/search',
+    '/api/settings',
+    '/assets/0000000000000000/app.js',
+    `/assets/${version}/index.html`,
+  ]) {
+    assertCache(await request(path), 'no-store');
+  }
+  const unauthorized = await fetch(base + '/api/search');
+  assert.equal(unauthorized.status, 401);
+  assertCache(unauthorized, 'no-store');
   assert.equal((await fetch(base + '/.env')).status, 404);
   const logout = await request('/api/session', 'reader', { method: 'DELETE' });
   assert.match(logout.headers.get('set-cookie')!, /Max-Age=0/);
