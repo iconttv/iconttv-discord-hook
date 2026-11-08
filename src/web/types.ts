@@ -45,7 +45,6 @@ export interface WebSearchMessage {
   channelName: string;
   senderName: string;
   senderId: string;
-  avatarUrl: string;
   parentChannelName?: string;
   timestamp: string;
   editedTimestamp?: string;

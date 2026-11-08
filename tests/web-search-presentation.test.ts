@@ -115,6 +115,7 @@ test('search verifies archive deletion state and presents current edits/images i
     ['1', '4']
   );
   assert.equal(elastic.messages[0].content, 'current content');
+  assert.ok(elastic.messages.every(message => !('avatarUrl' in message)));
   assert.equal(elastic.messages[0].editedTimestamp, '2026-11-08T11:00:00.000Z');
   assert.equal(elastic.messages[0].images?.length, 1);
   assert.equal(elastic.messages[1].content, '');
@@ -132,6 +133,7 @@ test('search verifies archive deletion state and presents current edits/images i
   mode = 'mongo';
   const mongo = await searchWebMessages(scope, options);
   assert.equal(mongo.source, 'mongodb');
+  assert.ok(mongo.messages.every(message => !('avatarUrl' in message)));
   assert.deepEqual(
     mongo.messages.map(message => message.id),
     ['1', '4']

@@ -156,7 +156,6 @@ const server = createWebServer({
                 parentChannelName: channel.parentName,
                 senderName: message.name,
                 senderId: String(index),
-                avatarUrl: '',
                 timestamp: new Date(
                   Date.UTC(2026, 10, 8, 9, 50 - index * 7)
                 ).toISOString(),

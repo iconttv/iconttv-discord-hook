@@ -1,4 +1,7 @@
-import type { WebSearchMessage } from './types';
+interface AvatarSubject {
+  senderId: string;
+  avatarUrl: string;
+}
 
 type AvatarLookup = (
   guildId: string,
@@ -26,14 +29,9 @@ export class WebAvatarCache {
     }
   ) {}
 
-  async resolve<T extends Pick<WebSearchMessage, 'senderId' | 'avatarUrl'>>(
-    guildId: string,
-    messages: T[]
-  ) {
+  async resolve<T extends AvatarSubject>(guildId: string, messages: T[]) {
     if (!/^\d{1,20}$/.test(guildId)) return messages;
-    const needsProfile = (
-      message: Pick<WebSearchMessage, 'senderId' | 'avatarUrl'>
-    ) =>
+    const needsProfile = (message: AvatarSubject) =>
       /^\d{1,20}$/.test(message.senderId) &&
       (!message.avatarUrl ||
         /^https:\/\/cdn\.discordapp\.com\/embed\/avatars\/\d\.png$/.test(

@@ -269,7 +269,7 @@ function renderMessages(messages, keyword) {
           : '';
       const long = content.length > 700 || content.split('\n').length > 8;
       return `${divider}<article class="message" aria-label="${escape(message.senderName)}의 메시지">
-      <div class="avatar" data-avatar-user="${escape(message.senderId)}">${avatar(message.avatarUrl, message.senderName)}</div>
+      <div class="avatar" data-avatar-user="${escape(message.senderId)}">${avatar('', message.senderName)}</div>
       <div class="message-body"><div class="message-meta"><span class="message-author">${escape(message.senderName)}</span><span class="message-timing"><a class="message-time" href="${link}" target="_blank" rel="noopener noreferrer" title="${escape(formatDate(message.timestamp))} · 디스코드 원문 보기"><time datetime="${escape(message.timestamp)}">${escape(formatDate(message.timestamp, true))}</time></a>${edited}</span><a class="message-channel" href="${channelLink}" target="_blank" rel="noopener noreferrer" title="디스코드에서 ${escape(locationName)} 열기"># ${escape(locationName)} ↗</a></div>
       <div class="message-content ${long ? 'collapsed' : ''}"></div>${long ? '<button class="expand-message" aria-expanded="false">본문 더 보기</button>' : ''}
       <div class="message-images" hidden></div>
@@ -324,7 +324,7 @@ async function loadAvatars(messages, request) {
   for (const message of messages) {
     const cached = state.avatars.get(`${guildId}:${message.senderId}`);
     if (
-      (!message.avatarUrl || /\/embed\/avatars\//.test(message.avatarUrl)) &&
+      /^\d+$/.test(message.senderId) &&
       (!cached || cached.expiresAt <= Date.now())
     )
       missing.set(message.senderId, {
