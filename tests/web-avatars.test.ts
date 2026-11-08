@@ -11,7 +11,7 @@ import type { WebSearchMessage, WebSearchResult } from '../src/web/types';
 const message = (
   senderId = '200',
   avatarUrl = archivedAvatar({}, senderId, '100')
-): WebSearchMessage => ({
+): WebSearchMessage & { avatarUrl: string } => ({
   id: '300',
   channelId: '400',
   channelName: 'allowed',

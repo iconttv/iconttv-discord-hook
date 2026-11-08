@@ -108,6 +108,7 @@ test('HTTP session, channel boundaries, optional keyword, paging and settings au
     guildId: '100',
     guildName: '테스트 서버',
     guildIconUrl: '',
+    initialChannelId: '300',
     channels: [{ id: '300', name: '공개', category: '' }],
     permissions: '0',
     expiresAt: new Date(Date.now() + 60000),
@@ -216,6 +217,7 @@ test('HTTP session, channel boundaries, optional keyword, paging and settings au
   assert.equal(searches[0].options.keyword, '');
   assert.equal(searches[0].options.mode, 'text');
   assert.equal(searches[0].options.sort, 'newest');
+  assert.equal(searches[0].options.channelId, '300');
   assert.equal(
     (
       await request(
@@ -227,11 +229,18 @@ test('HTTP session, channel boundaries, optional keyword, paging and settings au
   assert.equal(searches[1].options.mode, 'semantic');
   assert.equal(searches[1].options.channelId, '300');
   assert.equal(searches[1].options.page, 2);
+  assert.equal((await request('/api/search?allChannels=true')).status, 200);
+  assert.equal(searches[2].options.channelId, undefined);
+  assert.equal(
+    (await request('/api/search?allChannels=true&channelId=private')).status,
+    403
+  );
   for (const query of [
     'page=0',
     'page=101',
     'page=1.2',
     'embedding=yes',
+    'allChannels=yes',
     'after=2026-02-30',
     'after=2026-11-01&before=2026-10-01',
   ]) {
@@ -274,7 +283,18 @@ test('HTTP session, channel boundaries, optional keyword, paging and settings au
   );
   assert.equal(shell.headers.get('referrer-policy'), 'no-referrer');
   assert.equal(shell.headers.get('cache-control'), 'no-store');
-  assert.equal((await shell.text()).includes('secret'), false);
+  assert.equal(shell.headers.get('cloudflare-cdn-cache-control'), 'no-store');
+  const html = await shell.text();
+  assert.equal(html.includes('secret'), false);
+  const script = html.match(/src="(\/assets\/[a-f0-9]{16}\/app.js)"/)?.[1];
+  assert(script);
+  const module = await fetch(base + script);
+  assert.equal(module.status, 200);
+  assert.match(module.headers.get('content-type')!, /javascript/);
+  assert.equal(
+    module.headers.get('x-web-asset-version'),
+    shell.headers.get('x-web-asset-version')
+  );
   assert.equal((await fetch(base + '/.env')).status, 404);
   const logout = await request('/api/session', 'reader', { method: 'DELETE' });
   assert.match(logout.headers.get('set-cookie')!, /Max-Age=0/);

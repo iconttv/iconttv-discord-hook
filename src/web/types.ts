@@ -13,6 +13,8 @@ export interface WebSession {
   guildId: string;
   guildName: string;
   guildIconUrl: string;
+  initialChannelId?: string;
+  accessResolvedAt?: Date;
   channels: WebChannel[];
   permissions: string;
   expiresAt: Date;
@@ -43,7 +45,6 @@ export interface WebSearchMessage {
   channelName: string;
   senderName: string;
   senderId: string;
-  avatarUrl: string;
   parentChannelName?: string;
   timestamp: string;
   editedTimestamp?: string;

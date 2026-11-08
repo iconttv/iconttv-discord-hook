@@ -11,6 +11,7 @@ import {
 } from './service/webSessionService';
 import { searchWebMessages } from './service/webSearchService';
 import { getWebAvatars } from './service/webAvatarService';
+import { resolveWebSessionAccess } from './service/webSessionAccessService';
 import { scheduleWebSessionCleanup } from './service/webSessionCleanupService';
 import {
   getGuildSettingById,
@@ -47,7 +48,10 @@ const main = async () => {
     origin,
     assets,
     isHealthy: () => !stopping && mongoose.connection.readyState === 1,
-    findSession: findWebSession,
+    findSession: async token => {
+      const session = await findWebSession(token);
+      return session ? resolveWebSessionAccess(session) : null;
+    },
     search: searchWebMessages,
     avatars: getWebAvatars,
     getSettings: async guildId => {

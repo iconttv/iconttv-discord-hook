@@ -36,6 +36,8 @@ try {
       'tests/web-security.test.ts',
       'tests/web-search-presentation.test.ts',
       'tests/web-session-cleanup.test.ts',
+      'tests/web-session-access.test.ts',
+      'tests/web-assets.test.ts',
     ],
     {
       cwd: temporary,

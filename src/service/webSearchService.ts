@@ -12,7 +12,6 @@ import type {
   WebSearchScope,
 } from '../web/types';
 import {
-  archivedAvatar,
   archivedMentions,
   archivedEditedTimestamp,
   archivedImages,
@@ -149,12 +148,6 @@ const searchElastic = async (
         senderId: message?.senderId ?? hit.senderId ?? '',
         senderName:
           message?.senderName ?? hit.senderName ?? '알 수 없는 사용자',
-        avatarUrl: archivedAvatar(
-          message?.raw ?? hit.raw,
-          message?.senderId ?? hit.senderId ?? '',
-          session.guildId,
-          false
-        ),
         parentChannelName: session.channels.find(
           channel => channel.id === hit.channelId
         )?.parentName,
@@ -216,12 +209,6 @@ const searchStoredMessages = async (
         parentChannelName: channelMap.get(message.channelId)?.parentName,
         senderId: message.senderId,
         senderName: message.senderName ?? '알 수 없는 사용자',
-        avatarUrl: archivedAvatar(
-          message.raw,
-          message.senderId,
-          session.guildId,
-          false
-        ),
         timestamp: message.createdAt?.toISOString() ?? '',
         editedTimestamp: archivedEditedTimestamp(message.editedAt, message.raw),
         images,

@@ -16,6 +16,7 @@ const session: WebSession = {
   guildId: '100000000000000001',
   guildName: '아카이브 테스트 서버',
   guildIconUrl: '',
+  initialChannelId: '200000000000000001',
   permissions: PermissionFlagsBits.ModerateMembers.toString(),
   expiresAt: new Date(Date.now() + 3600000),
   channels: [
@@ -155,7 +156,6 @@ const server = createWebServer({
                 parentChannelName: channel.parentName,
                 senderName: message.name,
                 senderId: String(index),
-                avatarUrl: '',
                 timestamp: new Date(
                   Date.UTC(2026, 10, 8, 9, 50 - index * 7)
                 ).toISOString(),
