@@ -12,6 +12,8 @@ RUN yarn install --immutable
 COPY tsconfig.json ./
 COPY tsconfig.build.json ./
 COPY src ./src
+COPY web ./web
+COPY scripts/build-web.mjs ./scripts/build-web.mjs
 RUN yarn build
 
 FROM node:24-slim
