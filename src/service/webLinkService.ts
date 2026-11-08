@@ -4,9 +4,12 @@ import {
   ButtonStyle,
   ChatInputCommandInteraction,
   MessageFlags,
+  PermissionFlagsBits,
+  GuildMember,
   escapeMarkdown,
 } from 'discord.js';
 import { config } from '../config';
+import type { WebChannel } from '../web/types';
 import logger from '../lib/logger';
 import { truncateText } from '../utils';
 import { getMessageLink } from '../utils/message';
@@ -54,33 +57,83 @@ export const replyWithWebLink = async (
       return;
     }
     const guild = interaction.guild;
-    const [, member, candidates] = await Promise.all([
-      guild.roles.fetch(),
-      guild.members.fetch({ user: interaction.user.id, force: true }),
-      services.discoverChannels(guild),
-    ]);
-    // The active endpoint describes the bot's access, not the invoking user's.
-    // Recalculate member permissions (and private membership) for each result.
-    const current = interaction.channel;
-    const channels = await selectReadableWebChannels(candidates, member);
-    if (
-      current?.isThread() &&
-      !channels.some(channel => channel.id === current.id)
-    ) {
-      channels.push(...(await selectReadableWebChannels([current], member)));
-    }
-    if (
-      options.inChannel &&
-      !channels.some(channel => channel.id === interaction.channelId)
-    ) {
-      await interaction.editReply(
-        '현재 채널의 메시지 기록을 읽을 권한이 없습니다.'
-      );
+    const inChannel = options.inChannel ?? true;
+    if (webAvailable) {
+      // An interaction already identifies its issuer and originating channel.
+      // Resolve readable channels and settings privileges on first web access.
+      const member =
+        interaction.member instanceof GuildMember ? interaction.member : null;
+      const { origin } = getWebConfiguration();
+      const { token, expiresAt } = await services.createSession({
+        userId: interaction.user.id,
+        displayName:
+          member?.displayName ??
+          interaction.user.globalName ??
+          interaction.user.username,
+        avatarUrl:
+          member?.displayAvatarURL({ size: 128 }) ??
+          interaction.user.displayAvatarURL({ size: 128 }),
+        guildId: guild.id,
+        guildName: guild.name,
+        guildIconUrl: guild.iconURL({ size: 128 }) ?? '',
+        initialChannelId: interaction.channelId,
+        channels: [],
+        permissions: '0',
+      });
+      const url = new URL('/search', origin);
+      url.searchParams.set('token', token);
+      if (options.keyword) url.searchParams.set('keyword', options.keyword);
+      if (inChannel) url.searchParams.set('channelId', interaction.channelId);
+      url.searchParams.set('allChannels', String(!inChannel));
+      url.searchParams.set('embedding', String(options.semantic ?? false));
+      await interaction.editReply({
+        content: `웹에서 대화를 검색하고 원문으로 이동할 수 있어요.\n이 링크는 <t:${Math.floor(expiresAt.getTime() / 1000)}:R> 만료됩니다.`,
+        components: [
+          new ActionRowBuilder<ButtonBuilder>().addComponents(
+            new ButtonBuilder()
+              .setLabel('검색 페이지 열기')
+              .setStyle(ButtonStyle.Link)
+              .setURL(url.toString())
+          ),
+        ],
+      });
       return;
+    }
+    let channels: WebChannel[];
+    if (inChannel) {
+      const current = interaction.channel;
+      if (
+        !current ||
+        !('name' in current) ||
+        !interaction.memberPermissions?.has([
+          PermissionFlagsBits.ViewChannel,
+          PermissionFlagsBits.ReadMessageHistory,
+        ])
+      ) {
+        await interaction.editReply(
+          '현재 채널의 메시지 기록을 읽을 권한이 없습니다.'
+        );
+        return;
+      }
+      channels = [
+        {
+          id: current.id,
+          name: current.name ?? '',
+          category: '',
+          parentName: current.isThread() ? current.parent?.name : undefined,
+        },
+      ];
+    } else {
+      const [, member, candidates] = await Promise.all([
+        guild.roles.fetch(),
+        guild.members.fetch({ user: interaction.user.id, force: true }),
+        services.discoverChannels(guild),
+      ]);
+      channels = await selectReadableWebChannels(candidates, member);
     }
     if (!webAvailable) {
       const keyword = options.keyword ?? '';
-      const channelId = options.inChannel ? interaction.channelId : undefined;
+      const channelId = inChannel ? interaction.channelId : undefined;
       const result = await services.search(
         { guildId: guild.id, channels },
         {
@@ -125,34 +178,6 @@ export const replyWithWebLink = async (
       });
       return;
     }
-    const { origin } = getWebConfiguration();
-    const { token, expiresAt } = await services.createSession({
-      userId: member.id,
-      displayName: member.displayName,
-      avatarUrl: member.displayAvatarURL({ size: 128 }),
-      guildId: guild.id,
-      guildName: guild.name,
-      guildIconUrl: guild.iconURL({ size: 128 }) ?? '',
-      channels,
-      permissions: member.permissions.bitfield.toString(),
-    });
-    const url = new URL('/search', origin);
-    url.searchParams.set('token', token);
-    if (options.keyword) url.searchParams.set('keyword', options.keyword);
-    if (options.inChannel)
-      url.searchParams.set('channelId', interaction.channelId);
-    url.searchParams.set('embedding', String(options.semantic ?? false));
-    await interaction.editReply({
-      content: `웹에서 대화를 검색하고 원문으로 이동할 수 있어요.\n이 링크는 <t:${Math.floor(expiresAt.getTime() / 1000)}:R> 만료됩니다.`,
-      components: [
-        new ActionRowBuilder<ButtonBuilder>().addComponents(
-          new ButtonBuilder()
-            .setLabel('검색 페이지 열기')
-            .setStyle(ButtonStyle.Link)
-            .setURL(url.toString())
-        ),
-      ],
-    });
   } catch {
     logger.error(
       webAvailable

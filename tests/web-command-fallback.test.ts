@@ -50,7 +50,11 @@ const fixture = (available: boolean) => {
     },
     channel: channels[0],
     channelId: '300',
-    user: { id: member.id },
+    memberPermissions: new PermissionsBitField([
+      PermissionFlagsBits.ViewChannel,
+      PermissionFlagsBits.ReadMessageHistory,
+    ]),
+    user: { id: member.id, username: 'reader', displayAvatarURL: () => '' },
     deferReply: async (options: { flags: number }) => {
       assert.equal(options.flags, MessageFlags.Ephemeral);
     },
@@ -74,7 +78,6 @@ const fixture = (available: boolean) => {
           channelName: channelId,
           senderName: 'user',
           senderId: '200',
-          avatarUrl: '',
           timestamp: '2026-11-08T00:00:00Z',
           content:
             channelId === '999' ? 'private-secret' : '@everyone search result',
@@ -124,10 +127,11 @@ test('/itvsc unavailable searches in process without web credentials and keeps c
     assert.equal(f.sessions.length, 0);
     assert.deepEqual(
       f.searches[0].scope.channels.map(channel => channel.id),
-      ['300', '301']
+      ['300']
     );
     assert.equal(f.searches[0].options.channelId, '300');
     assert.equal(f.searches[0].options.mode, 'semantic');
+    assert.equal(f.permissionFetches(), 0);
     const reply = f.replies[0] as {
       content: string;
       components: unknown[];
@@ -152,7 +156,7 @@ test('/itvsc unavailable searches in process without web credentials and keeps c
   }
 });
 
-test('healthy commands issue links with the full readable scope and skip inline searching', async () => {
+test('healthy commands save only identity and issue a current-channel link without any permission discovery', async () => {
   const original = { ...config };
   Object.assign(config, {
     WEB_PUBLIC_URL: 'https://web.example',
@@ -163,8 +167,15 @@ test('healthy commands issue links with the full readable scope and skip inline 
     for (const options of [
       {},
       { keyword: 'test', inChannel: true, fallbackToMessages: true },
+      { keyword: 'test', inChannel: false, fallbackToMessages: true },
     ]) {
       const f = fixture(true);
+      const forbidden = async () => {
+        throw new Error('Link issuance must not request Discord permissions');
+      };
+      Object.assign(f.interaction.guild!.roles, { fetch: forbidden });
+      Object.assign(f.interaction.guild!.members, { fetch: forbidden });
+      f.services.discoverChannels = forbidden;
       await replyWithWebLink(f.interaction, options, f.services);
       assert.equal(f.sessions.length, 1);
       assert.equal(f.searches.length, 0);
@@ -176,14 +187,22 @@ test('healthy commands issue links with the full readable scope and skip inline 
       assert.equal(url.searchParams.get('token'), 'test-token');
       assert.equal(
         url.searchParams.get('channelId'),
-        options.inChannel ? '300' : null
+        options.inChannel === false ? null : '300'
       );
-      assert.deepEqual(
-        (f.sessions[0] as { channels: { id: string }[] }).channels.map(
-          channel => channel.id
-        ),
-        ['300', '301']
+      assert.equal(
+        url.searchParams.get('allChannels'),
+        String(options.inChannel === false)
       );
+      const session = f.sessions[0] as {
+        channels: unknown[];
+        permissions: string;
+        initialChannelId: string;
+        accessResolvedAt?: Date;
+      };
+      assert.deepEqual(session.channels, []);
+      assert.equal(session.permissions, '0');
+      assert.equal(session.initialChannelId, '300');
+      assert.equal(session.accessResolvedAt, undefined);
     }
   } finally {
     Object.assign(config, original);
@@ -192,7 +211,10 @@ test('healthy commands issue links with the full readable scope and skip inline 
 
 test('unreadable current channel cannot reach fallback search or token creation', async () => {
   const f = fixture(false);
-  Object.assign(f.interaction, { channelId: '999' });
+  Object.assign(f.interaction, {
+    channelId: '999',
+    memberPermissions: new PermissionsBitField(0n),
+  });
   await replyWithWebLink(
     f.interaction,
     { inChannel: true, fallbackToMessages: true },

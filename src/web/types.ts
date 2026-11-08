@@ -13,6 +13,8 @@ export interface WebSession {
   guildId: string;
   guildName: string;
   guildIconUrl: string;
+  initialChannelId?: string;
+  accessResolvedAt?: Date;
   channels: WebChannel[];
   permissions: string;
   expiresAt: Date;

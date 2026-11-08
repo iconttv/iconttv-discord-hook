@@ -75,7 +75,14 @@ const readOptions = (
   session: WebSession
 ): WebSearchOptions => {
   const keyword = params.get('keyword')?.trim() ?? '';
-  const channelId = params.get('channelId') || undefined;
+  const allChannels = params.get('allChannels') ?? 'false';
+  if (!['true', 'false'].includes(allChannels))
+    throw new HttpError(400, '검색 범위를 확인해 주세요.');
+  const channelId =
+    params.get('channelId') ||
+    (allChannels === 'true'
+      ? undefined
+      : session.initialChannelId || session.channels[0]?.id);
   const embedding = params.get('embedding') ?? 'false';
   const mode = keyword && embedding === 'true' ? 'semantic' : 'text';
   const sort = keyword ? (params.get('sort') ?? 'relevance') : 'newest';

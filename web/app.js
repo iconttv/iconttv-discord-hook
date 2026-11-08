@@ -158,6 +158,10 @@ function formParams(page = 1) {
   if (keyword) params.set('keyword', keyword);
   const channelId = currentParams().get('channelId');
   if (channelId) params.set('channelId', channelId);
+  params.set(
+    'allChannels',
+    String(!channelId && currentParams().get('allChannels') === 'true')
+  );
   params.set('embedding', String($('embedding').checked));
   if (keyword) params.set('sort', $('sort').value);
   if ($('after').value) params.set('after', $('after').value);
@@ -168,6 +172,23 @@ function formParams(page = 1) {
 
 function readForm() {
   const params = currentParams();
+  if (!state.lastChannelId && state.session) {
+    state.lastChannelId = state.session.channels.some(
+      channel => channel.id === state.session.initialChannelId
+    )
+      ? state.session.initialChannelId
+      : state.session.channels[0]?.id;
+  }
+  const selected = params.get('channelId');
+  if (selected) params.set('allChannels', 'false');
+  else if (params.get('allChannels') !== 'true') {
+    const initial =
+      state.session?.initialChannelId || state.session?.channels[0]?.id;
+    params.set('allChannels', 'false');
+    if (initial) params.set('channelId', initial);
+  }
+  if (params.toString() !== currentParams().toString())
+    history.replaceState(null, '', location.pathname + '?' + params);
   $('keyword').value = params.get('keyword') || '';
   $('embedding').checked = params.get('embedding') === 'true';
   $('after').value = params.get('after') || '';
@@ -183,9 +204,11 @@ function readForm() {
 function renderChannels() {
   if (!state.session) return;
   const selected = currentParams().get('channelId') || '';
+  const allChannels =
+    !selected && currentParams().get('allChannels') === 'true';
   const channels = state.session.channels;
   $('channel-count').textContent = String(channels.length);
-  let output = `<button class="channel-item ${selected ? '' : 'active'}" data-channel=""><span class="channel-hash">#</span><span>모든 채널</span></button>`;
+  let output = `<button class="channel-item ${allChannels ? 'active' : ''}" data-channel=""><span class="channel-hash">#</span><span>모든 채널</span></button>`;
   const groups = new Map();
   for (const channel of channels) {
     const category = channel.category || '텍스트 채널';
@@ -205,11 +228,13 @@ function renderChannels() {
   $('channels').innerHTML = output;
   const channel = channels.find(item => item.id === selected);
   if (channel) state.lastChannelId = channel.id;
-  $('all-channels').checked = !selected;
+  $('all-channels').checked = allChannels;
   $('all-channels').disabled = !channels.length;
   $('scope-label').textContent = channel
     ? `# ${channel.parentName ? channel.parentName + ' › ' : ''}${channel.name}`
-    : '모든 채널';
+    : allChannels
+      ? '모든 채널'
+      : '채널을 선택해 주세요';
 }
 
 function formatDate(value, time = false) {
@@ -545,12 +570,15 @@ $('embedding').addEventListener('change', () => navigateSearch());
 $('all-channels').addEventListener('change', () => {
   if (!state.session) return;
   const params = formParams();
-  if ($('all-channels').checked) params.delete('channelId');
-  else if (
+  if ($('all-channels').checked) {
+    params.delete('channelId');
+    params.set('allChannels', 'true');
+  } else if (
     state.session.channels.some(channel => channel.id === state.lastChannelId)
-  )
+  ) {
     params.set('channelId', state.lastChannelId);
-  else {
+    params.set('allChannels', 'false');
+  } else {
     $('all-channels').checked = true;
     setDrawer(true);
     toast('검색할 채널을 선택해 주세요.');
@@ -584,8 +612,13 @@ $('channels').addEventListener('click', event => {
   const item = event.target.closest('[data-channel]');
   if (!item || !state.session) return;
   const params = formParams();
-  if (item.dataset.channel) params.set('channelId', item.dataset.channel);
-  else params.delete('channelId');
+  if (item.dataset.channel) {
+    params.set('channelId', item.dataset.channel);
+    params.set('allChannels', 'false');
+  } else {
+    params.delete('channelId');
+    params.set('allChannels', 'true');
+  }
   navigateSearch(params);
 });
 $('previous-page').addEventListener('click', () =>
