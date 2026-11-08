@@ -127,6 +127,8 @@ messageSchema.index(
   { unique: true }
 );
 
+messageSchema.index({ guildId: 1, channelId: 1, createdAt: -1, messageId: -1 });
+
 const MessageModel = mongoose.model(
   'Message',
   messageSchema,

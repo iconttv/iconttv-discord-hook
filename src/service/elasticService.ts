@@ -9,7 +9,7 @@ import { aiClient } from './embedding/client';
 
 let _elasticClient: Client;
 
-const getElasticClient = () => {
+export const getElasticClient = () => {
   if (
     !config.ELASTIC_HOST ||
     config.ELASTIC_HOST.length === 0 ||
