@@ -1,7 +1,7 @@
 import { CommandInteraction, Interaction, Message } from 'discord.js';
 import DiscordSettingModel from '../database/model/DiscordSettingModel';
 
-interface GuildSetting {
+export interface GuildSetting {
   enableFeatureIconImageResize?: boolean;
   enableCommandQuestionForEveryone?: boolean;
 }
@@ -9,8 +9,13 @@ interface GuildSetting {
 export const getGuildSetting = async (
   trigger: Message | Interaction | CommandInteraction
 ) => {
+  return getGuildSettingById(trigger.guildId);
+};
+
+export const getGuildSettingById = async (guildId: string | null) => {
+  if (!guildId) return null;
   const setting = await DiscordSettingModel.find({
-    guildId: trigger.guildId,
+    guildId,
   })
     .limit(1)
     .exec();
@@ -24,16 +29,31 @@ export const setGuildSetting = async (
   trigger: Message | Interaction | CommandInteraction,
   setting: GuildSetting
 ) => {
+  if (!trigger.guildId) throw new Error('Guild is required.');
+  await setGuildSettingById(trigger.guildId, trigger.member?.user.id, setting);
+};
+
+export const setGuildSettingById = async (
+  guildId: string,
+  actorUserId: string | undefined,
+  setting: GuildSetting
+) => {
+  const changes: GuildSetting = {};
+  if (typeof setting.enableCommandQuestionForEveryone === 'boolean') {
+    changes.enableCommandQuestionForEveryone = setting.enableCommandQuestionForEveryone;
+  }
+  if (typeof setting.enableFeatureIconImageResize === 'boolean') {
+    changes.enableFeatureIconImageResize = setting.enableFeatureIconImageResize;
+  }
   await DiscordSettingModel.updateOne(
     {
-      guildId: trigger.guildId,
+      guildId,
     },
     {
       $set: {
-        enableCommandQuestionForEveryone:
-          setting.enableCommandQuestionForEveryone,
-        enableFeatureIconImageResize: setting.enableFeatureIconImageResize,
-        updatedBy: trigger.member?.user.id,
+        ...changes,
+        updatedBy: actorUserId,
+        updatedAt: new Date(),
       },
     },
     { upsert: true }
