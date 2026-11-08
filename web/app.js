@@ -21,6 +21,8 @@ const state = {
   toastTimer: null,
   cancelDiscordLaunch: null,
   collapsedCategories: new Set(),
+  lastChannelId: null,
+  avatars: new Map(),
 };
 
 function mediaUrl(value) {
@@ -40,6 +42,44 @@ function avatar(url, name) {
   return safe
     ? `<img src="${escape(safe)}" alt="" loading="lazy" referrerpolicy="no-referrer">`
     : escape([...String(name || '?')][0]);
+}
+
+function renderGuildIcon(button, url, name) {
+  const safe = mediaUrl(url);
+  const source = safe ? new URL(safe) : null;
+  if (
+    !source ||
+    (!/\.gif$/i.test(source.pathname) &&
+      !/\/a_[\w]+\.(?:png|webp)$/i.test(source.pathname))
+  ) {
+    button.innerHTML = avatar(url, name);
+    return;
+  }
+  const still = new URL(source);
+  still.pathname = still.pathname.replace(/\.[^.]+$/, '.png');
+  still.searchParams.delete('animated');
+  const animated = new URL(source);
+  animated.pathname = animated.pathname.replace(/\.[^.]+$/, '.gif');
+  button.innerHTML = avatar(still.href, name);
+  const image = button.querySelector('img');
+  const stop = () => {
+    if (image.isConnected) image.src = still.href;
+  };
+  button.addEventListener('pointerenter', event => {
+    if (event.pointerType === 'mouse' && image.isConnected)
+      image.src = animated.href;
+  });
+  button.addEventListener('pointerleave', stop);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) stop();
+  });
+  image.addEventListener('error', () => {
+    if (image.src !== still.href) stop();
+    else
+      button.replaceChildren(
+        document.createTextNode([...String(name || '?')][0])
+      );
+  });
 }
 
 async function api(path, options = {}) {
@@ -164,6 +204,9 @@ function renderChannels() {
   }
   $('channels').innerHTML = output;
   const channel = channels.find(item => item.id === selected);
+  if (channel) state.lastChannelId = channel.id;
+  $('all-channels').checked = !selected;
+  $('all-channels').disabled = !channels.length;
   $('scope-label').textContent = channel
     ? `# ${channel.parentName ? channel.parentName + ' › ' : ''}${channel.name}`
     : '모든 채널';
@@ -201,7 +244,7 @@ function renderMessages(messages, keyword) {
           : '';
       const long = content.length > 700 || content.split('\n').length > 8;
       return `${divider}<article class="message" aria-label="${escape(message.senderName)}의 메시지">
-      <div class="avatar">${avatar(message.avatarUrl, message.senderName)}</div>
+      <div class="avatar" data-avatar-user="${escape(message.senderId)}">${avatar(message.avatarUrl, message.senderName)}</div>
       <div class="message-body"><div class="message-meta"><span class="message-author">${escape(message.senderName)}</span><span class="message-timing"><a class="message-time" href="${link}" target="_blank" rel="noopener noreferrer" title="${escape(formatDate(message.timestamp))} · 디스코드 원문 보기"><time datetime="${escape(message.timestamp)}">${escape(formatDate(message.timestamp, true))}</time></a>${edited}</span><a class="message-channel" href="${channelLink}" target="_blank" rel="noopener noreferrer" title="디스코드에서 ${escape(locationName)} 열기"># ${escape(locationName)} ↗</a></div>
       <div class="message-content ${long ? 'collapsed' : ''}"></div>${long ? '<button class="expand-message" aria-expanded="false">본문 더 보기</button>' : ''}
       <div class="message-images" hidden></div>
@@ -240,6 +283,59 @@ function skeleton() {
   ).join('');
 }
 
+async function loadAvatars(messages, request) {
+  const guildId = state.session.guildId;
+  const missing = new Map();
+  const update = () => {
+    if (request.signal.aborted || state.request !== request) return;
+    for (const target of $('messages').querySelectorAll('[data-avatar-user]')) {
+      const cached = state.avatars.get(
+        `${guildId}:${target.dataset.avatarUser}`
+      );
+      if (cached && cached.expiresAt > Date.now())
+        target.innerHTML = avatar(cached.url, '');
+    }
+  };
+  for (const message of messages) {
+    const cached = state.avatars.get(`${guildId}:${message.senderId}`);
+    if (
+      (!message.avatarUrl || /\/embed\/avatars\//.test(message.avatarUrl)) &&
+      (!cached || cached.expiresAt <= Date.now())
+    )
+      missing.set(message.senderId, {
+        id: message.id,
+        channelId: message.channelId,
+      });
+  }
+  update();
+  if (!missing.size) return;
+  try {
+    const result = await api('/api/avatars', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: [...missing.values()] }),
+      signal: request.signal,
+    });
+    if (request.signal.aborted || state.request !== request) return;
+    for (const [id, value] of Object.entries(result.avatars ?? {})) {
+      const url = mediaUrl(value);
+      if (!url) continue;
+      const key = `${guildId}:${id}`;
+      state.avatars.delete(key);
+      state.avatars.set(key, {
+        url,
+        expiresAt:
+          Date.now() + (/\/embed\/avatars\//.test(url) ? 60000 : 3600000),
+      });
+    }
+    while (state.avatars.size > 2000)
+      state.avatars.delete(state.avatars.keys().next().value);
+    update();
+  } catch {
+    // Profile failure must not replace successfully loaded search results.
+  }
+}
+
 async function loadMessages() {
   if (!state.session) return;
   state.request?.abort();
@@ -264,6 +360,7 @@ async function loadMessages() {
     });
     if (request.signal.aborted || !state.session) return;
     renderMessages(result.messages, keyword);
+    void loadAvatars(result.messages, request);
     state.page = result.page;
     state.hasMore = result.hasMore;
     $('result-count').textContent = `${result.total.toLocaleString()}개`;
@@ -404,7 +501,9 @@ async function initialize() {
     $('guild-name').textContent = session.guildName;
     $('user-name').textContent = session.displayName;
     $('user-avatar').innerHTML = avatar(session.avatarUrl, session.displayName);
-    $('server-icon').innerHTML = avatar(
+    renderGuildIcon($('server-icon'), session.guildIconUrl, session.guildName);
+    renderGuildIcon(
+      $('title-guild-icon'),
       session.guildIconUrl,
       session.guildName
     );
@@ -443,6 +542,22 @@ $('keyword').addEventListener('input', () => {
 });
 $('sort').addEventListener('change', () => navigateSearch());
 $('embedding').addEventListener('change', () => navigateSearch());
+$('all-channels').addEventListener('change', () => {
+  if (!state.session) return;
+  const params = formParams();
+  if ($('all-channels').checked) params.delete('channelId');
+  else if (
+    state.session.channels.some(channel => channel.id === state.lastChannelId)
+  )
+    params.set('channelId', state.lastChannelId);
+  else {
+    $('all-channels').checked = true;
+    setDrawer(true);
+    toast('검색할 채널을 선택해 주세요.');
+    return;
+  }
+  navigateSearch(params);
+});
 $('clear-keyword').addEventListener('click', () => {
   $('keyword').value = '';
   navigateSearch();
