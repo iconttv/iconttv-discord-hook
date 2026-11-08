@@ -283,7 +283,18 @@ test('HTTP session, channel boundaries, optional keyword, paging and settings au
   );
   assert.equal(shell.headers.get('referrer-policy'), 'no-referrer');
   assert.equal(shell.headers.get('cache-control'), 'no-store');
-  assert.equal((await shell.text()).includes('secret'), false);
+  assert.equal(shell.headers.get('cloudflare-cdn-cache-control'), 'no-store');
+  const html = await shell.text();
+  assert.equal(html.includes('secret'), false);
+  const script = html.match(/src="(\/assets\/[a-f0-9]{16}\/app.js)"/)?.[1];
+  assert(script);
+  const module = await fetch(base + script);
+  assert.equal(module.status, 200);
+  assert.match(module.headers.get('content-type')!, /javascript/);
+  assert.equal(
+    module.headers.get('x-web-asset-version'),
+    shell.headers.get('x-web-asset-version')
+  );
   assert.equal((await fetch(base + '/.env')).status, 404);
   const logout = await request('/api/session', 'reader', { method: 'DELETE' });
   assert.match(logout.headers.get('set-cookie')!, /Max-Age=0/);

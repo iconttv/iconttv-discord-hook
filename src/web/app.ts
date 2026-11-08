@@ -1,6 +1,5 @@
 import { createServer, IncomingMessage, ServerResponse } from 'node:http';
-import { readFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { createWebAssets } from './assets';
 import type {
   WebSearchOptions,
   WebSearchResult,
@@ -167,6 +166,7 @@ const readAvatarReferences = (
 };
 
 export const createWebServer = (dependencies: WebDependencies) => {
+  const getAsset = createWebAssets(dependencies.assets);
   const secure = new URL(dependencies.origin).protocol === 'https:';
   const cookie = (token: string, age: number) =>
     `itv_session=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${age}${secure ? '; Secure' : ''}`;
@@ -178,6 +178,8 @@ export const createWebServer = (dependencies: WebDependencies) => {
   >();
   const server = createServer(async (request, response) => {
     response.setHeader('Cache-Control', 'no-store');
+    response.setHeader('CDN-Cache-Control', 'no-store');
+    response.setHeader('Cloudflare-CDN-Cache-Control', 'no-store');
     response.setHeader('Referrer-Policy', 'no-referrer');
     response.setHeader('X-Content-Type-Options', 'nosniff');
     response.setHeader('X-Frame-Options', 'DENY');
@@ -330,30 +332,13 @@ export const createWebServer = (dependencies: WebDependencies) => {
       }
       if (request.method !== 'GET' && request.method !== 'HEAD')
         throw new HttpError(405, '허용되지 않은 요청 방식입니다.');
-      const asset = (
-        {
-          '/': 'index.html',
-          '/search': 'index.html',
-          '/settings': 'index.html',
-          '/app.js': 'app.js',
-          '/message-format.js': 'message-format.js',
-          '/message-images.js': 'message-images.js',
-          '/discord-links.js': 'discord-links.js',
-          '/style.css': 'style.css',
-          '/favicon.svg': 'favicon.svg',
-        } as Record<string, string>
-      )[path];
+      const asset = await getAsset(path);
       if (!asset) throw new HttpError(404, '페이지를 찾을 수 없습니다.');
-      const content = await readFile(resolve(dependencies.assets, asset));
-      const type = asset.endsWith('.js')
-        ? 'text/javascript'
-        : asset.endsWith('.css')
-          ? 'text/css'
-          : asset.endsWith('.svg')
-            ? 'image/svg+xml'
-            : 'text/html';
-      response.writeHead(200, { 'Content-Type': `${type}; charset=utf-8` });
-      response.end(request.method === 'HEAD' ? undefined : content);
+      response.writeHead(200, {
+        'Content-Type': `${asset.type}; charset=utf-8`,
+        'X-Web-Asset-Version': asset.version,
+      });
+      response.end(request.method === 'HEAD' ? undefined : asset.content);
     } catch (error) {
       if (response.headersSent) {
         response.end();
