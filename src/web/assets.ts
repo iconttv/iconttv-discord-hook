@@ -29,8 +29,11 @@ export const createWebAssets = (directory: string) => {
       .get('index.html')!
       .toString('utf8')
       .replace(
-        /((?:src|href)=["'])\/(app\.js|style\.css|favicon\.svg)(["'])/g,
-        `$1/assets/${version}/$2$3`
+        /((?:src|href)=["'])\/([^"'/]+)(["'])/g,
+        (match, prefix: string, file: string, quote: string) =>
+          file !== 'index.html' && files.includes(file)
+            ? `${prefix}/assets/${version}/${file}${quote}`
+            : match
       );
     contents.set('index.html', Buffer.from(html));
     return { contents, version };

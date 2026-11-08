@@ -27,7 +27,16 @@ test('HTML, stylesheet and every JS module share a content version that changes 
     .matchAll(/from ['"]\.\/([^'"]+)['"]/g)) {
     const imported = await assets(`/assets/${shell.version}/${match[1]}`);
     assert.equal(imported?.version, shell.version);
+    assert.ok(
+      html.includes(
+        `rel="modulepreload" href="/assets/${shell.version}/${match[1]}"`
+      )
+    );
   }
+  assert.match(
+    html,
+    /<script data-cfasync="false" type="module" src="\/assets\//
+  );
   assert.equal(await assets('/assets/0000000000000000/app.js'), null);
   assert.equal(await assets('/assets/' + shell.version + '/../../.env'), null);
   assert.equal(await assets('/anything/app.js'), null);

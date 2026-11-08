@@ -177,9 +177,6 @@ export const createWebServer = (dependencies: WebDependencies) => {
     { start: number; count: number; active: number }
   >();
   const server = createServer(async (request, response) => {
-    response.setHeader('Cache-Control', 'no-store');
-    response.setHeader('CDN-Cache-Control', 'no-store');
-    response.setHeader('Cloudflare-CDN-Cache-Control', 'no-store');
     response.setHeader('Referrer-Policy', 'no-referrer');
     response.setHeader('X-Content-Type-Options', 'nosniff');
     response.setHeader('X-Frame-Options', 'DENY');

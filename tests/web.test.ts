@@ -282,8 +282,6 @@ test('HTTP session, channel boundaries, optional keyword, paging and settings au
     /frame-ancestors 'none'/
   );
   assert.equal(shell.headers.get('referrer-policy'), 'no-referrer');
-  assert.equal(shell.headers.get('cache-control'), 'no-store');
-  assert.equal(shell.headers.get('cloudflare-cdn-cache-control'), 'no-store');
   const html = await shell.text();
   assert.equal(html.includes('secret'), false);
   const script = html.match(/src="(\/assets\/[a-f0-9]{16}\/app.js)"/)?.[1];
@@ -295,6 +293,49 @@ test('HTTP session, channel boundaries, optional keyword, paging and settings au
     module.headers.get('x-web-asset-version'),
     shell.headers.get('x-web-asset-version')
   );
+  const version = shell.headers.get('x-web-asset-version');
+  const assertNoCacheHeaders = (response: Response) => {
+    for (const header of [
+      'cache-control',
+      'cdn-cache-control',
+      'cloudflare-cdn-cache-control',
+    ])
+      assert.equal(response.headers.get(header), null);
+  };
+  for (const file of [
+    'app.js',
+    'style.css',
+    'message-format.js',
+    'discord-links.js',
+    'message-images.js',
+    'favicon.svg',
+  ]) {
+    for (const method of ['GET', 'HEAD']) {
+      const asset = await fetch(`${base}/assets/${version}/${file}`, {
+        method,
+      });
+      assert.equal(asset.status, 200);
+      assertNoCacheHeaders(asset);
+      assert.equal(asset.headers.get('set-cookie'), null);
+    }
+  }
+  assertNoCacheHeaders(shell);
+  assertNoCacheHeaders(login);
+  for (const path of [
+    '/app.js',
+    '/style.css',
+    '/health',
+    '/api/session',
+    '/api/search',
+    '/api/settings',
+    '/assets/0000000000000000/app.js',
+    `/assets/${version}/index.html`,
+  ]) {
+    assertNoCacheHeaders(await request(path));
+  }
+  const unauthorized = await fetch(base + '/api/search');
+  assert.equal(unauthorized.status, 401);
+  assertNoCacheHeaders(unauthorized);
   assert.equal((await fetch(base + '/.env')).status, 404);
   const logout = await request('/api/session', 'reader', { method: 'DELETE' });
   assert.match(logout.headers.get('set-cookie')!, /Max-Age=0/);

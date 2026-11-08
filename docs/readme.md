@@ -22,7 +22,7 @@
 
 ### 검색 웹 POC (1.1.0)
 
-봇과 같은 저장소의 `web/`에 정적 화면을 두고 `src/web.ts`를 별도 HTTP 프로세스로 실행합니다. HTML에는 사용자/메시지를 포함하지 않으며, 브라우저가 같은 origin의 API에서 데이터를 가져옵니다. 운영 도메인은 `https://iconttv-discord.probius.dev`입니다. HTML은 정적 파일 내용의 해시를 포함한 `/assets/<version>/...` 주소로 JS·CSS·favicon을 불러옵니다. JS 하위 모듈도 같은 버전 경로를 사용하여 재배포 후 CDN의 이전 파일이 섞이지 않게 합니다. 응답에는 브라우저·CDN 모두 `no-store`를 지정합니다.
+봇과 같은 저장소의 `web/`에 정적 화면을 두고 `src/web.ts`를 별도 HTTP 프로세스로 실행합니다. HTML에는 사용자/메시지를 포함하지 않으며, 브라우저가 같은 origin의 API에서 데이터를 가져옵니다. 운영 도메인은 `https://iconttv-discord.probius.dev`입니다. HTML은 정적 파일 내용의 해시를 포함한 `/assets/<version>/...` 주소로 JS·CSS·favicon을 불러옵니다. JS 하위 모듈도 같은 버전 경로를 사용하여 재배포 후 CDN의 이전 파일이 섞이지 않게 합니다. 캐시 정책은 CDN 설정에서 관리하며 애플리케이션은 캐시 제어 응답 헤더를 추가하지 않습니다. 앱 스크립트는 `data-cfasync="false"`로 Rocket Loader 처리를 제외하고, 필요한 JS 모듈은 `modulepreload`로 병렬 요청합니다.
 
 - `/itvsc`: 웹이 정상일 때 본인에게만 보이는 웹 링크를 발급합니다. 웹이 내려가 있으면 봇 프로세스에서 검색하여 기존처럼 짧은 본문·원문 링크·시각 목록으로 응답합니다. 이 응답도 본인에게만 보이며 사용자별 채널 권한을 적용합니다. `keyword`는 선택(최대 180자), `channel`은 기본 **true**, `embedding`은 기본 false입니다. `channel:false`는 허용된 모든 채널로 시작합니다. 기존 `keep` 옵션은 제거했습니다.
 - `/itvweb`: 검색어 없이 웹을 열어 최근 메시지와 서버 설정에 접근합니다. 웹이 내려가 있으면 `현재 웹페이지를 사용할 수 없습니다.`로 응답합니다. 기존 `/itvsetting` 모달도 유지합니다.
@@ -80,7 +80,7 @@ yarn web-start
 yarn test:web
 ```
 
-`web-build`는 FE 자산만 `dist/public/`으로 복사합니다. FE는 외부 CDN 스크립트나 별도 번들러 없이 ES module/CSS로 동작합니다. Docker 이미지에도 같은 자산을 포함하며 compose의 `iconttv-discord-web`은 호스트 IP를 지정하지 않은 `${WEB_PORT:-3011}:${WEB_PORT:-3011}` 포트 매핑으로 노출합니다. `.env`의 `WEB_PORT`를 호스트·컨테이너 포트와 웹 리스너에 동일하게 적용하며, 미설정 또는 빈 값이면 3011을 사용합니다. 도메인의 HTTPS 리버스 프록시가 `/health`, `/search`, `/settings`, 정적 파일과 `/api/*`를 이 웹 서비스로 전달해야 합니다. 봇과 웹 컨테이너는 같은 Compose 네트워크에서 내부 서비스 이름으로 통신합니다. 토큰이 최초 URL에 있으므로 프록시 access log에는 query string을 기록하지 않도록 설정하세요. 응답은 no-store/no-referrer 정책을 사용합니다.
+`web-build`는 FE 자산만 `dist/public/`으로 복사합니다. FE는 외부 CDN 스크립트나 별도 번들러 없이 ES module/CSS로 동작합니다. Docker 이미지에도 같은 자산을 포함하며 compose의 `iconttv-discord-web`은 호스트 IP를 지정하지 않은 `${WEB_PORT:-3011}:${WEB_PORT:-3011}` 포트 매핑으로 노출합니다. `.env`의 `WEB_PORT`를 호스트·컨테이너 포트와 웹 리스너에 동일하게 적용하며, 미설정 또는 빈 값이면 3011을 사용합니다. 도메인의 HTTPS 리버스 프록시가 `/health`, `/search`, `/settings`, 정적 파일과 `/api/*`를 이 웹 서비스로 전달해야 합니다. 봇과 웹 컨테이너는 같은 Compose 네트워크에서 내부 서비스 이름으로 통신합니다. 토큰이 최초 URL에 있으므로 프록시 access log에는 query string을 기록하지 않도록 설정하세요. 응답은 no-referrer 정책을 사용합니다.
 
 웹 서비스의 컨테이너 리소스 상한은 CPU 1개와 메모리 512MB로 설정합니다.
 
