@@ -4,6 +4,11 @@ services:
       context: .
       dockerfile: ./Dockerfile
     container_name: iconttv-discord-web
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512m
     command: dist/web.js
     user: 1000:1000
     env_file:
