@@ -112,6 +112,7 @@ test('HTTP session, channel boundaries, optional keyword, paging and settings au
     channels: [{ id: '300', name: '공개', category: '' }],
     permissions: '0',
     expiresAt: new Date(Date.now() + 60000),
+    accessResolvedAt: new Date(),
   };
   const server = createWebServer({
     origin: 'https://example.test',
@@ -204,6 +205,7 @@ test('HTTP session, channel boundaries, optional keyword, paging and settings au
   );
   const profile = await (await request('/api/session')).json();
   assert.equal(profile.id, undefined);
+  assert.equal(profile.accessStatus, 'ready');
   assert.equal(profile.permissions, '0');
   assert.deepEqual(profile.capabilities, []);
   assert.equal((await request('/api/search?channelId=private')).status, 403);
@@ -339,4 +341,142 @@ test('HTTP session, channel boundaries, optional keyword, paging and settings au
   assert.equal((await fetch(base + '/.env')).status, 404);
   const logout = await request('/api/session', 'reader', { method: 'DELETE' });
   assert.match(logout.headers.get('set-cookie')!, /Max-Age=0/);
+});
+
+test('session polling reads pending, ready and failed snapshots without initializing permissions', async t => {
+  let snapshot: WebSession = {
+    id,
+    userId: '200',
+    displayName: '테스터',
+    avatarUrl: '',
+    guildId: '100',
+    guildName: '테스트 서버',
+    guildIconUrl: '',
+    initialChannelId: '300',
+    channels: [{ id: '300', name: '비공개', category: '비공개 카테고리' }],
+    permissions: PermissionFlagsBits.Administrator.toString(),
+    expiresAt: new Date(Date.now() + 60000),
+  };
+  const calls = { search: 0, avatars: 0, getSettings: 0, saveSettings: 0 };
+  const settings = {
+    enableFeatureIconImageResize: false,
+    enableCommandQuestionForEveryone: false,
+  };
+  const server = createWebServer({
+    origin: 'https://example.test',
+    assets: resolve('web'),
+    findSession: async token => (token === 'valid' ? { ...snapshot } : null),
+    search: async session => {
+      calls.search++;
+      assert.deepEqual(session.channels, snapshot.channels);
+      return {
+        messages: [],
+        total: 0,
+        page: 1,
+        hasMore: false,
+        source: 'elasticsearch',
+      };
+    },
+    avatars: async () => {
+      calls.avatars++;
+      return {};
+    },
+    getSettings: async () => {
+      calls.getSettings++;
+      return settings;
+    },
+    saveSettings: async () => {
+      calls.saveSettings++;
+    },
+    onError: error => assert.fail(String(error)),
+  });
+  server.listen(0, '127.0.0.1');
+  await once(server, 'listening');
+  t.after(() => {
+    server.closeAllConnections();
+    server.close();
+  });
+  const address = server.address();
+  assert(address && typeof address !== 'string');
+  const base = `http://127.0.0.1:${address.port}`;
+  const request = (path: string, init: RequestInit = {}) =>
+    fetch(base + path, {
+      ...init,
+      headers: {
+        Cookie: 'itv_session=valid',
+        Origin: 'https://example.test',
+        'Content-Type': 'application/json',
+      },
+      signal: AbortSignal.timeout(5000),
+    });
+  const assertBlocked = async (status: 'pending' | 'failed') => {
+    const response = await request('/api/session');
+    assert.equal(response.status, 200);
+    const profile = await response.json();
+    assert.equal(profile.accessStatus, status);
+    assert.equal(profile.id, undefined);
+    assert.equal(profile.initialChannelId, undefined);
+    assert.deepEqual(profile.channels, []);
+    assert.equal(profile.permissions, '0');
+    assert.deepEqual(profile.capabilities, []);
+    for (const [path, init] of [
+      ['/api/search', {}],
+      [
+        '/api/avatars',
+        {
+          method: 'POST',
+          body: JSON.stringify({ messages: [{ id: '400', channelId: '300' }] }),
+        },
+      ],
+      ['/api/settings', {}],
+      ['/api/settings', { method: 'PUT', body: JSON.stringify(settings) }],
+    ] satisfies [string, RequestInit][]) {
+      const blocked = await request(path, init);
+      assert.equal(blocked.status, 503, path);
+      assert.equal(
+        blocked.headers.get('retry-after'),
+        status === 'pending' ? '1' : null,
+        path
+      );
+      if (status === 'failed')
+        assert.match((await blocked.json()).error, /디스코드에서 새 링크/);
+    }
+  };
+
+  const login = await request('/api/session', {
+    method: 'POST',
+    body: JSON.stringify({ token: 'valid' }),
+  });
+  assert.equal(login.status, 200);
+  assert.deepEqual(await login.json(), { ok: true });
+  assert.match(login.headers.get('set-cookie')!, /itv_session=valid;/);
+  await assertBlocked('pending');
+  assert.deepEqual(calls, {
+    search: 0,
+    avatars: 0,
+    getSettings: 0,
+    saveSettings: 0,
+  });
+
+  // Only the bot updates the database snapshot; the next poll observes it.
+  snapshot = { ...snapshot, accessResolvedAt: new Date() };
+  const readyResponse = await request('/api/session');
+  assert.equal(readyResponse.status, 200);
+  const ready = await readyResponse.json();
+  assert.equal(ready.accessStatus, 'ready');
+  assert.deepEqual(ready.channels, snapshot.channels);
+  assert.equal(ready.permissions, snapshot.permissions);
+  assert.deepEqual(ready.capabilities, ['settings:write']);
+  assert.equal((await request('/api/search')).status, 200);
+  assert.equal(calls.search, 1);
+
+  // Failure takes precedence even when an older successful snapshot remains.
+  snapshot = { ...snapshot, accessFailedAt: new Date() };
+  await assertBlocked('failed');
+  assert.deepEqual(calls, {
+    search: 1,
+    avatars: 0,
+    getSettings: 0,
+    saveSettings: 0,
+  });
 });

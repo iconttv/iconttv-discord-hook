@@ -244,14 +244,38 @@ export const createWebServer = (dependencies: WebDependencies) => {
             401,
             '검색 세션이 만료되었습니다. 디스코드에서 새 링크를 받아 주세요.'
           );
+        const accessStatus = session.accessFailedAt
+          ? 'failed'
+          : session.accessResolvedAt
+            ? 'ready'
+            : 'pending';
         if (path === '/api/session' && request.method === 'GET') {
           const { id: _id, ...profile } = session;
           void _id;
           json(response, 200, {
             ...profile,
-            capabilities: getWebCapabilities(session),
+            accessStatus,
+            channels: accessStatus === 'ready' ? session.channels : [],
+            initialChannelId:
+              accessStatus === 'ready' ? session.initialChannelId : undefined,
+            permissions: accessStatus === 'ready' ? session.permissions : '0',
+            capabilities:
+              accessStatus === 'ready' ? getWebCapabilities(session) : [],
           });
           return;
+        }
+        if (accessStatus !== 'ready') {
+          if (accessStatus === 'pending') {
+            response.setHeader('Retry-After', '1');
+            throw new HttpError(
+              503,
+              '검색 권한을 준비하고 있습니다. 잠시 후 다시 시도해 주세요.'
+            );
+          }
+          throw new HttpError(
+            503,
+            '검색 권한을 확인하지 못했습니다. 디스코드에서 새 링크를 받아 주세요.'
+          );
         }
         const avatarRequest =
           path === '/api/avatars' && request.method === 'POST';
