@@ -16,99 +16,168 @@ import {
 } from '../src/service/webChannelService';
 import MessageModel from '../src/database/model/MessageModel';
 
-// Real discord.js permission resolution: role and member overwrites must be
-// applied to the requesting member, not to the bot's much broader permissions.
-test('channel discovery shares concurrent work and caches archive metadata without caching user permissions', async t => {
-  let now = 0;
-  t.mock.method(Date, 'now', () => now);
+test('channel discovery uses SDK channels and refreshes archive IDs without custom caches', async t => {
   let archiveQueries = 0;
-  let lists = 0;
-  let active = 0;
   const fetches: string[] = [];
-  let canRead = true;
   let deleted = false;
-  let release!: () => void;
-  const gate = new Promise<void>(resolve => {
-    release = resolve;
-  });
+  let storedIds: unknown[] = ['300', '301', '302', 'invalid', null];
   const channel = {
     id: '300',
     guildId: '100',
-    name: 'archived',
-    type: ChannelType.PublicThread,
-    parent: { name: 'parent' },
-    isTextBased: () => true,
-    isThread: () => true,
-    permissionsFor: () =>
-      new PermissionsBitField(
-        canRead
-          ? [
-              PermissionFlagsBits.ViewChannel,
-              PermissionFlagsBits.ReadMessageHistory,
-            ]
-          : []
-      ),
-  } as unknown as GuildBasedChannel;
-  const cache = new Map<string, GuildBasedChannel>();
+  } as GuildBasedChannel;
+  const live = { id: '302', guildId: '100' } as GuildBasedChannel;
+  const cache = new Map<string, GuildBasedChannel>([['302', live]]);
   const guild = {
     id: '100',
     channels: {
       cache,
-      fetch: async (id?: string) => {
-        if (!id) {
-          lists++;
-          await gate;
-          return new Map();
-        }
+      fetch: async (id?: string, options?: unknown) => {
+        assert.ok(id, 'discovery must never fetch the full channel list');
+        assert.equal(options, undefined, 'individual fetches must use SDK caching');
         fetches.push(id);
         if (id === '301' || deleted) throw new Error('deleted');
         cache.set(id, channel);
         return channel;
       },
       fetchActiveThreads: async () => {
-        active++;
-        await gate;
-        return { threads: new Map() };
+        assert.fail('discovery must never fetch active threads');
       },
     },
   } as unknown as Guild;
   t.mock.method(MessageModel, 'distinct', () => {
     archiveQueries++;
-    return { maxTimeMS: async () => ['300', '301'] };
+    return {
+      maxTimeMS: async () => storedIds,
+    };
   });
-  const first = discoverWebChannels(guild);
-  assert.equal(discoverWebChannels(guild), first);
-  assert.equal(lists, 1);
-  assert.equal(active, 1);
-  assert.equal(archiveQueries, 1);
-  release();
   assert.deepEqual(
-    (await first).map(item => item.id),
-    ['300']
-  );
-  const member = { id: '200' } as GuildMember;
-  assert.equal(
-    (await selectReadableWebChannels(await discoverWebChannels(guild), member))
-      .length,
-    1
-  );
-  canRead = false;
-  assert.deepEqual(
-    await selectReadableWebChannels(await discoverWebChannels(guild), member),
-    []
+    (await discoverWebChannels(guild)).map(item => item.id),
+    ['302', '300']
   );
   assert.deepEqual(fetches, ['300', '301']);
   assert.equal(archiveQueries, 1);
-  now = 30000;
   await discoverWebChannels(guild);
-  assert.deepEqual(fetches, ['300', '301', '300']);
+  // Successful objects live only in the SDK; failed lookups are not TTL-cached.
+  assert.deepEqual(fetches, ['300', '301', '301']);
+  assert.equal(archiveQueries, 2);
   deleted = true;
   cache.delete('300');
-  assert.deepEqual(await discoverWebChannels(guild), []);
-  now = 300001;
-  await discoverWebChannels(guild);
-  assert.equal(archiveQueries, 2);
+  assert.deepEqual(await discoverWebChannels(guild), [live]);
+  assert.deepEqual(fetches, ['300', '301', '301', '300', '301']);
+  cache.set('301', { id: '301', guildId: '100' } as GuildBasedChannel);
+  // Each job queries Mongo again, so new archived channel IDs appear immediately.
+  storedIds = ['301', '302', '303'];
+  cache.set('303', { id: '303', guildId: '100' } as GuildBasedChannel);
+  assert.deepEqual(
+    (await discoverWebChannels(guild)).map(item => item.id),
+    ['302', '301', '303']
+  );
+  assert.equal(archiveQueries, 4);
+  assert.deepEqual(fetches, ['300', '301', '301', '300', '301']);
 });
+
+test('archive channel resolution bounds concurrent missing lookups to five', async t => {
+  const ids = Array.from({ length: 12 }, (_, index) => String(300 + index));
+  t.mock.method(MessageModel, 'distinct', () => ({
+    maxTimeMS: async () => ids,
+  }));
+  let inFlight = 0;
+  let maximum = 0;
+  const cache = new Map<string, GuildBasedChannel>();
+  const guild = {
+    id: '100',
+    channels: {
+      cache,
+      fetch: async (id: string) => {
+        inFlight++;
+        maximum = Math.max(maximum, inFlight);
+        await Promise.resolve();
+        inFlight--;
+        const channel = { id, guildId: '100' } as GuildBasedChannel;
+        cache.set(id, channel);
+        return channel;
+      },
+    },
+  } as unknown as Guild;
+  assert.equal((await discoverWebChannels(guild)).length, ids.length);
+  assert.equal(maximum, 5);
+});
+
+test('SDK gateway channel and role changes remain authoritative without REST requests', async t => {
+  const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+  const rest = t.mock.method(client.rest, 'get', async () => {
+    assert.fail('cached discovery must not make REST requests');
+  });
+  const guild = new Guild(client, {
+    id: '100000000000000001',
+    name: 'Test',
+    owner_id: '999999999999999999',
+    roles: [{
+      id: '100000000000000001',
+      name: '@everyone',
+      permissions: (
+        PermissionFlagsBits.ViewChannel | PermissionFlagsBits.ReadMessageHistory
+      ).toString(),
+      position: 0,
+    }],
+    channels: [],
+  });
+  const member = new GuildMember(client, {
+    user: {
+      id: '200000000000000001',
+      username: 'reader',
+      discriminator: '0',
+      avatar: null,
+    },
+    roles: [],
+  }, guild);
+  const payload = {
+    id: '300000000000000001',
+    name: 'live',
+    type: ChannelType.GuildText,
+    guild_id: guild.id,
+    position: 0,
+    permission_overwrites: [] as {
+      id: string; type: number; allow: string; deny: string;
+    }[],
+  };
+  // These SDK insertion/update paths are also used by gateway handlers.
+  client.channels._add(payload, guild);
+  t.mock.method(MessageModel, 'distinct', () => ({ maxTimeMS: async () => [] }));
+  const readable = async () =>
+    selectReadableWebChannels(await discoverWebChannels(guild), member);
+  assert.equal((await readable()).length, 1);
+  client.channels._add({
+    ...payload,
+    permission_overwrites: [{
+      id: guild.id,
+      type: 0,
+      allow: '0',
+      deny: PermissionFlagsBits.ViewChannel.toString(),
+    }],
+  }, guild);
+  assert.deepEqual(await readable(), []);
+  client.channels._add(payload, guild);
+  assert.equal((await readable()).length, 1);
+  guild.roles.cache.get(guild.id)!.permissions = new PermissionsBitField(0n);
+  assert.deepEqual(await readable(), []);
+  guild.roles.cache.get(guild.id)!.permissions = new PermissionsBitField([
+    PermissionFlagsBits.ViewChannel,
+    PermissionFlagsBits.ReadMessageHistory,
+  ]);
+  assert.equal((await readable()).length, 1);
+  assert.equal(
+    await guild.channels.fetch(payload.id),
+    guild.channels.cache.get(payload.id)
+  );
+  client.channels._remove(payload.id);
+  assert.deepEqual(await discoverWebChannels(guild), []);
+  assert.equal(rest.mock.callCount(), 0);
+  await client.destroy();
+});
+
+// Real discord.js permission resolution: role and member overwrites must be
+// applied to the requesting member, not to the bot's much broader permissions.
 
 test('channel snapshots obey role/member overwrites and ReadMessageHistory', async () => {
   const client = new Client({ intents: [GatewayIntentBits.Guilds] });

@@ -1,11 +1,13 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { setImmediate } from 'node:timers/promises';
 import {
   ChatInputCommandInteraction,
   GuildBasedChannel,
   MessageFlags,
   PermissionsBitField,
   PermissionFlagsBits,
+  type Guild,
 } from 'discord.js';
 import { config } from '../src/config';
 import { replyWithWebLink } from '../src/service/webLinkService';
@@ -63,6 +65,7 @@ const fixture = (available: boolean) => {
     },
   } as unknown as ChatInputCommandInteraction;
   const services = {
+    prepareSession: async (_guild: Guild, _token: string) => {},
     isHealthy: async () => available,
     discoverChannels: async () => channels,
     createSession: async (input: unknown) => {
@@ -156,7 +159,7 @@ test('/itvsc unavailable searches in process without web credentials and keeps c
   }
 });
 
-test('healthy commands save only identity and issue a current-channel link without any permission discovery', async () => {
+test('healthy commands send links without awaiting background permission preparation and preserve them on failure', async () => {
   const original = { ...config };
   Object.assign(config, {
     WEB_PUBLIC_URL: 'https://web.example',
@@ -176,7 +179,25 @@ test('healthy commands save only identity and issue a current-channel link witho
       Object.assign(f.interaction.guild!.roles, { fetch: forbidden });
       Object.assign(f.interaction.guild!.members, { fetch: forbidden });
       f.services.discoverChannels = forbidden;
+      let preparationStarted = false;
+      const preparation = Promise.withResolvers<void>();
+      f.services.prepareSession = async (guild, token) => {
+        assert.equal(guild, f.interaction.guild);
+        assert.equal(f.replies.length, 1, 'link delivery must already be started');
+        assert.equal(token, 'test-token');
+        preparationStarted = true;
+        await preparation.promise;
+      };
       await replyWithWebLink(f.interaction, options, f.services);
+      await setImmediate();
+      assert.equal(preparationStarted, true);
+      preparation.reject(new Error('Discord unavailable after link issuance'));
+      await setImmediate();
+      assert.equal(
+        f.replies.length,
+        1,
+        'background failure must not overwrite the link'
+      );
       assert.equal(f.sessions.length, 1);
       assert.equal(f.searches.length, 0);
       const reply = f.replies[0] as {
@@ -225,4 +246,52 @@ test('unreadable current channel cannot reach fallback search or token creation'
   ]);
   assert.equal(f.sessions.length, 0);
   assert.equal(f.searches.length, 0);
+});
+
+test('permission preparation runs while link delivery is pending and survives delivery failure', async () => {
+  const original = { ...config };
+  Object.assign(config, {
+    WEB_PUBLIC_URL: 'https://web.example',
+    WEB_SESSION_SECRET: 'test-only-secret-012345678901234567890123',
+    WEB_SESSION_TTL_SECONDS: '1800',
+  });
+  try {
+    const f = fixture(true);
+    const replyStarted = Promise.withResolvers<void>();
+    const reply = Promise.withResolvers<void>();
+    const preparationStarted = Promise.withResolvers<void>();
+    const preparation = Promise.withResolvers<void>();
+    f.interaction.editReply = (async () => {
+      replyStarted.resolve();
+      await reply.promise;
+    }) as typeof f.interaction.editReply;
+    f.services.prepareSession = async (guild, token) => {
+      assert.equal(guild, f.interaction.guild);
+      assert.equal(token, 'test-token');
+      preparationStarted.resolve();
+      await preparation.promise;
+    };
+    const command = replyWithWebLink(f.interaction, {}, f.services);
+    await replyStarted.promise;
+    await preparationStarted.promise;
+    reply.resolve();
+    await command;
+    preparation.resolve();
+
+    const failed = fixture(true);
+    let attempts = 0;
+    let preparations = 0;
+    failed.interaction.editReply = (async () => {
+      if (++attempts === 1) throw new Error('Discord reply failed');
+    }) as typeof failed.interaction.editReply;
+    failed.services.prepareSession = async () => {
+      preparations++;
+    };
+    await replyWithWebLink(failed.interaction, {}, failed.services);
+    await setImmediate();
+    assert.equal(attempts, 2);
+    assert.equal(preparations, 1, 'delivery failure must not cancel scheduled access');
+  } finally {
+    Object.assign(config, original);
+  }
 });

@@ -62,6 +62,7 @@ export const findWebSession = async (
     guildIconUrl: session.guildIconUrl,
     initialChannelId: session.initialChannelId ?? undefined,
     accessResolvedAt: session.accessResolvedAt ?? undefined,
+    accessFailedAt: session.accessFailedAt ?? undefined,
     channels: session.channels.map(({ id, name, category, parentName }) => ({
       id,
       name,

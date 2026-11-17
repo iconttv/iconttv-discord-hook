@@ -48,6 +48,7 @@ test('HTTP blocks CSRF, privilege injection, oversized requests and rate-limit b
     channels: [{ id: '300', name: 'allowed', category: '' }],
     permissions: '0',
     expiresAt: new Date(Date.now() + 60000),
+    accessResolvedAt: new Date(),
   };
   const pending: (() => void)[] = [];
   let searches = 0;

@@ -16,6 +16,7 @@ test('avatar batches require readable message references and cannot delay or exh
     guildIconUrl: '',
     permissions: '0',
     expiresAt: new Date(Date.now() + 60000),
+    accessResolvedAt: new Date(),
   };
   let calls = 0;
   let release!: () => void;

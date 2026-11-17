@@ -15,7 +15,11 @@ import { truncateText } from '../utils';
 import { getMessageLink } from '../utils/message';
 import { WebHealthProbe, getWebHealthOrigin } from '../web/health';
 import { searchWebMessages } from './webSearchService';
-import { createWebSession, getWebConfiguration } from './webSessionService';
+import {
+  createWebSession,
+  getWebConfiguration,
+} from './webSessionService';
+import { prepareWebSessionAccess } from './webSessionAccessService';
 import {
   discoverWebChannels,
   selectReadableWebChannels,
@@ -29,6 +33,7 @@ const defaultServices = {
   discoverChannels: discoverWebChannels,
   createSession: createWebSession,
   search: searchWebMessages,
+  prepareSession: prepareWebSessionAccess,
 };
 
 export const replyWithWebLink = async (
@@ -59,8 +64,7 @@ export const replyWithWebLink = async (
     const guild = interaction.guild;
     const inChannel = options.inChannel ?? true;
     if (webAvailable) {
-      // An interaction already identifies its issuer and originating channel.
-      // Resolve readable channels and settings privileges on first web access.
+      // Link delivery and bot-owned permission preparation run independently.
       const member =
         interaction.member instanceof GuildMember ? interaction.member : null;
       const { origin } = getWebConfiguration();
@@ -86,7 +90,7 @@ export const replyWithWebLink = async (
       if (inChannel) url.searchParams.set('channelId', interaction.channelId);
       url.searchParams.set('allChannels', String(!inChannel));
       url.searchParams.set('embedding', String(options.semantic ?? false));
-      await interaction.editReply({
+      const reply = interaction.editReply({
         content: `웹에서 대화를 검색하고 원문으로 이동할 수 있어요.\n이 링크는 <t:${Math.floor(expiresAt.getTime() / 1000)}:R> 만료됩니다.`,
         components: [
           new ActionRowBuilder<ButtonBuilder>().addComponents(
@@ -97,6 +101,12 @@ export const replyWithWebLink = async (
           ),
         ],
       });
+      setImmediate(() => {
+        void services.prepareSession(guild, token).catch(() => {
+          logger.warn('Background web session preparation failed.');
+        });
+      });
+      await reply;
       return;
     }
     let channels: WebChannel[];

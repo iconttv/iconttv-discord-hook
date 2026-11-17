@@ -8,93 +8,25 @@ import {
 import MessageModel from '../database/model/MessageModel';
 import type { WebChannel } from '../web/types';
 
-interface DiscoveryCache {
-  ids?: { values: string[]; expiresAt: number };
-  archived: Map<
-    string,
-    { channel: GuildBasedChannel | null; expiresAt: number }
-  >;
-  pending?: Promise<GuildBasedChannel[]>;
-}
-
-const discoveryCaches = new WeakMap<Guild, DiscoveryCache>();
-
-export const discoverWebChannels = (
+export const discoverWebChannels = async (
   guild: Guild
 ): Promise<GuildBasedChannel[]> => {
-  let cache = discoveryCaches.get(guild);
-  if (!cache) {
-    cache = { archived: new Map() };
-    discoveryCaches.set(guild, cache);
-  }
-  if (cache.pending) return cache.pending;
-  const state = cache;
-  state.pending = loadWebChannels(guild, state).finally(() => {
-    state.pending = undefined;
-  });
-  return state.pending;
-};
-
-const loadWebChannels = async (
-  guild: Guild,
-  cache: DiscoveryCache
-): Promise<GuildBasedChannel[]> => {
-  // Cache archive IDs, not user permissions. Refresh live parents/overwrites
-  // every time, and still check the issuer's roles and private-thread membership.
-  const ids =
-    cache.ids && cache.ids.expiresAt > Date.now()
-      ? Promise.resolve(cache.ids.values)
-      : MessageModel.distinct('channelId', { guildId: guild.id })
-          .maxTimeMS(10000)
-          .then(values => {
-            const filtered = values.filter(
-              (id): id is string => typeof id === 'string' && /^\d+$/.test(id)
-            );
-            cache.ids = {
-              values: filtered,
-              expiresAt: Date.now() + 5 * 60 * 1000,
-            };
-            return filtered;
-          });
-  const [available, active, storedIds] = await Promise.all([
-    guild.channels.fetch(),
-    guild.channels.fetchActiveThreads(),
-    ids,
-  ]);
-  const candidates = new Map<string, GuildBasedChannel>();
-  for (const channel of [...available.values(), ...active.threads.values()]) {
-    if (channel) candidates.set(channel.id, channel);
-  }
-  // Archived threads aren't returned by the active-thread endpoint. Resolve
-  // channel IDs present in our archive against Discord before granting access.
+  // Gateway events maintain channel/role objects; let discord.js own caching.
+  const storedIds = await MessageModel.distinct('channelId', {
+    guildId: guild.id,
+  }).maxTimeMS(10000);
+  const candidates = new Map<string, GuildBasedChannel>(guild.channels.cache);
+  // Archived threads may be absent from the SDK cache. Resolve only archive IDs
+  // missing there, letting discord.js reuse any object cached in the meantime.
   const missing = storedIds.filter(
-    id => /^\d+$/.test(id) && !candidates.has(id)
+    (id): id is string =>
+      typeof id === 'string' && /^\d+$/.test(id) && !candidates.has(id)
   );
   for (let offset = 0; offset < missing.length; offset += 5) {
     await Promise.all(
       missing.slice(offset, offset + 5).map(async id => {
-        const cached = cache.archived.get(id);
-        if (cached && cached.expiresAt > Date.now()) {
-          if (!cached.channel) return;
-          // Use the SDK's current object so gateway updates/deletions take effect.
-          const current = guild.channels.cache.get(id);
-          if (current?.guildId === guild.id) {
-            candidates.set(id, current);
-            return;
-          }
-        }
-        const channel = await guild.channels
-          .fetch(id, { force: true })
-          .catch(() => null);
-        const verified = channel?.guildId === guild.id ? channel : null;
-        cache.archived.delete(id);
-        cache.archived.set(id, {
-          channel: verified,
-          expiresAt: Date.now() + (verified ? 30000 : 60000),
-        });
-        while (cache.archived.size > 2000)
-          cache.archived.delete(cache.archived.keys().next().value!);
-        if (verified) candidates.set(verified.id, verified);
+        const channel = await guild.channels.fetch(id).catch(() => null);
+        if (channel?.guildId === guild.id) candidates.set(channel.id, channel);
       })
     );
   }

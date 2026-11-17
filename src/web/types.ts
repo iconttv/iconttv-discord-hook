@@ -15,6 +15,7 @@ export interface WebSession {
   guildIconUrl: string;
   initialChannelId?: string;
   accessResolvedAt?: Date;
+  accessFailedAt?: Date;
   channels: WebChannel[];
   permissions: string;
   expiresAt: Date;

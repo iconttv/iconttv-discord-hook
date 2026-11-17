@@ -19,6 +19,7 @@ const session: WebSession = {
   initialChannelId: '200000000000000001',
   permissions: PermissionFlagsBits.ModerateMembers.toString(),
   expiresAt: new Date(Date.now() + 3600000),
+  accessResolvedAt: new Date(),
   channels: [
     { id: '200000000000000001', name: '💬・잡담', category: '이야기' },
     {

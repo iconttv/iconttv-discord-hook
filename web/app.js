@@ -520,8 +520,30 @@ async function initialize() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token }),
       });
-    state.session = await api('/api/session');
-    const session = state.session;
+    let session = await api('/api/session');
+    if (session.accessStatus === 'pending') {
+      showGate(
+        '채널 권한을 확인하고 있어요',
+        '디스코드 봇이 접근 가능한 채널을 준비하고 있습니다. 잠시만 기다려 주세요.'
+      );
+      $('copy-command').hidden = true;
+      $('channels').textContent = '채널 권한 확인 중';
+      $('session-time').textContent = '권한 검사 중';
+      while (session.accessStatus === 'pending') {
+        const { promise, resolve } = Promise.withResolvers();
+        setTimeout(resolve, 500);
+        await promise;
+        session = await api('/api/session');
+      }
+    }
+    if (session.accessStatus !== 'ready') {
+      showGate(
+        '채널 권한을 확인하지 못했어요',
+        '디스코드에서 /itvsc 또는 /itvweb 명령어로 새 링크를 받아 주세요.'
+      );
+      return;
+    }
+    state.session = session;
     $('window-title').textContent = session.guildName;
     $('guild-name').textContent = session.guildName;
     $('user-name').textContent = session.displayName;

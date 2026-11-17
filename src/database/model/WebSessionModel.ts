@@ -23,6 +23,7 @@ const webSessionSchema = new mongoose.Schema(
     guildIconUrl: { type: String, default: '' },
     initialChannelId: { type: String },
     accessResolvedAt: { type: Date },
+    accessFailedAt: { type: Date },
     channels: { type: [channelSchema], default: [] },
     permissions: { type: String, default: '0' },
     createdAt: { type: Date, default: Date.now },
