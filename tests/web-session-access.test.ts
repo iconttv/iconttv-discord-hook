@@ -76,48 +76,46 @@ const fixture = (cachedRoles = true) => {
   return { guild, member, roleLoads: () => roleLoads, memberLoads: () => memberLoads };
 };
 
-test('bot preparation waits for cache-miss roles and discovery, coalesces jobs and persists only resolved access', async () => {
+test('current channel becomes usable before full discovery, after fresh roles and membership', async () => {
   const f = fixture(false);
   const discovery = Promise.withResolvers<GuildBasedChannel[]>();
   const roles = Promise.withResolvers<void>();
+  const memberLoaded = Promise.withResolvers<void>();
   const started = Promise.withResolvers<void>();
   f.guild.roles.fetch = (() => roles.promise) as typeof f.guild.roles.fetch;
+  f.guild.members.fetch = (async () => {
+    memberLoaded.resolve();
+    return f.member;
+  }) as typeof f.guild.members.fetch;
   let persisted = pendingSession();
-  let saves = 0;
-  let finds = 0;
   const prepare = createWebSessionAccessPreparer({
-    findSession: async token => {
-      finds++;
-      assert.equal(token, 'issuer');
-      return persisted;
-    },
-    discoverChannels: async guild => {
-      assert.equal(guild, f.guild);
+    findSession: async () => persisted,
+    discoverChannels: async () => {
       started.resolve();
       return discovery.promise;
     },
-    save: async value => { saves++; persisted = value; return true; },
+    save: async value => { persisted = value; return true; },
     markFailed: async () => { assert.fail('must not mark successful access failed'); },
   });
   const first = prepare(f.guild, 'issuer');
   assert.equal(prepare(f.guild, 'issuer'), first);
-  await started.promise;
-  assert.equal(saves, 0);
-  assert.equal(persisted.accessResolvedAt, undefined);
-  discovery.resolve([channel('300'), channel('999', 0n)]);
-  await Promise.resolve();
-  assert.equal(saves, 0, 'role refresh must complete before permissions are used');
+  await memberLoaded.promise;
+  assert.equal(persisted.accessPartialAt, undefined);
+  assert.deepEqual(persisted.channels, [], 'roles must finish before publishing access');
   roles.resolve();
-  await first;
-  assert.equal(saves, 1);
-  assert.equal(f.memberLoads(), 1);
+  await started.promise;
+  assert.ok(persisted.accessPartialAt);
+  assert.equal(persisted.accessResolvedAt, undefined);
   assert.deepEqual(persisted.channels.map(value => value.id), ['300']);
   assert.equal(persisted.displayName, 'current name');
   assert.equal(persisted.permissions, readable.toString());
+  discovery.resolve([channel('301'), channel('999', 0n)]);
+  await first;
+  assert.deepEqual(persisted.channels.map(value => value.id), ['300', '301']);
   assert.ok(persisted.accessResolvedAt);
+  const ready = persisted;
   await prepare(f.guild, 'issuer');
-  assert.equal(saves, 1, 'persisted ready state must skip initialization');
-  assert.equal(finds, 2, 'new bot jobs must read MongoDB state again');
+  assert.equal(persisted, ready);
 });
 
 test('warm role cache preserves channel permissions and private-thread membership checks without mutating discovery', async () => {
@@ -149,8 +147,35 @@ test('warm role cache preserves channel permissions and private-thread membershi
   assert.equal(f.memberLoads(), 1, 'cached roles do not make cached members authoritative');
 });
 
-test('membership, role, discovery, guild mismatch and persistence failures mark pending access failed', async () => {
-  for (const cause of ['member', 'roles', 'discovery', 'guild', 'save', 'unmatched']) {
+test('an unjoined private initial thread never publishes partial access', async () => {
+  const f = fixture();
+  const discovery = Promise.withResolvers<GuildBasedChannel[]>();
+  const started = Promise.withResolvers<void>();
+  f.guild.channels.fetch = (async () => ({
+    ...channel('300'),
+    type: ChannelType.PrivateThread,
+    isThread: () => true,
+    members: { fetch: async () => null },
+  })) as typeof f.guild.channels.fetch;
+  let persisted = pendingSession();
+  const prepare = createWebSessionAccessPreparer({
+    findSession: async () => persisted,
+    discoverChannels: async () => { started.resolve(); return discovery.promise; },
+    save: async value => { persisted = value; return true; },
+    markFailed: async () => { assert.fail('must not fail'); },
+  });
+  const job = prepare(f.guild, 'issuer');
+  await started.promise;
+  assert.equal(persisted.accessPartialAt, undefined);
+  assert.deepEqual(persisted.channels, []);
+  discovery.resolve([channel('301')]);
+  await job;
+  assert.ok(persisted.accessResolvedAt);
+  assert.deepEqual(persisted.channels.map(value => value.id), ['301']);
+});
+
+test('preparation failures never expose unchecked channels and preserve verified partial access', async () => {
+  for (const cause of ['member', 'roles', 'discovery', 'guild', 'save', 'unmatched', 'finalSave']) {
     const f = fixture();
     const session = pendingSession();
     const failure = new Error(cause);
@@ -160,32 +185,33 @@ test('membership, role, discovery, guild mismatch and persistence failures mark 
       f.guild.roles.fetch = (async () => { throw failure; }) as typeof f.guild.roles.fetch;
     }
     if (cause === 'guild') session.guildId = 'different';
-    let failed = 0;
-    let saved = 0;
+    let persisted = session;
+    let failed: WebSession | undefined;
     const prepare = createWebSessionAccessPreparer({
       findSession: async () => session,
       discoverChannels: async () => {
         if (cause === 'discovery') throw failure;
-        return [channel('300')];
+        return [channel('301')];
       },
-      save: async () => {
-        saved++;
-        if (cause === 'save') throw failure;
-        return false;
+      save: async value => {
+        if (cause === 'save' || (cause === 'finalSave' && value.accessResolvedAt)) throw failure;
+        if (cause === 'unmatched') return false;
+        persisted = value;
+        return true;
       },
-      markFailed: async value => {
-        assert.equal(value, session);
-        assert.equal(value.accessResolvedAt, undefined);
-        assert.deepEqual(value.channels, []);
-        assert.equal(value.permissions, '0');
-        failed++;
-      },
+      markFailed: async value => { failed = value; },
     });
     await assert.rejects(prepare(f.guild, 'issuer'));
-    assert.equal(failed, 1, cause);
-    assert.equal(saved, ['save', 'unmatched'].includes(cause) ? 1 : 0, cause);
-    await assert.rejects(prepare(f.guild, 'issuer'));
-    assert.equal(failed, 2, 'rejected jobs must release in-process coalescing');
+    assert.ok(failed, cause);
+    assert.equal(persisted.accessResolvedAt, undefined, cause);
+    if (cause === 'discovery' || cause === 'finalSave') {
+      assert.ok(failed.accessPartialAt, cause);
+      assert.deepEqual(failed.channels.map(value => value.id), ['300']);
+      assert.deepEqual(persisted.channels, failed.channels);
+    } else {
+      assert.equal(failed.accessPartialAt, undefined, cause);
+      assert.deepEqual(persisted.channels, []);
+    }
   }
 });
 
@@ -196,6 +222,7 @@ test('missing, expired, failed and ready sessions never initialize or overwrite 
     { ...pendingSession(), expiresAt: new Date(0) },
     { ...pendingSession(), accessResolvedAt: new Date() },
     { ...pendingSession(), accessFailedAt: new Date() },
+    { ...pendingSession(), channelsFailedAt: new Date() },
   ]) {
     const forbidden = async () => { assert.fail('terminal session must not be changed'); };
     const prepare = createWebSessionAccessPreparer({
@@ -214,7 +241,11 @@ test('missing, expired, failed and ready sessions never initialize or overwrite 
       session.expiresAt = new Date(0);
       return [channel('300')];
     },
-    save: async () => { assert.fail('expired discovery must not save'); },
+    save: async value => {
+      assert.ok(value.accessPartialAt);
+      assert.equal(value.accessResolvedAt, undefined, 'expired discovery must not publish full access');
+      return true;
+    },
     markFailed: async () => { assert.fail('expired session need not be changed'); },
   });
   await prepare(f.guild, 'issuer');
@@ -239,6 +270,7 @@ test('bot uses gateway-style SDK caches but refreshes stale member roles and ind
   const client = new Client({ intents: [] });
   let memberFailure = false;
   let memberCanRead = true;
+  let discoveryFailure = false;
   t.mock.method(client.rest, 'get', async (route: string) => {
     requests.push(route);
     const roles = [
@@ -284,7 +316,10 @@ test('bot uses gateway-style SDK caches but refreshes stale member roles and ind
   assert.equal(guild.channels.cache.has(archivedId), false);
   assert.ok(guild.members.cache.get(userId)?.permissions.has(readable));
   t.mock.method(MessageModel, 'distinct', () => ({
-    maxTimeMS: async () => [channelId, threadId, archivedId],
+    maxTimeMS: async () => {
+      if (discoveryFailure) throw new Error('archive discovery unavailable');
+      return [channelId, threadId, archivedId];
+    },
   }));
   const session = {
     ...pendingSession(), id: '11111111-1111-4111-8111-111111111111',
@@ -322,6 +357,7 @@ test('bot uses gateway-style SDK caches but refreshes stale member roles and ind
     _id: session.id, userId, guildId,
     expiresAt: { $eq: session.expiresAt, $gt: expirationFilter.$gt },
     accessResolvedAt: { $exists: false }, accessFailedAt: { $exists: false },
+    channelsFailedAt: { $exists: false },
   });
   memberCanRead = false;
   assert.ok(guild.members.cache.get(userId)?.permissions.has(readable), 'cached member still has the removed role');
@@ -339,8 +375,17 @@ test('bot uses gateway-style SDK caches but refreshes stale member roles and ind
   assert.deepEqual(persisted?.channels, []);
   assert.equal(persisted?.permissions, '0');
   assert.equal(persisted?.accessResolvedAt, undefined);
-  assert.deepEqual(writes[2].filter.accessResolvedAt, { $exists: false });
-  assert.deepEqual(writes[2].filter.accessFailedAt, { $exists: false });
+  assert.deepEqual(writes.at(-1)?.filter.accessResolvedAt, { $exists: false });
+  assert.deepEqual(writes.at(-1)?.filter.accessFailedAt, { $exists: false });
+  memberFailure = false;
+  memberCanRead = true;
+  discoveryFailure = true;
+  await assert.rejects(prepareWebSessionAccess(guild, token), /archive discovery unavailable/);
+  assert.ok(persisted?.channelsFailedAt);
+  assert.equal(persisted?.accessFailedAt, undefined);
+  assert.deepEqual(writes.at(-1)?.scope, { channelsFailedAt: persisted?.channelsFailedAt });
+  assert.deepEqual(writes.at(-2)?.scope.channels?.map(value => value.id), [channelId]);
+  discoveryFailure = false;
   memberFailure = false;
   matched = 0;
   const previous = persisted;

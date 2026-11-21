@@ -82,6 +82,14 @@ const readOptions = (
     (allChannels === 'true'
       ? undefined
       : session.initialChannelId || session.channels[0]?.id);
+  if (!channelId && !session.accessResolvedAt) {
+    throw new HttpError(
+      503,
+      session.channelsFailedAt
+        ? '전체 채널 권한을 확인하지 못했습니다. 현재 채널에서 검색하거나 새 링크를 받아 주세요.'
+        : '전체 채널 권한을 준비하고 있습니다. 잠시 후 다시 시도해 주세요.'
+    );
+  }
   const embedding = params.get('embedding') ?? 'false';
   const mode = keyword && embedding === 'true' ? 'semantic' : 'text';
   const sort = keyword ? (params.get('sort') ?? 'relevance') : 'newest';
@@ -248,23 +256,29 @@ export const createWebServer = (dependencies: WebDependencies) => {
           ? 'failed'
           : session.accessResolvedAt
             ? 'ready'
-            : 'pending';
+            : session.accessPartialAt
+              ? 'partial'
+              : 'pending';
+        const accessible = accessStatus === 'partial' || accessStatus === 'ready';
         if (path === '/api/session' && request.method === 'GET') {
           const { id: _id, ...profile } = session;
           void _id;
           json(response, 200, {
             ...profile,
             accessStatus,
-            channels: accessStatus === 'ready' ? session.channels : [],
-            initialChannelId:
-              accessStatus === 'ready' ? session.initialChannelId : undefined,
-            permissions: accessStatus === 'ready' ? session.permissions : '0',
-            capabilities:
-              accessStatus === 'ready' ? getWebCapabilities(session) : [],
+            channelsStatus: session.channelsFailedAt
+              ? 'failed'
+              : session.accessResolvedAt
+                ? 'ready'
+                : 'pending',
+            channels: accessible ? session.channels : [],
+            initialChannelId: accessible ? session.initialChannelId : undefined,
+            permissions: accessible ? session.permissions : '0',
+            capabilities: accessible ? getWebCapabilities(session) : [],
           });
           return;
         }
-        if (accessStatus !== 'ready') {
+        if (!accessible) {
           if (accessStatus === 'pending') {
             response.setHeader('Retry-After', '1');
             throw new HttpError(

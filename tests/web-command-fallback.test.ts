@@ -3,6 +3,8 @@ import { test } from 'node:test';
 import { setImmediate } from 'node:timers/promises';
 import {
   ChatInputCommandInteraction,
+  Client,
+  CommandInteractionOptionResolver,
   GuildBasedChannel,
   MessageFlags,
   PermissionsBitField,
@@ -11,6 +13,7 @@ import {
 } from 'discord.js';
 import { config } from '../src/config';
 import { replyWithWebLink } from '../src/service/webLinkService';
+import { data, execute } from '../src/service/commands/search';
 import type { WebSearchOptions, WebSearchScope } from '../src/web/types';
 
 const fixture = (available: boolean) => {
@@ -102,6 +105,24 @@ const fixture = (available: boolean) => {
     permissionFetches: () => permissionFetches,
   };
 };
+
+test('/itvsc requires keyword in registration and rejects interactions without it', async () => {
+  const command = data.toJSON();
+  assert.equal(
+    command.options?.find(option => option.name === 'keyword')?.required,
+    true
+  );
+  const interaction = {
+    options: new CommandInteractionOptionResolver(
+      new Client({ intents: [] }),
+      [],
+      {}
+    ),
+  } as unknown as ChatInputCommandInteraction;
+  await assert.rejects(execute(interaction), {
+    code: 'CommandInteractionOptionNotFound',
+  });
+});
 
 test('/itvweb unavailable returns only the requested notice without tokens or permission work', async () => {
   const f = fixture(false);
