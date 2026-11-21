@@ -18,6 +18,10 @@ const state = {
   loading: false,
   settings: null,
   request: null,
+  sessionPoll: null,
+  sessionPollTimer: null,
+  channelsError: '',
+  waitingForChannels: false,
   toastTimer: null,
   cancelDiscordLaunch: null,
   collapsedCategories: new Set(),
@@ -106,6 +110,8 @@ async function api(path, options = {}) {
 
 function showGate(title, description) {
   state.cancelDiscordLaunch?.();
+  stopSessionPolling();
+  state.waitingForChannels = false;
   state.session = null;
   state.request?.abort();
   $('gate').hidden = false;
@@ -207,8 +213,15 @@ function renderChannels() {
   const allChannels =
     !selected && currentParams().get('allChannels') === 'true';
   const channels = state.session.channels;
+  const ready = state.session.accessStatus === 'ready';
   $('channel-count').textContent = String(channels.length);
-  let output = `<button class="channel-item ${allChannels ? 'active' : ''}" data-channel=""><span class="channel-hash">#</span><span>모든 채널</span></button>`;
+  let output = `<button class="channel-item ${allChannels ? 'active' : ''}" data-channel=""${ready ? '' : ' disabled'}><span class="channel-hash">#</span><span>모든 채널</span></button>`;
+  if (!ready) {
+    const message = state.session.channelsStatus === 'failed'
+      ? '전체 채널을 불러오지 못했어요. 확인된 채널은 계속 검색할 수 있어요.'
+      : state.channelsError || '전체 채널을 불러오는 중이에요. 현재 채널은 바로 검색할 수 있어요.';
+    output += `<p class="sidebar-hint">${escape(message)}</p>`;
+  }
   const groups = new Map();
   for (const channel of channels) {
     const category = channel.category || '텍스트 채널';
@@ -229,7 +242,7 @@ function renderChannels() {
   const channel = channels.find(item => item.id === selected);
   if (channel) state.lastChannelId = channel.id;
   $('all-channels').checked = allChannels;
-  $('all-channels').disabled = !channels.length;
+  $('all-channels').disabled = !ready || !channels.length;
   $('scope-label').textContent = channel
     ? `# ${channel.parentName ? channel.parentName + ' › ' : ''}${channel.name}`
     : allChannels
@@ -361,8 +374,34 @@ async function loadAvatars(messages, request) {
   }
 }
 
+function needsFullChannels() {
+  if (!state.session || state.session.accessStatus === 'ready') return false;
+  const params = currentParams();
+  const selected = params.get('channelId');
+  return selected
+    ? !state.session.channels.some(channel => channel.id === selected)
+    : params.get('allChannels') === 'true';
+}
+
+function renderChannelWait() {
+  const failed = state.session.channelsStatus === 'failed';
+  $('result-count').textContent = failed ? '' : '채널 확인 중…';
+  $('search-notice').hidden = true;
+  $('messages').replaceChildren();
+  $('messages').setAttribute('aria-busy', 'false');
+  $('previous-page').disabled = true;
+  $('next-page').disabled = true;
+  $('page-number').textContent = String(state.page);
+  $('pagination-description').textContent = `${state.page}페이지 · 페이지당 25개`;
+  $('result-state').hidden = false;
+  $('result-state').innerHTML = failed
+    ? '<span class="empty-symbol">!</span><strong>전체 채널을 불러오지 못했어요</strong><p>요청한 검색 범위를 확인할 수 없습니다. 확인된 채널을 선택하면 검색할 수 있어요.</p>'
+    : '<span class="empty-symbol">⌕</span><strong>검색할 채널을 확인하고 있어요</strong><p>요청한 검색 범위가 준비되면 자동으로 검색합니다.</p>';
+}
+
 async function loadMessages() {
   if (!state.session) return;
+  state.waitingForChannels = false;
   state.request?.abort();
   const request = new AbortController();
   state.request = request;
@@ -372,6 +411,12 @@ async function loadMessages() {
   const params = currentParams();
   const keyword = (params.get('keyword') || '').trim();
   $('result-title').textContent = keyword ? '검색 결과' : '최근 메시지';
+  if (needsFullChannels()) {
+    state.loading = false;
+    state.waitingForChannels = true;
+    renderChannelWait();
+    return;
+  }
   $('result-count').textContent = '불러오는 중…';
   $('search-notice').hidden = true;
   $('result-state').hidden = true;
@@ -472,6 +517,7 @@ async function loadSettings() {
     navigateSearch(currentParams());
     return;
   }
+  state.waitingForChannels = false;
   state.request?.abort();
   showView('settings');
   setDrawer(false);
@@ -500,6 +546,57 @@ function updateSessionTime() {
     return;
   }
   $('session-time').textContent = `세션 ${Math.ceil(remaining / 60000)}분 남음`;
+}
+
+function stopSessionPolling() {
+  clearTimeout(state.sessionPollTimer);
+  state.sessionPollTimer = null;
+  state.sessionPoll?.abort();
+  state.sessionPoll = null;
+}
+
+function startSessionPolling() {
+  if (
+    state.sessionPoll ||
+    state.session?.accessStatus !== 'partial' ||
+    state.session.channelsStatus === 'failed'
+  ) return;
+  const poll = new AbortController();
+  state.sessionPoll = poll;
+  const schedule = () => {
+    state.sessionPollTimer = setTimeout(refresh, 500);
+  };
+  const refresh = async () => {
+    state.sessionPollTimer = null;
+    try {
+      const session = await api('/api/session', { signal: poll.signal });
+      if (state.sessionPoll !== poll || !state.session) return;
+      if (session.accessStatus !== 'partial' && session.accessStatus !== 'ready') {
+        showGate(
+          '채널 권한을 확인하지 못했어요',
+          '디스코드에서 /itvsc 또는 /itvweb 명령어로 새 링크를 받아 주세요.'
+        );
+        return;
+      }
+      state.session = session;
+      state.channelsError = '';
+      renderChannels();
+      if (session.accessStatus === 'ready' || session.channelsStatus === 'failed') {
+        stopSessionPolling();
+        if (state.waitingForChannels && location.pathname !== '/settings') {
+          if (session.accessStatus === 'ready') void loadMessages();
+          else renderChannelWait();
+        }
+        return;
+      }
+    } catch (error) {
+      if (state.sessionPoll !== poll || !state.session) return;
+      state.channelsError = '전체 채널을 불러오지 못해 다시 시도하고 있어요. 현재 채널은 계속 검색할 수 있어요.';
+      renderChannels();
+    }
+    if (state.sessionPoll === poll && state.session) schedule();
+  };
+  schedule();
 }
 
 async function initialize() {
@@ -536,7 +633,7 @@ async function initialize() {
         session = await api('/api/session');
       }
     }
-    if (session.accessStatus !== 'ready') {
+    if (session.accessStatus !== 'partial' && session.accessStatus !== 'ready') {
       showGate(
         '채널 권한을 확인하지 못했어요',
         '디스코드에서 /itvsc 또는 /itvweb 명령어로 새 링크를 받아 주세요.'
@@ -562,6 +659,7 @@ async function initialize() {
     readForm();
     updateSessionTime();
     setInterval(updateSessionTime, 15000);
+    startSessionPolling();
     if (location.pathname === '/settings') await loadSettings();
     else {
       showView('search');
@@ -590,7 +688,7 @@ $('keyword').addEventListener('input', () => {
 $('sort').addEventListener('change', () => navigateSearch());
 $('embedding').addEventListener('change', () => navigateSearch());
 $('all-channels').addEventListener('change', () => {
-  if (!state.session) return;
+  if (state.session?.accessStatus !== 'ready') return;
   const params = formParams();
   if ($('all-channels').checked) {
     params.delete('channelId');
@@ -632,7 +730,7 @@ $('channels').addEventListener('click', event => {
     return;
   }
   const item = event.target.closest('[data-channel]');
-  if (!item || !state.session) return;
+  if (!item || item.disabled || !state.session) return;
   const params = formParams();
   if (item.dataset.channel) {
     params.set('channelId', item.dataset.channel);
@@ -759,6 +857,7 @@ $('copy-command').addEventListener('click', async () => {
   }
 });
 $('logout').addEventListener('click', async () => {
+  stopSessionPolling();
   try {
     await api('/api/session', { method: 'DELETE' });
     showGate(
@@ -767,6 +866,7 @@ $('logout').addEventListener('click', async () => {
     );
   } catch (error) {
     toast(error.message);
+    startSessionPolling();
   }
 });
 window.addEventListener('popstate', () => {

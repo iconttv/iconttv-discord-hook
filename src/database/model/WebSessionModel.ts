@@ -22,6 +22,8 @@ const webSessionSchema = new mongoose.Schema(
     guildName: { type: String, required: true },
     guildIconUrl: { type: String, default: '' },
     initialChannelId: { type: String },
+    accessPartialAt: { type: Date },
+    channelsFailedAt: { type: Date },
     accessResolvedAt: { type: Date },
     accessFailedAt: { type: Date },
     channels: { type: [channelSchema], default: [] },

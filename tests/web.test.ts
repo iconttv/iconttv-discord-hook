@@ -458,6 +458,33 @@ test('session polling reads pending, ready and failed snapshots without initiali
     saveSettings: 0,
   });
 
+  snapshot = { ...snapshot, accessPartialAt: new Date() };
+  const partial = await (await request('/api/session')).json();
+  assert.equal(partial.accessStatus, 'partial');
+  assert.equal(partial.channelsStatus, 'pending');
+  assert.deepEqual(partial.channels, snapshot.channels);
+  assert.deepEqual(partial.capabilities, ['settings:write']);
+  assert.equal((await request('/api/search?channelId=300')).status, 200);
+  assert.equal((await request('/api/search')).status, 200);
+  assert.equal((await request('/api/search?allChannels=true')).status, 503);
+  assert.equal((await request('/api/search?channelId=999')).status, 403);
+  assert.equal((await request('/api/avatars', {
+    method: 'POST',
+    body: JSON.stringify({ messages: [{ id: '400', channelId: '300' }] }),
+  })).status, 200);
+  assert.equal((await request('/api/avatars', {
+    method: 'POST',
+    body: JSON.stringify({ messages: [{ id: '400', channelId: '999' }] }),
+  })).status, 403);
+  assert.equal(calls.search, 2, 'partial access cannot invoke a full-scope search');
+  snapshot = { ...snapshot, channelsFailedAt: new Date() };
+  const degraded = await (await request('/api/session')).json();
+  assert.equal(degraded.accessStatus, 'partial');
+  assert.equal(degraded.channelsStatus, 'failed');
+  assert.equal((await request('/api/search?allChannels=true')).status, 503);
+  assert.equal((await request('/api/search?channelId=300')).status, 200);
+  snapshot = { ...snapshot, channelsFailedAt: undefined };
+
   // Only the bot updates the database snapshot; the next poll observes it.
   snapshot = { ...snapshot, accessResolvedAt: new Date() };
   const readyResponse = await request('/api/session');
@@ -468,14 +495,14 @@ test('session polling reads pending, ready and failed snapshots without initiali
   assert.equal(ready.permissions, snapshot.permissions);
   assert.deepEqual(ready.capabilities, ['settings:write']);
   assert.equal((await request('/api/search')).status, 200);
-  assert.equal(calls.search, 1);
+  assert.equal(calls.search, 4);
 
   // Failure takes precedence even when an older successful snapshot remains.
   snapshot = { ...snapshot, accessFailedAt: new Date() };
   await assertBlocked('failed');
   assert.deepEqual(calls, {
-    search: 1,
-    avatars: 0,
+    search: 4,
+    avatars: 1,
     getSettings: 0,
     saveSettings: 0,
   });

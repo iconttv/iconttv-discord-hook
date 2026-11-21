@@ -14,6 +14,8 @@ export interface WebSession {
   guildName: string;
   guildIconUrl: string;
   initialChannelId?: string;
+  accessPartialAt?: Date;
+  channelsFailedAt?: Date;
   accessResolvedAt?: Date;
   accessFailedAt?: Date;
   channels: WebChannel[];
