@@ -12,8 +12,8 @@ export const data = new SlashCommandBuilder()
   .addStringOption(option =>
     option
       .setName('keyword')
-      .setDescription('검색어 (생략하면 최근 메시지)')
-      .setRequired(false)
+      .setDescription('검색어')
+      .setRequired(true)
       .setMaxLength(180)
   )
   .addBooleanOption(option =>
@@ -31,7 +31,7 @@ export const data = new SlashCommandBuilder()
 
 export const execute = async (interaction: ChatInputCommandInteraction) => {
   await replyWithWebLink(interaction, {
-    keyword: interaction.options.getString('keyword')?.trim(),
+    keyword: interaction.options.getString('keyword', true).trim(),
     inChannel: interaction.options.getBoolean('channel') ?? true,
     semantic: interaction.options.getBoolean('embedding') ?? false,
     fallbackToMessages: true,
